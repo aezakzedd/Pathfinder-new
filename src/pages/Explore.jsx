@@ -79,8 +79,9 @@ export default function Explore() {
     overflow: 'hidden'
   }), []);
 
+  // Updated to account for 24px gap
   const leftContainerStyle = useMemo(() => ({
-    width: '50%',
+    width: 'calc((100% - 24px) / 2)',
     height: '100%',
     position: 'relative',
     overflow: 'hidden'
@@ -164,6 +165,13 @@ export default function Explore() {
     willChange: 'transform'
   }), [isMinimized]);
 
+  // Updated right placeholder container to match left container width
+  const rightPlaceholderStyle = useMemo(() => ({
+    width: 'calc((100% - 24px) / 2)',
+    height: '100%',
+    position: 'relative'
+  }), []);
+
   // Updated map container style - now overlays instead of pushing
   const mapContainerStyle = useMemo(() => ({
     position: 'absolute',
@@ -171,7 +179,7 @@ export default function Explore() {
     right: isMapFullscreen ? 0 : '24px',
     bottom: isMapFullscreen ? 0 : '24px',
     left: isMapFullscreen ? 0 : 'auto',
-    width: isMapFullscreen ? '100%' : 'calc(50% - 12px)',
+    width: isMapFullscreen ? '100%' : 'calc((100% - 72px) / 2)', // Account for padding and gap
     height: isMapFullscreen ? '100%' : 'calc(100% - 48px)',
     borderRadius: isMapFullscreen ? '24px' : '16px',
     overflow: 'hidden',
@@ -223,8 +231,8 @@ export default function Explore() {
             </div>
           </div>
           
-          {/* Right container placeholder (maintains layout) */}
-          <div style={{ width: '50%', height: '100%', position: 'relative' }} />
+          {/* Right container placeholder (maintains layout and gap) */}
+          <div style={rightPlaceholderStyle} />
           
           {/* Map container - overlays with absolute positioning */}
           <div style={mapContainerStyle}>
