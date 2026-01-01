@@ -12,7 +12,6 @@ export default function ChatBot() {
     'Create a 5-day Catanduanes itinerary',
     'Romantic getaway in Puraran Beach',
     'One-day Virac city tour',
-    'Best family activities in Catanduanes',
     'Best beaches in Catanduanes'
   ];
 
@@ -95,12 +94,12 @@ export default function ChatBot() {
             </p>
           </div>
 
-          {/* Suggestion chips */}
+          {/* Suggestion chips - right aligned */}
           <div style={{
             display: 'flex',
             flexWrap: 'wrap',
             gap: '8px',
-            justifyContent: 'center',
+            justifyContent: 'flex-end',
             width: '100%'
           }}>
             {suggestions.map((suggestion, index) => (
