@@ -29,29 +29,30 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
     // Add markers for each tourist spot
     touristSpots.forEach(spot => {
-      // Create custom marker element
+      // Create custom marker element with SVG pin icon
       const markerEl = document.createElement('div');
-      markerEl.style.width = '32px';
-      markerEl.style.height = '32px';
-      markerEl.style.borderRadius = '50%';
-      markerEl.style.backgroundColor = '#84cc16'; // Lime green
-      markerEl.style.border = '3px solid white';
-      markerEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
-      markerEl.style.cursor = 'pointer';
-      markerEl.style.transition = 'transform 0.2s ease';
+      markerEl.innerHTML = `
+        <svg width="36" height="45" viewBox="0 0 36 45" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3)); cursor: pointer; transition: transform 0.2s ease;">
+          <path d="M18 0C8.059 0 0 8.059 0 18C0 29.25 18 45 18 45C18 45 36 29.25 36 18C36 8.059 27.941 0 18 0Z" fill="#84cc16"/>
+          <path d="M18 0C8.059 0 0 8.059 0 18C0 29.25 18 45 18 45C18 45 36 29.25 36 18C36 8.059 27.941 0 18 0Z" stroke="white" stroke-width="2"/>
+          <circle cx="18" cy="16" r="6" fill="white"/>
+        </svg>
+      `;
+      
+      const svgElement = markerEl.querySelector('svg');
       
       // Add hover effect
       markerEl.addEventListener('mouseenter', () => {
-        markerEl.style.transform = 'scale(1.15)';
+        svgElement.style.transform = 'scale(1.15)';
       });
       markerEl.addEventListener('mouseleave', () => {
-        markerEl.style.transform = 'scale(1)';
+        svgElement.style.transform = 'scale(1)';
       });
 
-      // Create marker
+      // Create marker with proper anchor at the bottom point of the pin
       const marker = new maplibregl.Marker({
         element: markerEl,
-        anchor: 'bottom'
+        anchor: 'bottom' // Anchors at the bottom point of the pin
       })
         .setLngLat(spot.coordinates)
         .addTo(map.current);
