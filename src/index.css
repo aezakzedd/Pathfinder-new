@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body, html, #root {
+    @apply m-0 p-0 overflow-hidden bg-black;
+    height: 100%;
+    width: 100%;
+  }
+}
