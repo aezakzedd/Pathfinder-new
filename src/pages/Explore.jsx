@@ -84,7 +84,6 @@ export default function Explore() {
     width: isMapFullscreen ? '0%' : '50%',
     height: '100%',
     position: 'relative',
-    flexShrink: 0,
     overflow: 'hidden',
     opacity: isMapFullscreen ? 0 : 1,
     transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
@@ -169,49 +168,18 @@ export default function Explore() {
     willChange: 'transform'
   }), [isMinimized]);
 
-  // Expand from original position using absolute positioning with smooth transitions
-  const mapContainerStyle = useMemo(() => {
-    if (isMapFullscreen) {
-      // Fullscreen: position absolute to overlay entire container
-      return {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: '100%',
-        height: '100%',
-        borderRadius: '24px',
-        overflow: 'hidden',
-        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-        zIndex: 30,
-        willChange: 'width, height, top, left, right, bottom'
-      };
-    } else {
-      // Normal: width 46% and height 93.5%
-      return {
-        position: 'absolute',
-        top: '3.25%', // Centered vertically: (100% - 93.5%) / 2 = 3.25%
-        left: 'calc(50% + 24px)', // After left container (50%) + gap (24px)
-        width: '46%',
-        height: '93.5%',
-        borderRadius: '16px',
-        overflow: 'hidden',
-        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-        zIndex: 1,
-        willChange: 'width, height, top, left'
-      };
-    }
-  }, [isMapFullscreen]);
-
-  // Inner wrapper to maintain background
-  const mapInnerStyle = useMemo(() => ({
-    width: '100%',
+  const mapContainerStyle = useMemo(() => ({
+    position: isMapFullscreen ? 'absolute' : 'relative',
+    top: isMapFullscreen ? 0 : 'auto',
+    left: isMapFullscreen ? 0 : 'auto',
+    width: isMapFullscreen ? '100%' : '50%',
     height: '100%',
-    backgroundColor: '#1f2937',
-    borderRadius: 'inherit',
-    overflow: 'hidden'
-  }), []);
+    borderRadius: isMapFullscreen ? '24px' : '16px',
+    overflow: 'hidden',
+    transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+    zIndex: isMapFullscreen ? 30 : 1,
+    willChange: 'width, border-radius'
+  }), [isMapFullscreen]);
 
   return (
     <div className="h-screen w-screen bg-black overflow-hidden">
@@ -256,14 +224,12 @@ export default function Explore() {
             </div>
           </div>
           
-          {/* Map container - expands from original position to fullscreen */}
+          {/* Map container - expands smoothly to fullscreen */}
           <div style={mapContainerStyle}>
-            <div style={mapInnerStyle}>
-              <MapView 
-                isFullscreen={isMapFullscreen}
-                onToggleFullscreen={toggleMapFullscreen}
-              />
-            </div>
+            <MapView 
+              isFullscreen={isMapFullscreen}
+              onToggleFullscreen={toggleMapFullscreen}
+            />
           </div>
         </div>
       </div>
