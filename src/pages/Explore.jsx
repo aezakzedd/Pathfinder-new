@@ -84,6 +84,7 @@ export default function Explore() {
     width: isMapFullscreen ? '0%' : '50%',
     height: '100%',
     position: 'relative',
+    flexShrink: 0,
     overflow: 'hidden',
     opacity: isMapFullscreen ? 0 : 1,
     transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
@@ -168,18 +169,34 @@ export default function Explore() {
     willChange: 'transform'
   }), [isMinimized]);
 
+  // Smooth fullscreen animation using flexGrow and negative margins
   const mapContainerStyle = useMemo(() => ({
-    position: isMapFullscreen ? 'absolute' : 'relative',
-    top: isMapFullscreen ? 0 : 'auto',
-    left: isMapFullscreen ? 0 : 'auto',
-    width: isMapFullscreen ? '100%' : '50%',
+    position: 'relative',
+    width: isMapFullscreen ? 'auto' : '50%',
     height: '100%',
+    flexGrow: isMapFullscreen ? 1 : 0,
+    flexShrink: 0,
+    // Use negative margins to expand beyond parent padding when fullscreen
+    marginTop: isMapFullscreen ? '-24px' : '0',
+    marginRight: isMapFullscreen ? '-24px' : '0',
+    marginBottom: isMapFullscreen ? '-24px' : '0',
+    marginLeft: isMapFullscreen ? '-24px' : '0',
+    // Adjust border radius
     borderRadius: isMapFullscreen ? '24px' : '16px',
     overflow: 'hidden',
     transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
     zIndex: isMapFullscreen ? 30 : 1,
-    willChange: 'width, border-radius'
+    willChange: 'margin, width, border-radius'
   }), [isMapFullscreen]);
+
+  // Inner wrapper to maintain background and prevent content shift
+  const mapInnerStyle = useMemo(() => ({
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#1f2937',
+    borderRadius: 'inherit',
+    overflow: 'hidden'
+  }), []);
 
   return (
     <div className="h-screen w-screen bg-black overflow-hidden">
@@ -226,10 +243,12 @@ export default function Explore() {
           
           {/* Map container - expands smoothly to fullscreen */}
           <div style={mapContainerStyle}>
-            <MapView 
-              isFullscreen={isMapFullscreen}
-              onToggleFullscreen={toggleMapFullscreen}
-            />
+            <div style={mapInnerStyle}>
+              <MapView 
+                isFullscreen={isMapFullscreen}
+                onToggleFullscreen={toggleMapFullscreen}
+              />
+            </div>
           </div>
         </div>
       </div>
