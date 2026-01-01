@@ -182,13 +182,14 @@ export default function Explore() {
     boxSizing: 'border-box'
   }), []);
 
-  // Fixed smooth map container - back to working animation
+  // Map container - positioned absolutely within right container
+  // Expands to cover entire main container when fullscreen
   const mapContainerStyle = useMemo(() => ({
     position: 'absolute',
-    top: isMapFullscreen ? '0' : '0',
-    right: isMapFullscreen ? 'calc(-100% - 48px)' : '0',
-    bottom: isMapFullscreen ? '0' : '0',
-    left: isMapFullscreen ? 'calc(-100% - 48px)' : '0',
+    top: isMapFullscreen ? '-24px' : '0',
+    right: isMapFullscreen ? '-24px' : '0',
+    bottom: isMapFullscreen ? '-24px' : '0',
+    left: isMapFullscreen ? 'calc(-100% - 24px)' : '0',
     borderRadius: isMapFullscreen ? '24px' : '16px',
     overflow: 'hidden',
     transition: 'all 0.5s ease-in-out',
@@ -245,7 +246,7 @@ export default function Explore() {
               {/* Your content goes here */}
             </div>
             
-            {/* Map container - overlays on top of white container */}
+            {/* Map container - overlays on top and expands to fullscreen */}
             <div style={mapContainerStyle}>
               <MapView 
                 isFullscreen={isMapFullscreen}
