@@ -4,13 +4,15 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
+const DEFAULT_ZOOM = 9;
 
 const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
-  const savedState = useRef({ center: [124.2475, 13.8], zoom: 9 });
+  const savedState = useRef({ center: [124.2475, 13.8], zoom: DEFAULT_ZOOM });
   const resizeTimeout = useRef(null);
   const animationTimeout = useRef(null);
+  const previousZoom = useRef(DEFAULT_ZOOM);
 
   useEffect(() => {
     if (map.current) return; // Initialize map only once
@@ -25,7 +27,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       container: mapContainer.current,
       style: `https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`,
       center: [124.2475, 13.8], // Catanduanes coordinates
-      zoom: 9,
+      zoom: DEFAULT_ZOOM,
       attributionControl: false,
       maxBounds: bounds, // Restrict camera movement to these expanded bounds
       
@@ -99,9 +101,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     if (!map.current) return;
     
     // Save current state before resize
+    const currentZoom = map.current.getZoom();
+    const currentCenter = map.current.getCenter();
+    
     savedState.current = {
-      center: map.current.getCenter(),
-      zoom: map.current.getZoom()
+      center: currentCenter,
+      zoom: currentZoom
     };
 
     // Clear existing timeout
@@ -114,10 +119,19 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       if (map.current) {
         map.current.resize();
         
+        // Determine zoom to use after resize
+        let targetZoom = savedState.current.zoom;
+        
+        // If the previous zoom was at default (9), keep it at 9
+        // This prevents zoom drift when going fullscreen at default zoom
+        if (Math.abs(previousZoom.current - DEFAULT_ZOOM) < 0.01) {
+          targetZoom = DEFAULT_ZOOM;
+        }
+        
         // Restore the exact center and zoom after resize
         map.current.jumpTo({
           center: savedState.current.center,
-          zoom: savedState.current.zoom
+          zoom: targetZoom
         });
       }
     }, 100);
@@ -125,6 +139,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
   // Resize map AFTER animation completes when fullscreen state changes
   useEffect(() => {
+    // Save the current zoom before fullscreen toggle
+    if (map.current) {
+      previousZoom.current = map.current.getZoom();
+    }
+
     // Clear any existing animation timeout
     if (animationTimeout.current) {
       clearTimeout(animationTimeout.current);
