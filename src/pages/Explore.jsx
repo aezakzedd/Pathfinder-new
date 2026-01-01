@@ -169,21 +169,20 @@ export default function Explore() {
     willChange: 'transform'
   }), [isMinimized]);
 
-  // Fixed map container style - now expands smoothly without teleporting
+  // Fixed map container style - maintains proper spacing and smooth animation
   const mapContainerStyle = useMemo(() => ({
-    position: 'relative',
-    width: '100%',
+    width: isMapFullscreen ? '100%' : '50%',
     height: '100%',
-    flexGrow: 1,
+    position: 'relative',
     flexShrink: 0,
+    backgroundColor: '#1f2937',
     borderRadius: '16px',
+    padding: '0',
+    boxSizing: 'border-box',
     overflow: 'hidden',
-    // Use transform for smooth scaling when going fullscreen
-    transform: isMapFullscreen ? 'scale(1.04)' : 'scale(1)',
-    transformOrigin: 'center',
-    transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+    transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
     zIndex: isMapFullscreen ? 30 : 1,
-    willChange: 'transform'
+    willChange: 'width'
   }), [isMapFullscreen]);
 
   return (
