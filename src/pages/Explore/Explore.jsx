@@ -20,6 +20,7 @@ export default function Explore() {
         <FloatingCard 
           leftContent={null}
           rightContent={<MapView />}
+          overlayContent={null}
         />
       </div>
     </div>
