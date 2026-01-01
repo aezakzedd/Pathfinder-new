@@ -40,7 +40,7 @@ export default function ChatBot() {
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'center',
+      justifyContent: 'flex-end',
       alignItems: 'center',
       backgroundColor: 'black',
       padding: '0',
@@ -50,57 +50,56 @@ export default function ChatBot() {
     }}>
       {/* Initial state with suggestions */}
       {showSuggestions && messages.length === 0 && (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 'clamp(16px, 3vh, 24px)',
-          marginBottom: 'clamp(24px, 5vh, 40px)',
-          width: '90%',
-          maxWidth: '600px',
-          padding: '0 16px'
-        }}>
-          {/* Icon */}
+        <>
+          {/* Header - positioned higher */}
           <div style={{
-            width: 'clamp(40px, 6vw, 48px)',
-            height: 'clamp(40px, 6vw, 48px)',
-            borderRadius: '50%',
-            backgroundColor: 'white',
+            position: 'absolute',
+            top: '20%',
+            left: '50%',
+            transform: 'translateX(-50%)',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0
+            gap: 'clamp(16px, 3vh, 24px)',
+            width: '90%',
+            maxWidth: '600px'
           }}>
-            <Sparkles color="black" size={24} strokeWidth={2} />
-          </div>
+            {/* Icon */}
+            <div style={{
+              width: 'clamp(40px, 6vw, 48px)',
+              height: 'clamp(40px, 6vw, 48px)',
+              borderRadius: '50%',
+              backgroundColor: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <Sparkles color="black" size={24} strokeWidth={2} />
+            </div>
 
-          {/* Heading */}
-          <div style={{ textAlign: 'center', width: '100%' }}>
+            {/* Heading only */}
             <h2 style={{
               color: 'white',
               fontSize: 'clamp(18px, 3vw, 24px)',
               fontWeight: '600',
-              margin: '0 0 8px 0'
+              margin: '0',
+              textAlign: 'center'
             }}>
               How can we help you?
             </h2>
-            <p style={{
-              color: 'rgba(255, 255, 255, 0.6)',
-              fontSize: 'clamp(12px, 2vw, 14px)',
-              margin: '0',
-              lineHeight: '1.5'
-            }}>
-              Planning a trip? I'll help you explore, plan, and discover hidden gems in Catanduanes. Where to?
-            </p>
           </div>
 
-          {/* Suggestion chips - right aligned */}
+          {/* Suggestion chips - directly above input */}
           <div style={{
             display: 'flex',
             flexWrap: 'wrap',
             gap: '8px',
             justifyContent: 'flex-end',
-            width: '100%'
+            width: '90%',
+            maxWidth: '600px',
+            marginBottom: '16px',
+            padding: '0 8px'
           }}>
             {suggestions.map((suggestion, index) => (
               <button
@@ -131,7 +130,7 @@ export default function ChatBot() {
               </button>
             ))}
           </div>
-        </div>
+        </>
       )}
 
       {/* Chat messages display */}
@@ -176,7 +175,6 @@ export default function ChatBot() {
           display: 'flex',
           alignItems: 'center',
           position: 'relative',
-          marginTop: 'auto',
           marginBottom: '16px',
           padding: '0 8px'
         }}
