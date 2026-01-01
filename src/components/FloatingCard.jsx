@@ -38,22 +38,22 @@ export default function FloatingCard({ leftContent, rightContent, overlayContent
           {leftContent}
         </div>
         
-        {/* White overlay container */}
-        <div 
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'white',
-            borderRadius: '16px',
-            padding: '16px',
-            boxSizing: 'border-box'
-          }}
-        >
-          {overlayContent}
-        </div>
+        {/* Overlay container - now without fixed background */}
+        {overlayContent && (
+          <div 
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              borderRadius: '16px',
+              pointerEvents: 'auto'
+            }}
+          >
+            {overlayContent}
+          </div>
+        )}
       </div>
       
       {/* Right container - for map */}
