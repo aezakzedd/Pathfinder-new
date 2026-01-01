@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Maximize, Minimize } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -8,8 +8,7 @@ const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const lockedState = useRef(null);
+  const savedState = useRef({ center: [124.2475, 13.8], zoom: 9 });
 
   useEffect(() => {
     if (map.current) return; // Initialize map only once
@@ -88,57 +87,26 @@ export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
     };
   }, []);
 
-  // Handle fullscreen transitions with locked state
+  // Resize map and preserve view when fullscreen state changes
   useEffect(() => {
-    if (!map.current) return;
+    if (map.current) {
+      // Save current state before resize
+      savedState.current = {
+        center: map.current.getCenter(),
+        zoom: map.current.getZoom()
+      };
 
-    // Lock the current state
-    lockedState.current = {
-      center: map.current.getCenter(),
-      zoom: map.current.getZoom(),
-      bearing: map.current.getBearing(),
-      pitch: map.current.getPitch()
-    };
-
-    setIsTransitioning(true);
-
-    // Continuously enforce locked state during transition
-    const enforceInterval = setInterval(() => {
-      if (map.current && lockedState.current) {
-        map.current.jumpTo({
-          center: lockedState.current.center,
-          zoom: lockedState.current.zoom,
-          bearing: lockedState.current.bearing,
-          pitch: lockedState.current.pitch
-        });
-      }
-    }, 16); // ~60fps
-
-    // After transition completes
-    const transitionTimeout = setTimeout(() => {
-      if (map.current) {
+      // Wait for CSS transition to complete, then resize and restore state
+      setTimeout(() => {
         map.current.resize();
         
-        // Final enforcement
-        if (lockedState.current) {
-          map.current.jumpTo({
-            center: lockedState.current.center,
-            zoom: lockedState.current.zoom,
-            bearing: lockedState.current.bearing,
-            pitch: lockedState.current.pitch
-          });
-        }
-      }
-      
-      clearInterval(enforceInterval);
-      setIsTransitioning(false);
-      lockedState.current = null;
-    }, 550);
-
-    return () => {
-      clearInterval(enforceInterval);
-      clearTimeout(transitionTimeout);
-    };
+        // Restore the exact center and zoom
+        map.current.jumpTo({
+          center: savedState.current.center,
+          zoom: savedState.current.zoom
+        });
+      }, 100);
+    }
   }, [isFullscreen]);
 
   return (
