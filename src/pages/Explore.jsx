@@ -169,7 +169,7 @@ export default function Explore() {
     willChange: 'transform'
   }), [isMinimized]);
 
-  // Smooth fullscreen animation - map width reduced to 45%
+  // Smooth fullscreen animation - map width set to 47.5%
   const mapContainerStyle = useMemo(() => {
     if (isMapFullscreen) {
       // Fullscreen: use margins to expand beyond padding
@@ -190,10 +190,10 @@ export default function Explore() {
         willChange: 'margin, width, border-radius'
       };
     } else {
-      // Normal: reduced width to 45%
+      // Normal: width set to 47.5%
       return {
         position: 'relative',
-        width: '45%',
+        width: '47.5%',
         height: '100%',
         flexShrink: 0,
         borderRadius: '16px',
