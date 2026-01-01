@@ -177,40 +177,42 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         position: 'relative'
       }} 
     >
-      {/* Fullscreen toggle button - top left */}
-      <button
-        onClick={handleToggleFullscreen}
-        style={{
-          position: 'absolute',
-          top: '12px',
-          left: '12px',
-          width: '36px',
-          height: '36px',
-          borderRadius: '4px',
-          backgroundColor: 'white',
-          border: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          zIndex: 10,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-          transition: 'all 0.2s ease',
-          willChange: 'background-color'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#f3f4f6';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'white';
-        }}
-      >
-        {isFullscreen ? (
-          <Minimize color="black" size={18} strokeWidth={2} />
-        ) : (
-          <Maximize color="black" size={18} strokeWidth={2} />
-        )}
-      </button>
+      {/* Fullscreen toggle button - top left - only show in map mode */}
+      {activeView === 'map' && (
+        <button
+          onClick={handleToggleFullscreen}
+          style={{
+            position: 'absolute',
+            top: '12px',
+            left: '12px',
+            width: '36px',
+            height: '36px',
+            borderRadius: '4px',
+            backgroundColor: 'white',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            zIndex: 10,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            transition: 'all 0.2s ease',
+            willChange: 'background-color'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#f3f4f6';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'white';
+          }}
+        >
+          {isFullscreen ? (
+            <Minimize color="black" size={18} strokeWidth={2} />
+          ) : (
+            <Maximize color="black" size={18} strokeWidth={2} />
+          )}
+        </button>
+      )}
 
       {/* Map/Itinerary sliding toggle - top right */}
       <div
