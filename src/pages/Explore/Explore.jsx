@@ -1,4 +1,4 @@
-import { Map, Wifi } from 'lucide-react';
+import { Map, Wifi, ArrowUpLeft } from 'lucide-react';
 import FloatingCard from '../../components/FloatingCard';
 import MapView from '../../components/MapView';
 
@@ -20,7 +20,30 @@ export default function Explore() {
         <FloatingCard 
           leftContent={null}
           rightContent={<MapView />}
-          overlayContent={null}
+          overlayContent={
+            <div style={{ 
+              width: '100%', 
+              height: '100%', 
+              position: 'relative'
+            }}>
+              {/* Green circle with chevron - bottom right */}
+              <div style={{
+                position: 'absolute',
+                bottom: '16px',
+                right: '16px',
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                backgroundColor: '#84cc16',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}>
+                <ArrowUpLeft color="black" size={32} strokeWidth={2.5} />
+              </div>
+            </div>
+          }
         />
       </div>
     </div>
