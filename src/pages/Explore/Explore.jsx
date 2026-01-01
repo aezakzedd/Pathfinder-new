@@ -28,12 +28,8 @@ export default function Explore() {
           leftContent={null}
           rightContent={<MapView />}
           overlayContent={
-            <div style={{ 
-              width: '100%', 
-              height: '100%', 
-              position: 'relative'
-            }}>
-              {/* White overlay with shrink animation */}
+            <>
+              {/* White card that animates */}
               <div 
                 style={{
                   position: 'absolute',
@@ -47,14 +43,14 @@ export default function Explore() {
                   transformOrigin: 'bottom right',
                   transform: isMinimized ? 'scale(0)' : 'scale(1)',
                   opacity: isMinimized ? 0 : 1,
-                  overflow: 'hidden',
-                  pointerEvents: isMinimized ? 'none' : 'auto'
+                  padding: '16px',
+                  boxSizing: 'border-box'
                 }}
               >
-                {/* Content can go here */}
+                {/* Your white card content goes here */}
               </div>
 
-              {/* Green circle with chevron - always visible */}
+              {/* Green chevron button - always visible */}
               <div 
                 onClick={toggleMinimize}
                 style={{
@@ -69,9 +65,11 @@ export default function Explore() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                  zIndex: 10,
-                  boxShadow: isMinimized ? '0 4px 12px rgba(132, 204, 22, 0.4)' : '0 2px 4px rgba(0,0,0,0.1)'
+                  transition: 'transform 0.2s ease, box-shadow 0.3s ease',
+                  zIndex: 20,
+                  boxShadow: isMinimized 
+                    ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
+                    : '0 2px 8px rgba(0, 0, 0, 0.15)'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
@@ -86,7 +84,7 @@ export default function Explore() {
                   }}
                 />
               </div>
-            </div>
+            </>
           }
         />
       </div>
