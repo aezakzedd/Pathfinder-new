@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, memo, useState } from 'react';
-import { Maximize, Minimize } from 'lucide-react';
+import { Maximize, Minimize, Map as MapIcon, List } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -234,19 +234,19 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           onClick={() => setActiveView('map')}
           style={{
             position: 'relative',
-            padding: '8px 16px',
+            padding: '8px 12px',
             border: 'none',
             borderRadius: '16px',
             backgroundColor: activeView === 'map' ? '#1f2937' : 'transparent',
             color: activeView === 'map' ? 'white' : '#6b7280',
-            fontSize: '14px',
-            fontWeight: '600',
             cursor: 'pointer',
             transition: 'all 0.3s ease',
-            whiteSpace: 'nowrap'
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
-          Map
+          <MapIcon size={18} strokeWidth={2} />
         </button>
 
         {/* Itinerary button */}
@@ -254,19 +254,19 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           onClick={() => setActiveView('itinerary')}
           style={{
             position: 'relative',
-            padding: '8px 16px',
+            padding: '8px 12px',
             border: 'none',
             borderRadius: '16px',
             backgroundColor: activeView === 'itinerary' ? '#1f2937' : 'transparent',
             color: activeView === 'itinerary' ? 'white' : '#6b7280',
-            fontSize: '14px',
-            fontWeight: '600',
             cursor: 'pointer',
             transition: 'all 0.3s ease',
-            whiteSpace: 'nowrap'
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
-          Itinerary
+          <List size={18} strokeWidth={2} />
         </button>
       </div>
 
