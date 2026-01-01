@@ -27,7 +27,8 @@ export default function ChatBot() {
       justifyContent: 'center',
       alignItems: 'center',
       padding: '24px',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      backgroundColor: 'black'
     }}>
       {/* Chat messages container */}
       <div style={{
@@ -36,6 +37,7 @@ export default function ChatBot() {
         height: '60%',
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: '12px',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
         padding: '16px',
         marginBottom: '16px',
         overflowY: 'auto',
@@ -45,7 +47,7 @@ export default function ChatBot() {
       }}>
         {messages.length === 0 ? (
           <div style={{
-            color: 'rgba(255, 255, 255, 0.5)',
+            color: 'rgba(255, 255, 255, 0.4)',
             textAlign: 'center',
             marginTop: 'auto',
             marginBottom: 'auto',
@@ -59,8 +61,8 @@ export default function ChatBot() {
               key={index}
               style={{
                 alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
-                backgroundColor: msg.sender === 'user' ? '#84cc16' : 'rgba(255, 255, 255, 0.1)',
-                color: msg.sender === 'user' ? 'black' : 'white',
+                backgroundColor: msg.sender === 'user' ? '#84cc16' : 'white',
+                color: msg.sender === 'user' ? 'black' : 'black',
                 padding: '10px 16px',
                 borderRadius: '12px',
                 maxWidth: '70%',
@@ -92,7 +94,7 @@ export default function ChatBot() {
           style={{
             flex: 1,
             padding: '12px 16px',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            backgroundColor: 'black',
             border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '24px',
             color: 'white',
@@ -101,11 +103,9 @@ export default function ChatBot() {
             transition: 'all 0.2s ease'
           }}
           onFocus={(e) => {
-            e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
             e.target.style.borderColor = '#84cc16';
           }}
           onBlur={(e) => {
-            e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
             e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
           }}
         />
