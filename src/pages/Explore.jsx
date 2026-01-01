@@ -84,6 +84,7 @@ export default function Explore() {
     width: isMapFullscreen ? '0%' : '50%',
     height: '100%',
     position: 'relative',
+    flexShrink: 0,
     overflow: 'hidden',
     opacity: isMapFullscreen ? 0 : 1,
     transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
@@ -168,17 +169,21 @@ export default function Explore() {
     willChange: 'transform'
   }), [isMinimized]);
 
+  // Fixed map container style - now expands smoothly without teleporting
   const mapContainerStyle = useMemo(() => ({
-    position: isMapFullscreen ? 'absolute' : 'relative',
-    top: isMapFullscreen ? 0 : 'auto',
-    left: isMapFullscreen ? 0 : 'auto',
-    width: isMapFullscreen ? '100%' : '50%',
+    position: 'relative',
+    width: '100%',
     height: '100%',
-    borderRadius: isMapFullscreen ? '24px' : '16px',
+    flexGrow: 1,
+    flexShrink: 0,
+    borderRadius: '16px',
     overflow: 'hidden',
-    transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+    // Use transform for smooth scaling when going fullscreen
+    transform: isMapFullscreen ? 'scale(1.04)' : 'scale(1)',
+    transformOrigin: 'center',
+    transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
     zIndex: isMapFullscreen ? 30 : 1,
-    willChange: 'width, border-radius'
+    willChange: 'transform'
   }), [isMapFullscreen]);
 
   return (
