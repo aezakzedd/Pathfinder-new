@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, memo } from 'react';
+import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import { Maximize, Minimize } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -13,6 +13,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const resizeTimeout = useRef(null);
   const animationTimeout = useRef(null);
   const previousZoom = useRef(DEFAULT_ZOOM);
+  const [activeView, setActiveView] = useState('map'); // 'map' or 'itinerary'
 
   useEffect(() => {
     if (map.current) return; // Initialize map only once
@@ -176,7 +177,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         position: 'relative'
       }} 
     >
-      {/* Fullscreen toggle button */}
+      {/* Fullscreen toggle button - top left */}
       <button
         onClick={handleToggleFullscreen}
         style={{
@@ -211,6 +212,62 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         )}
       </button>
 
+      {/* Map/Itinerary sliding toggle - top right */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '12px',
+          right: '12px',
+          zIndex: 10,
+          display: 'flex',
+          backgroundColor: 'white',
+          borderRadius: '20px',
+          padding: '4px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          gap: '4px'
+        }}
+      >
+        {/* Map button */}
+        <button
+          onClick={() => setActiveView('map')}
+          style={{
+            position: 'relative',
+            padding: '8px 16px',
+            border: 'none',
+            borderRadius: '16px',
+            backgroundColor: activeView === 'map' ? '#1f2937' : 'transparent',
+            color: activeView === 'map' ? 'white' : '#6b7280',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          Map
+        </button>
+
+        {/* Itinerary button */}
+        <button
+          onClick={() => setActiveView('itinerary')}
+          style={{
+            position: 'relative',
+            padding: '8px 16px',
+            border: 'none',
+            borderRadius: '16px',
+            backgroundColor: activeView === 'itinerary' ? '#1f2937' : 'transparent',
+            color: activeView === 'itinerary' ? 'white' : '#6b7280',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          Itinerary
+        </button>
+      </div>
+
       {/* Map container */}
       <div 
         ref={mapContainer} 
@@ -218,9 +275,30 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           width: '100%', 
           height: '100%',
           borderRadius: '16px',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          display: activeView === 'map' ? 'block' : 'none'
         }} 
       />
+
+      {/* Itinerary view placeholder */}
+      {activeView === 'itinerary' && (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: '16px',
+            backgroundColor: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#1f2937',
+            fontSize: '18px',
+            fontWeight: '600'
+          }}
+        >
+          Itinerary View
+        </div>
+      )}
     </div>
   );
 });
