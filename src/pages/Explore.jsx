@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Map, ChevronDown } from 'lucide-react';
 import FloatingCard from '../components/FloatingCard';
 import MapView from '../components/MapView';
+import ChatBot from '../components/ChatBot';
 import TripPlanner from '../components/TripPlanner';
 import NetworkStatus from '../components/NetworkStatus';
 
@@ -133,7 +134,8 @@ export default function Explore() {
     boxSizing: 'border-box',
     opacity: isMinimized ? 0 : 1,
     transition: 'opacity 0.4s ease',
-    willChange: 'opacity'
+    willChange: 'opacity',
+    overflow: 'hidden'
   }), [isMinimized]);
 
   const buttonStyle = useMemo(() => ({
@@ -214,19 +216,19 @@ export default function Explore() {
       {/* Centered container for FloatingCard */}
       <div className="w-full h-full flex items-center justify-center">
         <div style={containerStyle}>
-          {/* Left container with TripPlanner */}
+          {/* Left container with ChatBot in black background */}
           <div style={leftContainerStyle}>
             <div style={leftContentStyle}>
-              <TripPlanner />
+              <ChatBot />
             </div>
             
-            {/* Overlay for white card */}
+            {/* Overlay for white card with TripPlanner */}
             <div ref={containerRef} style={overlayContainerStyle}>
               {/* White card that shrinks following button path */}
               <div style={whiteCardTransformStyle}>
-                {/* White card background */}
+                {/* White card background with TripPlanner */}
                 <div style={whiteCardBackgroundStyle}>
-                  {/* Your white card content goes here */}
+                  <TripPlanner />
                 </div>
               </div>
 
