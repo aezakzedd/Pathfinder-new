@@ -76,7 +76,8 @@ export default function Explore() {
             padding: '24px',
             boxSizing: 'border-box',
             position: 'relative',
-            transition: 'gap 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+            transition: 'gap 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+            overflow: 'hidden'
           }}
         >
           {/* Left container with ChatBot - hide when map is fullscreen */}
@@ -190,15 +191,16 @@ export default function Explore() {
             </div>
           </div>
           
-          {/* Right container - Map fills completely without gray wrapper */}
+          {/* Right container - Map */}
           <div 
             style={{
-              width: isMapFullscreen ? '100%' : '50%',
+              width: isMapFullscreen ? '0%' : '50%',
               height: '100%',
               borderRadius: '16px',
               overflow: 'hidden',
-              transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-              zIndex: isMapFullscreen ? 30 : 'auto'
+              opacity: isMapFullscreen ? 0 : 1,
+              transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+              zIndex: 1
             }}
           >
             <MapView 
@@ -206,6 +208,27 @@ export default function Explore() {
               onToggleFullscreen={toggleMapFullscreen}
             />
           </div>
+
+          {/* Fullscreen map overlay - touches all edges */}
+          {isMapFullscreen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                borderRadius: '24px',
+                overflow: 'hidden',
+                zIndex: 30
+              }}
+            >
+              <MapView 
+                isFullscreen={isMapFullscreen}
+                onToggleFullscreen={toggleMapFullscreen}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
