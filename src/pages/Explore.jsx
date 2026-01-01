@@ -190,7 +190,9 @@ export default function Explore() {
     top: isMapFullscreen ? '-24px' : '0',
     right: isMapFullscreen ? '-24px' : '0',
     bottom: isMapFullscreen ? '-24px' : '0',
-    left: isMapFullscreen ? 'calc(-100% - 24px)' : '0',
+    // To cover full width: go left by (right container + gap + left container + left padding)
+    // Right container = 100%, left container = 100%, gap = 24px, padding = 24px
+    left: isMapFullscreen ? 'calc(-200% - 48px)' : '0',
     borderRadius: isMapFullscreen ? '24px' : '16px',
     overflow: 'hidden',
     transition: 'all 0.5s ease-in-out',
