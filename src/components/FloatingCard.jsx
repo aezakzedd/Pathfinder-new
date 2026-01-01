@@ -1,4 +1,4 @@
-export default function FloatingCard({ children, className = '', ...props }) {
+export default function FloatingCard({ leftContent, rightContent, className = '', ...props }) {
   return (
     <div 
       className={`floating-card ${className}`}
@@ -16,7 +16,7 @@ export default function FloatingCard({ children, className = '', ...props }) {
       }}
       {...props}
     >
-      {/* First children container - 50% width with gray background */}
+      {/* Left container */}
       <div 
         style={{
           width: '50%',
@@ -27,20 +27,23 @@ export default function FloatingCard({ children, className = '', ...props }) {
           boxSizing: 'border-box'
         }}
       >
-        {children}
+        {leftContent}
       </div>
       
-      {/* Second children container - 50% width with gray background */}
+      {/* Right container - for map */}
       <div 
         style={{
           width: '50%',
           height: '100%',
-          backgroundColor: '#374151',
+          backgroundColor: '#1f2937',
           borderRadius: '16px',
-          padding: '16px',
-          boxSizing: 'border-box'
+          padding: '0',
+          boxSizing: 'border-box',
+          overflow: 'hidden'
         }}
-      />
+      >
+        {rightContent}
+      </div>
     </div>
   )
 }
