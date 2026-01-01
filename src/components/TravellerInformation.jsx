@@ -86,7 +86,7 @@ export default function TravellerInformation() {
       }}>
         {/* Journey Dates Card */}
         <div style={{
-          backgroundColor: '#1f2937',
+          backgroundColor: '#000000', // Black background
           borderRadius: '12px',
           padding: '14px',
           display: 'flex',
@@ -103,7 +103,7 @@ export default function TravellerInformation() {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            backgroundColor: '#374151',
+            backgroundColor: '#1f2937',
             padding: '8px',
             borderRadius: '8px',
             marginTop: '8px'
@@ -134,7 +134,7 @@ export default function TravellerInformation() {
 
         {/* Budget Card */}
         <div style={{
-          backgroundColor: '#1f2937',
+          backgroundColor: '#000000', // Black background
           borderRadius: '12px',
           padding: '14px',
           display: 'flex',
@@ -181,7 +181,7 @@ export default function TravellerInformation() {
 
         {/* Weather Card */}
         <div style={{
-          backgroundColor: '#1f2937',
+          backgroundColor: '#000000', // Black background
           borderRadius: '12px',
           padding: '14px',
           display: 'flex',
@@ -257,7 +257,7 @@ export default function TravellerInformation() {
 
         {/* Activities Card */}
         <div style={{
-          backgroundColor: '#1f2937',
+          backgroundColor: '#000000', // Black background
           borderRadius: '12px',
           padding: '14px',
           display: 'flex',
