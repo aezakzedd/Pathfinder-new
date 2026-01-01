@@ -10,6 +10,7 @@ const DEFAULT_ZOOM = 9;
 const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
+  const mapLoaded = useRef(false);
   const markersRef = useRef([]);
   const popupRef = useRef(null);
   const savedState = useRef({ center: [124.2, 13.8], zoom: DEFAULT_ZOOM });
@@ -24,11 +25,19 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   // Load GeoJSON data and extract selected spots
   useEffect(() => {
     const loadTouristSpots = async () => {
+      console.log('Starting to load tourist spots...');
       const spots = [];
       
       for (const selection of selectedSpots) {
         try {
+          console.log(`Loading ${selection.geojsonFile}...`);
           const response = await fetch(`/data/${selection.geojsonFile}`);
+          
+          if (!response.ok) {
+            console.error(`Failed to fetch ${selection.geojsonFile}: ${response.status}`);
+            continue;
+          }
+          
           const geojson = await response.json();
           
           // Find the specific spot by name
@@ -44,17 +53,19 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
-              image: null // Will be added later when you have images
+              image: null
             });
+            console.log(`✓ Found: ${feature.properties.name}`);
           } else {
-            console.warn(`Spot "${selection.spotName}" not found in ${selection.geojsonFile}`);
+            console.error(`✗ Spot "${selection.spotName}" not found in ${selection.geojsonFile}`);
+            console.log('Available spots:', geojson.features.map(f => f.properties.name));
           }
         } catch (error) {
           console.error(`Error loading ${selection.geojsonFile}:`, error);
         }
       }
       
-      console.log(`Loaded ${spots.length} tourist spots out of ${selectedSpots.length}`);
+      console.log(`Loaded ${spots.length}/${selectedSpots.length} tourist spots`);
       setTouristSpots(spots);
     };
 
@@ -63,13 +74,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
   // Add to itinerary handler
   const addToItinerary = (spot) => {
-    // Check if already in itinerary
     const isAlreadyAdded = itinerary.some(item => item.name === spot.name);
     
     if (!isAlreadyAdded) {
       setItinerary(prev => [...prev, spot]);
       console.log('Added to itinerary:', spot.name);
-      // You can add a toast notification here later
     } else {
       console.log('Already in itinerary:', spot.name);
     }
@@ -116,7 +125,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   // Create info card HTML content
   const createInfoCardHTML = (spot) => {
     const categoryHTML = spot.categories
-      .slice(0, 2) // Show max 2 categories
+      .slice(0, 2)
       .map(cat => getCategoryPill(cat))
       .join('');
 
@@ -129,9 +138,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         overflow: hidden;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
       ">
-        <!-- Action buttons -->
         <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 10;">
-          <!-- Add to Itinerary button -->
           <button id="add-to-itinerary-btn" class="add-itinerary-btn" style="
             height: 28px;
             min-width: 28px;
@@ -162,7 +169,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             ">Add to Itinerary</span>
           </button>
 
-          <!-- Close button -->
           <button id="close-card-btn" style="
             width: 28px;
             height: 28px;
@@ -182,7 +188,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           </button>
         </div>
 
-        <!-- Image section -->
         <div style="
           width: 100%;
           height: 210px;
@@ -198,15 +203,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           }
         </div>
 
-        <!-- Details section -->
         <div style="padding: 12px 14px; background-color: white;">
-          <!-- Location -->
           <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 8px;">
             <i class="fa-solid fa-location-dot fa-bounce" style="font-size: 12px; color: #6b7280;"></i>
             <span style="color: #6b7280; font-size: 11px; font-weight: 500;">${spot.barangay}, ${spot.location}</span>
           </div>
 
-          <!-- Name -->
           <h3 style="
             margin: 0;
             font-size: 15px;
@@ -218,7 +220,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             white-space: nowrap;
           ">${spot.name}</h3>
 
-          <!-- Categories -->
           <div style="display: flex; flex-wrap: wrap; gap: 0;">
             ${categoryHTML}
           </div>
@@ -239,9 +240,18 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   };
 
-  // Add tourist spot markers
+  // Add tourist spot markers - memoized to prevent recreation
   const addTouristSpotMarkers = useCallback(() => {
-    if (!map.current || touristSpots.length === 0) return;
+    if (!map.current || !mapLoaded.current || touristSpots.length === 0) {
+      console.log('Cannot add markers yet:', {
+        hasMap: !!map.current,
+        mapLoaded: mapLoaded.current,
+        spotsCount: touristSpots.length
+      });
+      return;
+    }
+
+    console.log(`Adding ${touristSpots.length} markers to map...`);
 
     // Clear existing markers
     markersRef.current.forEach(marker => marker.remove());
@@ -251,8 +261,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     const scale = getMarkerScale(currentZoom);
 
     // Add markers for each tourist spot
-    touristSpots.forEach(spot => {
-      // Create custom marker element with Font Awesome icon
+    touristSpots.forEach((spot, index) => {
       const markerEl = document.createElement('div');
       markerEl.className = 'custom-marker';
       markerEl.innerHTML = `
@@ -267,7 +276,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       
       const iconElement = markerEl.querySelector('i');
       
-      // Add hover effect with bounce animation
       markerEl.addEventListener('mouseenter', () => {
         iconElement.classList.add('fa-bounce');
         iconElement.style.transform = 'scale(1.15)';
@@ -277,7 +285,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         iconElement.style.transform = 'scale(1)';
       });
 
-      // Create marker with proper anchor at the bottom point of the pin
       const marker = new maplibregl.Marker({
         element: markerEl,
         anchor: 'bottom'
@@ -285,22 +292,16 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         .setLngLat(spot.coordinates)
         .addTo(map.current);
 
-      // Add click event to show info card with bounce animation
       markerEl.addEventListener('click', () => {
-        // Trigger bounce animation
         iconElement.classList.add('fa-bounce');
-        setTimeout(() => {
-          iconElement.classList.remove('fa-bounce');
-        }, 1000);
+        setTimeout(() => iconElement.classList.remove('fa-bounce'), 1000);
 
         setSelectedSpot(spot);
         
-        // Remove existing popup if any
         if (popupRef.current) {
           popupRef.current.remove();
         }
 
-        // Create geo-anchored popup
         const popup = new maplibregl.Popup({
           offset: [0, -342],
           closeButton: false,
@@ -314,9 +315,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         popupRef.current = popup;
 
-        // Add event listeners after popup is added to DOM
         setTimeout(() => {
-          // Close button
           const closeBtn = document.getElementById('close-card-btn');
           if (closeBtn) {
             closeBtn.addEventListener('click', () => {
@@ -335,16 +334,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             });
           }
 
-          // Add to itinerary button
           const addBtn = document.getElementById('add-to-itinerary-btn');
           if (addBtn) {
-            addBtn.addEventListener('click', () => {
-              addToItinerary(spot);
-            });
+            addBtn.addEventListener('click', () => addToItinerary(spot));
           }
         }, 0);
         
-        // Use padding to keep info card visible while centering on marker coordinates
         const targetZoom = Math.max(map.current.getZoom(), 12);
         
         map.current.flyTo({
@@ -356,13 +351,16 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       });
 
       markersRef.current.push(marker);
+      console.log(`✓ Added marker ${index + 1}: ${spot.name}`);
     });
+
+    console.log(`Successfully added ${markersRef.current.length} markers`);
   }, [touristSpots]);
 
+  // Initialize map
   useEffect(() => {
-    if (map.current) return; // Initialize map only once
+    if (map.current) return;
 
-    // Load Font Awesome CSS
     const fontAwesomeLink = document.createElement('link');
     fontAwesomeLink.rel = 'stylesheet';
     fontAwesomeLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css';
@@ -370,17 +368,16 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     fontAwesomeLink.crossOrigin = 'anonymous';
     document.head.appendChild(fontAwesomeLink);
 
-    // Define bounds
     const bounds = [
       [123.5, 12.8],
       [125.0, 14.8]
     ];
 
-    // Fetch and modify the style
+    console.log('Initializing map...');
+
     fetch(`https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`)
       .then(response => response.json())
       .then(style => {
-        // Modify layers to show place labels at lower zoom levels
         style.layers = style.layers.map(layer => {
           if (layer.id && (
             layer.id.includes('place') || 
@@ -413,14 +410,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           maxPitch: 60,
         });
 
-        // Add zoom event listener
         map.current.on('zoom', () => {
           const currentZoom = map.current.getZoom();
           updateMarkerSizes(currentZoom);
         });
 
-        // Add mask overlay when map loads
         map.current.on('load', () => {
+          console.log('Map loaded successfully');
+          mapLoaded.current = true;
+          
           const maskGeoJSON = {
             type: 'Feature',
             geometry: {
@@ -459,7 +457,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             }
           });
 
-          // Add tourist spot markers after map loads
+          // Add markers now that map is loaded
           addTouristSpotMarkers();
         });
       })
@@ -479,13 +477,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       if (map.current) {
         map.current.remove();
         map.current = null;
+        mapLoaded.current = false;
       }
     };
-  }, [addTouristSpotMarkers, updateMarkerSizes]);
+  }, [updateMarkerSizes]);
 
-  // Re-add markers when tourist spots are loaded
+  // Add markers when tourist spots are loaded and map is ready
   useEffect(() => {
-    if (map.current && touristSpots.length > 0) {
+    if (mapLoaded.current && touristSpots.length > 0) {
+      console.log('Tourist spots loaded, adding markers...');
       addTouristSpotMarkers();
     }
   }, [touristSpots, addTouristSpotMarkers]);
@@ -524,7 +524,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }, 100);
   }, []);
 
-  // Resize map after animation
   useEffect(() => {
     if (map.current) {
       previousZoom.current = map.current.getZoom();
@@ -545,7 +544,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     };
   }, [isFullscreen, handleResize]);
 
-  // Memoized button handler
   const handleToggleFullscreen = useCallback(() => {
     if (onToggleFullscreen) {
       onToggleFullscreen();
@@ -560,7 +558,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         position: 'relative'
       }} 
     >
-      {/* Fullscreen toggle button */}
       {activeView === 'map' && (
         <button
           onClick={handleToggleFullscreen}
@@ -597,7 +594,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         </button>
       )}
 
-      {/* Map/Itinerary toggle */}
       <div
         style={{
           position: 'absolute',
@@ -651,7 +647,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         </button>
       </div>
 
-      {/* Map container */}
       <div 
         ref={mapContainer} 
         style={{ 
@@ -663,7 +658,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }} 
       />
 
-      {/* Itinerary view placeholder */}
       {activeView === 'itinerary' && (
         <div
           style={{
@@ -696,7 +690,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         </div>
       )}
 
-      {/* Custom CSS for popup */}
       <style>
         {`
           .maplibregl-popup-content {
