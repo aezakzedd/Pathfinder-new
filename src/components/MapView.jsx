@@ -2,6 +2,8 @@ import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import { Maximize, Minimize, Map as MapIcon, List } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { touristSpots } from '../data/touristSpots';
+import TouristSpotCard from './TouristSpotCard';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
@@ -9,11 +11,65 @@ const DEFAULT_ZOOM = 9;
 const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
-  const savedState = useRef({ center: [124.2, 13.8], zoom: DEFAULT_ZOOM }); // Adjusted center
+  const markersRef = useRef([]);
+  const savedState = useRef({ center: [124.2, 13.8], zoom: DEFAULT_ZOOM });
   const resizeTimeout = useRef(null);
   const animationTimeout = useRef(null);
   const previousZoom = useRef(DEFAULT_ZOOM);
-  const [activeView, setActiveView] = useState('map'); // 'map' or 'itinerary'
+  const [activeView, setActiveView] = useState('map');
+  const [selectedSpot, setSelectedSpot] = useState(null);
+
+  // Add tourist spot markers
+  const addTouristSpotMarkers = useCallback(() => {
+    if (!map.current) return;
+
+    // Clear existing markers
+    markersRef.current.forEach(marker => marker.remove());
+    markersRef.current = [];
+
+    // Add markers for each tourist spot
+    touristSpots.forEach(spot => {
+      // Create custom marker element
+      const markerEl = document.createElement('div');
+      markerEl.style.width = '32px';
+      markerEl.style.height = '32px';
+      markerEl.style.borderRadius = '50%';
+      markerEl.style.backgroundColor = '#84cc16'; // Lime green
+      markerEl.style.border = '3px solid white';
+      markerEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+      markerEl.style.cursor = 'pointer';
+      markerEl.style.transition = 'transform 0.2s ease';
+      
+      // Add hover effect
+      markerEl.addEventListener('mouseenter', () => {
+        markerEl.style.transform = 'scale(1.15)';
+      });
+      markerEl.addEventListener('mouseleave', () => {
+        markerEl.style.transform = 'scale(1)';
+      });
+
+      // Create marker
+      const marker = new maplibregl.Marker({
+        element: markerEl,
+        anchor: 'bottom'
+      })
+        .setLngLat(spot.coordinates)
+        .addTo(map.current);
+
+      // Add click event to show info card
+      markerEl.addEventListener('click', () => {
+        setSelectedSpot(spot);
+        // Smooth pan to marker location
+        map.current.flyTo({
+          center: spot.coordinates,
+          zoom: Math.max(map.current.getZoom(), 12),
+          duration: 800
+        });
+      });
+
+      markersRef.current.push(marker);
+    });
+  }, []);
 
   useEffect(() => {
     if (map.current) return; // Initialize map only once
@@ -109,6 +165,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               'fill-opacity': 1
             }
           });
+
+          // Add tourist spot markers after map loads
+          addTouristSpotMarkers();
         });
       })
       .catch(error => {
@@ -130,15 +189,23 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           maxZoom: 18,
           maxPitch: 60,
         });
+
+        map.current.on('load', () => {
+          addTouristSpotMarkers();
+        });
       });
 
     return () => {
+      // Clean up markers
+      markersRef.current.forEach(marker => marker.remove());
+      markersRef.current = [];
+      
       if (map.current) {
         map.current.remove();
         map.current = null;
       }
     };
-  }, []);
+  }, [addTouristSpotMarkers]);
 
   // Debounced resize handler for better performance
   const handleResize = useCallback(() => {
@@ -212,6 +279,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   }, [onToggleFullscreen]);
 
+  // Handle closing the tourist spot card
+  const handleCloseCard = useCallback(() => {
+    setSelectedSpot(null);
+  }, []);
+
   return (
     <div 
       style={{ 
@@ -226,14 +298,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           onClick={handleToggleFullscreen}
           style={{
             position: 'absolute',
-            // Normal: standard 12px from edges
-            // Fullscreen: adjust for map container's new position and width
             top: isFullscreen ? '12px' : '12px',
-            // In fullscreen, map container shifts left by calc(-100% - 24px)
-            // So button at 12px from map container's left = actual left edge + 12px
-            // We want button at 12px from actual left, which means:
-            // 12px from map container's left + map's left offset
-            // = 12px + 0 (since map is already at the parent's left edge)
             left: '12px',
             width: '36px',
             height: '36px',
@@ -331,6 +396,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           display: activeView === 'map' ? 'block' : 'none'
         }} 
       />
+
+      {/* Tourist Spot Info Card */}
+      {activeView === 'map' && selectedSpot && (
+        <TouristSpotCard spot={selectedSpot} onClose={handleCloseCard} />
+      )}
 
       {/* Itinerary view placeholder - properly centered in both modes */}
       {activeView === 'itinerary' && (
