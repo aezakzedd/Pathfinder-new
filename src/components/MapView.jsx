@@ -22,6 +22,54 @@ export default function MapView() {
     // Add navigation controls
     map.current.addControl(new maplibregl.NavigationControl(), 'top-right');
 
+    // Add mask overlay when map loads
+    map.current.on('load', () => {
+      // Create mask with rectangular cutout for Catanduanes
+      // Outer ring covers entire world, inner ring is the cutout for Catanduanes
+      const maskGeoJSON = {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [
+            // Outer ring (covers entire world)
+            [
+              [-180, -90],
+              [180, -90],
+              [180, 90],
+              [-180, 90],
+              [-180, -90]
+            ],
+            // Inner ring (cutout for Catanduanes including Palumbanes Island)
+            // Counter-clockwise for hole
+            [
+              [123.95, 13.35], // Southwest corner
+              [123.95, 14.15], // Northwest corner
+              [124.45, 14.15], // Northeast corner
+              [124.45, 13.35], // Southeast corner
+              [123.95, 13.35]  // Close the ring
+            ]
+          ]
+        }
+      };
+
+      // Add source
+      map.current.addSource('mask', {
+        type: 'geojson',
+        data: maskGeoJSON
+      });
+
+      // Add layer with semi-transparent black fill
+      map.current.addLayer({
+        id: 'mask-layer',
+        type: 'fill',
+        source: 'mask',
+        paint: {
+          'fill-color': '#000000',
+          'fill-opacity': 0.6
+        }
+      });
+    });
+
     return () => {
       if (map.current) {
         map.current.remove();
