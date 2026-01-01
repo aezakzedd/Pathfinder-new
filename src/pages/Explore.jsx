@@ -191,16 +191,18 @@ export default function Explore() {
             </div>
           </div>
           
-          {/* Right container - Map */}
+          {/* Map container - expands smoothly to fullscreen */}
           <div 
             style={{
-              width: isMapFullscreen ? '0%' : '50%',
+              position: isMapFullscreen ? 'absolute' : 'relative',
+              top: isMapFullscreen ? 0 : 'auto',
+              left: isMapFullscreen ? 0 : 'auto',
+              width: isMapFullscreen ? '100%' : '50%',
               height: '100%',
-              borderRadius: '16px',
+              borderRadius: isMapFullscreen ? '24px' : '16px',
               overflow: 'hidden',
-              opacity: isMapFullscreen ? 0 : 1,
-              transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
-              zIndex: 1
+              transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+              zIndex: isMapFullscreen ? 30 : 1
             }}
           >
             <MapView 
@@ -208,27 +210,6 @@ export default function Explore() {
               onToggleFullscreen={toggleMapFullscreen}
             />
           </div>
-
-          {/* Fullscreen map overlay - touches all edges */}
-          {isMapFullscreen && (
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                borderRadius: '24px',
-                overflow: 'hidden',
-                zIndex: 30
-              }}
-            >
-              <MapView 
-                isFullscreen={isMapFullscreen}
-                onToggleFullscreen={toggleMapFullscreen}
-              />
-            </div>
-          )}
         </div>
       </div>
     </div>
