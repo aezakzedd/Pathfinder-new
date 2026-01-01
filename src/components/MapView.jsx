@@ -10,6 +10,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const map = useRef(null);
   const savedState = useRef({ center: [124.2475, 13.8], zoom: 9 });
   const resizeTimeout = useRef(null);
+  const animationTimeout = useRef(null);
 
   useEffect(() => {
     if (map.current) return; // Initialize map only once
@@ -122,9 +123,23 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }, 100);
   }, []);
 
-  // Resize map and preserve view when fullscreen state changes
+  // Resize map AFTER animation completes when fullscreen state changes
   useEffect(() => {
-    handleResize();
+    // Clear any existing animation timeout
+    if (animationTimeout.current) {
+      clearTimeout(animationTimeout.current);
+    }
+
+    // Wait for CSS animation to complete (700ms) plus a small buffer
+    animationTimeout.current = setTimeout(() => {
+      handleResize();
+    }, 750);
+
+    return () => {
+      if (animationTimeout.current) {
+        clearTimeout(animationTimeout.current);
+      }
+    };
   }, [isFullscreen, handleResize]);
 
   // Memoized button handler to prevent recreation
