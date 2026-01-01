@@ -45,17 +45,17 @@ export default function TripPlanner() {
       height: '100%',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
-      padding: '16px'
+      justifyContent: 'center'
     }}>
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
         gridTemplateRows: '1fr 1fr',
         gap: '12px',
-        width: '100%',
-        maxWidth: '600px',
-        aspectRatio: '1 / 1'
+        width: 'calc(100% - 48px)',
+        height: 'calc(100% - 48px)',
+        maxWidth: '90%',
+        maxHeight: '90%'
       }}>
         {/* Journey Dates Card */}
         <div style={{
