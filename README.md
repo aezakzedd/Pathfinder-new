@@ -1,9 +1,9 @@
-# Vite + React + Tailwind CSS v4
+# Vite + React + Tailwind CSS
 
 This project uses the **latest** versions of:
 - Vite
 - React
-- Tailwind CSS v4 (with @tailwindcss/vite plugin)
+- Tailwind CSS (with @tailwindcss/postcss plugin)
 
 ## Setup
 ```bash
@@ -12,10 +12,9 @@ npm run dev
 ```
 
 ## Notes
-- Uses Tailwind CSS v4 with the new `@import "tailwindcss"` syntax
-- No `tailwind.config.js` or `postcss.config.js` needed
 - `.gitignore` is included and ready for GitHub upload
 - `node_modules` and build outputs are excluded
+- Tailwind CSS is configured with PostCSS
 
 ## Structure
-- `/src/pages/Explore` - Explore page with black background
+- `/src/pages/Explore` - Explore page with black background (no scrollbar)
