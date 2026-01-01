@@ -8,6 +8,7 @@ const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
+  const savedState = useRef({ center: [124.2475, 13.8], zoom: 9 });
 
   useEffect(() => {
     if (map.current) return; // Initialize map only once
@@ -86,11 +87,24 @@ export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
     };
   }, []);
 
-  // Resize map when fullscreen state changes
+  // Resize map and preserve view when fullscreen state changes
   useEffect(() => {
     if (map.current) {
+      // Save current state before resize
+      savedState.current = {
+        center: map.current.getCenter(),
+        zoom: map.current.getZoom()
+      };
+
+      // Wait for CSS transition to complete, then resize and restore state
       setTimeout(() => {
         map.current.resize();
+        
+        // Restore the exact center and zoom
+        map.current.jumpTo({
+          center: savedState.current.center,
+          zoom: savedState.current.zoom
+        });
       }, 100);
     }
   }, [isFullscreen]);
