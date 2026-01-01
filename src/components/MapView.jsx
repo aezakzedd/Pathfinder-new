@@ -19,6 +19,28 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [activeView, setActiveView] = useState('map');
   const [selectedSpot, setSelectedSpot] = useState(null);
 
+  // Calculate marker scale based on zoom level
+  const getMarkerScale = (zoom) => {
+    // At zoom 9 (default), scale = 1
+    // At zoom 12, scale = 0.7
+    // At zoom 15+, scale = 0.5
+    const baseZoom = 9;
+    const scale = Math.max(0.5, 1 - (zoom - baseZoom) * 0.1);
+    return scale;
+  };
+
+  // Update marker sizes based on zoom
+  const updateMarkerSizes = useCallback((zoom) => {
+    const scale = getMarkerScale(zoom);
+    markersRef.current.forEach(marker => {
+      const element = marker.getElement();
+      const icon = element?.querySelector('i');
+      if (icon) {
+        icon.style.fontSize = `${42 * scale}px`;
+      }
+    });
+  }, []);
+
   // Create info card HTML content
   const createInfoCardHTML = (spot) => {
     return `
@@ -110,6 +132,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
 
+    const currentZoom = map.current.getZoom();
+    const scale = getMarkerScale(currentZoom);
+
     // Add markers for each tourist spot
     touristSpots.forEach(spot => {
       // Create custom marker element with Font Awesome icon
@@ -117,11 +142,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       markerEl.className = 'custom-marker';
       markerEl.innerHTML = `
         <i class="fa-solid fa-location-dot" style="
-          font-size: 42px;
+          font-size: ${42 * scale}px;
           color: #84cc16;
           filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
           cursor: pointer;
-          transition: transform 0.2s ease;
+          transition: font-size 0.3s ease, transform 0.2s ease;
         "></i>
       `;
       
@@ -161,10 +186,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }
 
         // Create geo-anchored popup
-        // Card height: 210px (image) + 70px (details) = 280px
-        // Pin height: ~42px
-        // Gap: 20px
-        // Total offset: -(280 + 42 + 20) = -342px
         const popup = new maplibregl.Popup({
           offset: [0, -342], // Position well above the pin to avoid blocking
           closeButton: false,
@@ -200,10 +221,25 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           }
         }, 0);
         
-        // Smooth pan to marker location
+        // Calculate offset to center both marker and info card
+        // Card height: 280px, offset: 342px above marker
+        // We need to shift the center point up by half of the total height (card + gap + marker)
+        // Total visible height: ~400px (card + marker + gap)
+        // Offset center by ~200px (in map units) to show both
+        
+        const targetZoom = Math.max(map.current.getZoom(), 12);
+        
+        // Convert pixel offset to lat offset (approximate)
+        // At zoom 12, 1 degree latitude ≈ 11132000 meters ≈ 890560 pixels at equator
+        // For our purposes, we need to offset by ~200 pixels upward
+        const pixelOffset = 200;
+        const metersPerPixel = 156543.03392 * Math.cos(spot.coordinates[1] * Math.PI / 180) / Math.pow(2, targetZoom);
+        const latOffset = (pixelOffset * metersPerPixel) / 111320; // degrees latitude
+        
+        // Pan to marker location with offset to show full card
         map.current.flyTo({
-          center: spot.coordinates,
-          zoom: Math.max(map.current.getZoom(), 12),
+          center: [spot.coordinates[0], spot.coordinates[1] + latOffset],
+          zoom: targetZoom,
           duration: 800
         });
       });
@@ -268,6 +304,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           trackResize: true, // Still track resize but we'll debounce it
           maxZoom: 18, // Reasonable max zoom limit
           maxPitch: 60, // Limit pitch for better performance
+        });
+
+        // Add zoom event listener to update marker sizes
+        map.current.on('zoom', () => {
+          const currentZoom = map.current.getZoom();
+          updateMarkerSizes(currentZoom);
         });
 
         // Add mask overlay when map loads
@@ -339,6 +381,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           maxPitch: 60,
         });
 
+        map.current.on('zoom', () => {
+          const currentZoom = map.current.getZoom();
+          updateMarkerSizes(currentZoom);
+        });
+
         map.current.on('load', () => {
           addTouristSpotMarkers();
         });
@@ -360,7 +407,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         map.current = null;
       }
     };
-  }, [addTouristSpotMarkers]);
+  }, [addTouristSpotMarkers, updateMarkerSizes]);
 
   // Debounced resize handler for better performance
   const handleResize = useCallback(() => {
