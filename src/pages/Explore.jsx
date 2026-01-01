@@ -182,13 +182,13 @@ export default function Explore() {
     boxSizing: 'border-box'
   }), []);
 
-  // Smooth map container with ease-in-out for linear, smooth animation
+  // Fixed smooth map container - back to working animation
   const mapContainerStyle = useMemo(() => ({
     position: 'absolute',
     top: isMapFullscreen ? '0' : '0',
-    right: isMapFullscreen ? 'calc(-50% - 36px)' : '0',
+    right: isMapFullscreen ? 'calc(-100% - 48px)' : '0',
     bottom: isMapFullscreen ? '0' : '0',
-    left: isMapFullscreen ? 'calc(-50% - 36px)' : '0',
+    left: isMapFullscreen ? 'calc(-100% - 48px)' : '0',
     borderRadius: isMapFullscreen ? '24px' : '16px',
     overflow: 'hidden',
     transition: 'all 0.5s ease-in-out',
