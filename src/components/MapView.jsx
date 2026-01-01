@@ -19,6 +19,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [activeView, setActiveView] = useState('map');
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [touristSpots, setTouristSpots] = useState([]);
+  const [itinerary, setItinerary] = useState([]);
 
   // Load GeoJSON data and extract selected spots
   useEffect(() => {
@@ -39,6 +40,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             spots.push({
               name: feature.properties.name,
               location: feature.properties.municipality,
+              barangay: selection.barangay,
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
@@ -55,6 +57,20 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
     loadTouristSpots();
   }, []);
+
+  // Add to itinerary handler
+  const addToItinerary = (spot) => {
+    // Check if already in itinerary
+    const isAlreadyAdded = itinerary.some(item => item.name === spot.name);
+    
+    if (!isAlreadyAdded) {
+      setItinerary(prev => [...prev, spot]);
+      console.log('Added to itinerary:', spot.name);
+      // You can add a toast notification here later
+    } else {
+      console.log('Already in itinerary:', spot.name);
+    }
+  };
 
   // Calculate marker scale based on zoom level
   const getMarkerScale = (zoom) => {
@@ -110,28 +126,58 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         overflow: hidden;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
       ">
-        <!-- Close button -->
-        <button id="close-card-btn" style="
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          background-color: rgba(0, 0, 0, 0.5);
-          border: none;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          z-index: 10;
-          transition: background-color 0.2s;
-        ">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <!-- Action buttons -->
+        <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 10;">
+          <!-- Add to Itinerary button -->
+          <button id="add-to-itinerary-btn" class="add-itinerary-btn" style="
+            height: 28px;
+            min-width: 28px;
+            border-radius: 14px;
+            background-color: rgba(132, 204, 22, 0.9);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            white-space: nowrap;
+            padding: 0 10px;
+          ">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span class="btn-text" style="
+              max-width: 0;
+              opacity: 0;
+              margin-left: 0;
+              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+              font-size: 11px;
+              font-weight: 600;
+              color: white;
+            ">Add to Itinerary</span>
+          </button>
+
+          <!-- Close button -->
+          <button id="close-card-btn" style="
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+          ">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
 
         <!-- Image section -->
         <div style="
@@ -152,9 +198,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         <!-- Details section -->
         <div style="padding: 12px 14px; background-color: white;">
           <!-- Location -->
-          <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+          <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 8px;">
             <i class="fa-solid fa-location-dot fa-bounce" style="font-size: 12px; color: #6b7280;"></i>
-            <span style="color: #6b7280; font-size: 11px; font-weight: 500;">${spot.location}</span>
+            <span style="color: #6b7280; font-size: 11px; font-weight: 500;">${spot.barangay}, ${spot.location}</span>
           </div>
 
           <!-- Name -->
@@ -175,6 +221,18 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           </div>
         </div>
       </div>
+
+      <style>
+        .add-itinerary-btn:hover {
+          background-color: rgba(132, 204, 22, 1) !important;
+          min-width: 140px !important;
+        }
+        .add-itinerary-btn:hover .btn-text {
+          max-width: 120px !important;
+          opacity: 1 !important;
+          margin-left: 6px !important;
+        }
+      </style>
     `;
   };
 
@@ -253,8 +311,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         popupRef.current = popup;
 
-        // Add close button event listener after popup is added to DOM
+        // Add event listeners after popup is added to DOM
         setTimeout(() => {
+          // Close button
           const closeBtn = document.getElementById('close-card-btn');
           if (closeBtn) {
             closeBtn.addEventListener('click', () => {
@@ -265,12 +324,19 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               setSelectedSpot(null);
             });
             
-            // Add hover effect to close button
             closeBtn.addEventListener('mouseenter', () => {
               closeBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
             });
             closeBtn.addEventListener('mouseleave', () => {
               closeBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            });
+          }
+
+          // Add to itinerary button
+          const addBtn = document.getElementById('add-to-itinerary-btn');
+          if (addBtn) {
+            addBtn.addEventListener('click', () => {
+              addToItinerary(spot);
             });
           }
         }, 0);
@@ -608,12 +674,22 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            flexDirection: 'column',
             color: '#1f2937',
             fontSize: '18px',
-            fontWeight: '600'
+            fontWeight: '600',
+            padding: '20px'
           }}
         >
-          Itinerary View
+          <div>Itinerary View</div>
+          {itinerary.length > 0 && (
+            <div style={{ marginTop: '20px', fontSize: '14px', fontWeight: '400' }}>
+              <div style={{ fontWeight: '600', marginBottom: '10px' }}>Items in itinerary: {itinerary.length}</div>
+              {itinerary.map((item, index) => (
+                <div key={index} style={{ padding: '5px 0' }}>• {item.name}</div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
