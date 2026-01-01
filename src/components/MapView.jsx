@@ -1,14 +1,15 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback, memo } from 'react';
 import { Maximize, Minimize } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 
-export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
+const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const savedState = useRef({ center: [124.2475, 13.8], zoom: 9 });
+  const resizeTimeout = useRef(null);
 
   useEffect(() => {
     if (map.current) return; // Initialize map only once
@@ -25,13 +26,22 @@ export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
       center: [124.2475, 13.8], // Catanduanes coordinates
       zoom: 9,
       attributionControl: false,
-      maxBounds: bounds // Restrict camera movement to these expanded bounds
+      maxBounds: bounds, // Restrict camera movement to these expanded bounds
+      
+      // Performance optimizations for Raspberry Pi
+      antialias: false, // Significant GPU savings
+      preserveDrawingBuffer: false, // Enable buffer swapping for better performance
+      fadeDuration: 0, // Remove tile fade animations
+      maxParallelImageRequests: 8, // Reduce concurrent requests (default is 16)
+      refreshExpiredTiles: false, // Don't auto-refresh expired tiles
+      trackResize: true, // Still track resize but we'll debounce it
+      maxZoom: 18, // Reasonable max zoom limit
+      maxPitch: 60, // Limit pitch for better performance
     });
 
     // Add mask overlay when map loads
     map.current.on('load', () => {
       // Create mask with rectangular cutout for Catanduanes
-      // Outer ring covers entire world, inner ring is the cutout for Catanduanes
       const maskGeoJSON = {
         type: 'Feature',
         geometry: {
@@ -46,9 +56,8 @@ export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
               [-180, -90]
             ],
             // Inner ring (cutout for Catanduanes including Palumbanes Island)
-            // Counter-clockwise for hole - adjusted to 124.011 to show full province
             [
-              [124.011, 13.35], // Southwest corner - at specified western boundary
+              [124.011, 13.35], // Southwest corner
               [124.011, 14.15], // Northwest corner
               [124.45, 14.15],  // Northeast corner
               [124.45, 13.35],  // Southeast corner
@@ -84,27 +93,46 @@ export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
     };
   }, []);
 
-  // Resize map and preserve view when fullscreen state changes
-  useEffect(() => {
-    if (map.current) {
-      // Save current state before resize
-      savedState.current = {
-        center: map.current.getCenter(),
-        zoom: map.current.getZoom()
-      };
+  // Debounced resize handler for better performance
+  const handleResize = useCallback(() => {
+    if (!map.current) return;
+    
+    // Save current state before resize
+    savedState.current = {
+      center: map.current.getCenter(),
+      zoom: map.current.getZoom()
+    };
 
-      // Wait for CSS transition to complete, then resize and restore state
-      setTimeout(() => {
+    // Clear existing timeout
+    if (resizeTimeout.current) {
+      clearTimeout(resizeTimeout.current);
+    }
+
+    // Debounce resize to avoid excessive calls
+    resizeTimeout.current = setTimeout(() => {
+      if (map.current) {
         map.current.resize();
         
-        // Restore the exact center and zoom
+        // Restore the exact center and zoom after resize
         map.current.jumpTo({
           center: savedState.current.center,
           zoom: savedState.current.zoom
         });
-      }, 100);
+      }
+    }, 100);
+  }, []);
+
+  // Resize map and preserve view when fullscreen state changes
+  useEffect(() => {
+    handleResize();
+  }, [isFullscreen, handleResize]);
+
+  // Memoized button handler to prevent recreation
+  const handleToggleFullscreen = useCallback(() => {
+    if (onToggleFullscreen) {
+      onToggleFullscreen();
     }
-  }, [isFullscreen]);
+  }, [onToggleFullscreen]);
 
   return (
     <div 
@@ -116,7 +144,7 @@ export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
     >
       {/* Fullscreen toggle button */}
       <button
-        onClick={onToggleFullscreen}
+        onClick={handleToggleFullscreen}
         style={{
           position: 'absolute',
           top: '12px',
@@ -132,7 +160,8 @@ export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
           cursor: 'pointer',
           zIndex: 10,
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-          transition: 'all 0.2s ease'
+          transition: 'all 0.2s ease',
+          willChange: 'background-color'
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = '#f3f4f6';
@@ -160,4 +189,6 @@ export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
       />
     </div>
   );
-}
+});
+
+export default MapView;
