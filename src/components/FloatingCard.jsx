@@ -8,11 +8,24 @@ export default function FloatingCard({ children, className = '', ...props }) {
         border: '1px solid white',
         borderRadius: '24px',
         backgroundColor: 'transparent',
+        display: 'flex',
+        padding: '24px',
         ...props.style
       }}
       {...props}
     >
-      {children}
+      {/* Children container - 50% width with gray background */}
+      <div 
+        style={{
+          width: '50%',
+          height: '100%',
+          backgroundColor: '#374151',
+          borderRadius: '16px',
+          padding: '16px'
+        }}
+      >
+        {children}
+      </div>
     </div>
   )
 }
