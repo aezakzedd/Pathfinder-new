@@ -24,12 +24,12 @@ export default function FloatingCard({ leftContent, rightContent, overlayContent
           position: 'relative'
         }}
       >
-        {/* Base left container */}
+        {/* Base left container - changed to black */}
         <div 
           style={{
             width: '100%',
             height: '100%',
-            backgroundColor: '#374151',
+            backgroundColor: 'black',
             borderRadius: '16px',
             padding: '16px',
             boxSizing: 'border-box'
