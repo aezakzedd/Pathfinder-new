@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Map, Wifi, ChevronDown } from 'lucide-react';
+import { Map, ChevronDown } from 'lucide-react';
 import FloatingCard from '../components/FloatingCard';
 import MapView from '../components/MapView';
 import ChatBot from '../components/ChatBot';
+import NetworkStatus from '../components/NetworkStatus';
 
 export default function Explore() {
   const [isMinimized, setIsMinimized] = useState(false);
@@ -203,9 +204,9 @@ export default function Explore() {
         <Map color="white" size={28} strokeWidth={2} />
       </div>
       
-      {/* Online icon - top right */}
+      {/* Network status - top right */}
       <div className="absolute z-20" style={{ top: '1.2vh', right: '1.2vw' }}>
-        <Wifi color="white" size={28} strokeWidth={2} />
+        <NetworkStatus />
       </div>
       
       {/* Centered container for FloatingCard */}
