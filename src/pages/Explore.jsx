@@ -169,7 +169,7 @@ export default function Explore() {
     willChange: 'transform'
   }), [isMinimized]);
 
-  // Fixed: Expand from original position using absolute positioning with smooth transitions
+  // Expand from original position using absolute positioning with smooth transitions
   const mapContainerStyle = useMemo(() => {
     if (isMapFullscreen) {
       // Fullscreen: position absolute to overlay entire container
@@ -188,13 +188,12 @@ export default function Explore() {
         willChange: 'width, height, top, left, right, bottom'
       };
     } else {
-      // Normal: calculate position to stay in flex layout
-      // Position absolutely but anchored to where it would be in flex
+      // Normal: width reduced to 45%
       return {
         position: 'absolute',
         top: 0,
         left: 'calc(50% + 24px)', // After left container (50%) + gap (24px)
-        width: '47.5%',
+        width: '45%',
         height: '100%',
         borderRadius: '16px',
         overflow: 'hidden',
