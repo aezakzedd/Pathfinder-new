@@ -1,6 +1,14 @@
+import { Map } from 'lucide-react';
+
 export default function Explore() {
   return (
-    <div className="h-screen w-screen bg-black overflow-hidden flex items-center justify-center">
+    <div className="h-screen w-screen bg-black overflow-hidden flex items-center justify-center relative">
+      {/* Map icon in top left corner */}
+      <div className="absolute top-8 left-8">
+        <Map className="text-white" size={32} />
+      </div>
+      
+      {/* Rectangle */}
       <div 
         className="flex items-center justify-center"
         style={{
