@@ -128,7 +128,7 @@ export default function Explore() {
     left: '0',
     width: '100%',
     height: '100%',
-    backgroundColor: '#d1d5db', // Grey background (Tailwind gray-300)
+    backgroundColor: '#434141', // Darker grey background
     borderRadius: '16px',
     padding: '16px',
     boxSizing: 'border-box',
