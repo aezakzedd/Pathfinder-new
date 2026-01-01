@@ -1,8 +1,15 @@
+import { useState } from 'react';
 import { Map, Wifi, ChevronDown } from 'lucide-react';
 import FloatingCard from '../../components/FloatingCard';
 import MapView from '../../components/MapView';
 
 export default function Explore() {
+  const [isMinimized, setIsMinimized] = useState(false);
+
+  const toggleMinimize = () => {
+    setIsMinimized(!isMinimized);
+  };
+
   return (
     <div className="h-screen w-screen bg-black overflow-hidden">
       {/* Map icon - top left */}
@@ -26,26 +33,53 @@ export default function Explore() {
               height: '100%', 
               position: 'relative'
             }}>
-              {/* Green circle with chevron - bottom right */}
-              <div style={{
-                position: 'absolute',
-                bottom: '4px',
-                right: '4px',
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                backgroundColor: '#84cc16',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer'
-              }}>
-                <ChevronDown 
-                  color="black" 
-                  size={20} 
-                  strokeWidth={3} 
-                  style={{ transform: 'rotate(135deg)' }}
-                />
+              {/* White overlay with minimize animation */}
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: isMinimized ? '0' : '0',
+                  left: isMinimized ? '0' : '0',
+                  width: isMinimized ? '60px' : '100%',
+                  height: isMinimized ? '60px' : '100%',
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transformOrigin: 'top left',
+                  overflow: 'hidden',
+                  boxShadow: isMinimized ? '0 4px 6px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                {/* Green circle with chevron - bottom right */}
+                <div 
+                  onClick={toggleMinimize}
+                  style={{
+                    position: 'absolute',
+                    bottom: '4px',
+                    right: '4px',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    backgroundColor: '#84cc16',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s ease',
+                    zIndex: 10
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <ChevronDown 
+                    color="black" 
+                    size={20} 
+                    strokeWidth={3} 
+                    style={{ 
+                      transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
+                      transition: 'transform 0.4s ease'
+                    }}
+                  />
+                </div>
               </div>
             </div>
           }
