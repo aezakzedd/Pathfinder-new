@@ -33,53 +33,58 @@ export default function Explore() {
               height: '100%', 
               position: 'relative'
             }}>
-              {/* White overlay with minimize animation */}
+              {/* White overlay with shrink animation */}
               <div 
                 style={{
                   position: 'absolute',
-                  top: isMinimized ? '0' : '0',
-                  left: isMinimized ? '0' : '0',
-                  width: isMinimized ? '60px' : '100%',
-                  height: isMinimized ? '60px' : '100%',
+                  top: '0',
+                  left: '0',
+                  width: '100%',
+                  height: '100%',
                   backgroundColor: 'white',
                   borderRadius: '16px',
-                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                  transformOrigin: 'top left',
+                  transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transformOrigin: 'bottom right',
+                  transform: isMinimized ? 'scale(0)' : 'scale(1)',
+                  opacity: isMinimized ? 0 : 1,
                   overflow: 'hidden',
-                  boxShadow: isMinimized ? '0 4px 6px rgba(0,0,0,0.1)' : 'none'
+                  pointerEvents: isMinimized ? 'none' : 'auto'
                 }}
               >
-                {/* Green circle with chevron - bottom right */}
-                <div 
-                  onClick={toggleMinimize}
-                  style={{
-                    position: 'absolute',
-                    bottom: '4px',
-                    right: '4px',
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    backgroundColor: '#84cc16',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'transform 0.2s ease',
-                    zIndex: 10
+                {/* Content can go here */}
+              </div>
+
+              {/* Green circle with chevron - always visible */}
+              <div 
+                onClick={toggleMinimize}
+                style={{
+                  position: 'absolute',
+                  bottom: '4px',
+                  right: '4px',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  backgroundColor: '#84cc16',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  zIndex: 10,
+                  boxShadow: isMinimized ? '0 4px 12px rgba(132, 204, 22, 0.4)' : '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <ChevronDown 
+                  color="black" 
+                  size={20} 
+                  strokeWidth={3} 
+                  style={{ 
+                    transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
+                    transition: 'transform 0.5s ease'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  <ChevronDown 
-                    color="black" 
-                    size={20} 
-                    strokeWidth={3} 
-                    style={{ 
-                      transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
-                      transition: 'transform 0.4s ease'
-                    }}
-                  />
-                </div>
+                />
               </div>
             </div>
           }
