@@ -9,7 +9,7 @@ export default function Explore() {
   const containerRef = useRef(null);
   const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
 
-  useEffect(() => {
+  const calculateTranslateValues = () => {
     if (containerRef.current) {
       const container = containerRef.current;
       const width = container.offsetWidth;
@@ -22,6 +22,23 @@ export default function Explore() {
       
       setTranslateValues({ x: translateX, y: translateY });
     }
+  };
+
+  useEffect(() => {
+    // Calculate on mount
+    calculateTranslateValues();
+
+    // Add resize listener
+    const handleResize = () => {
+      calculateTranslateValues();
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   const toggleMinimize = () => {
