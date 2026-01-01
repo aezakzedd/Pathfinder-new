@@ -64,121 +64,153 @@ export default function Explore() {
       
       {/* Centered container for FloatingCard */}
       <div className="w-full h-full flex items-center justify-center">
-        <div style={{ position: 'relative', width: '90vw', height: '90vh' }}>
-          <FloatingCard 
-            leftContent={<ChatBot />}
-            rightContent={
-              <MapView 
-                isFullscreen={isMapFullscreen}
-                onToggleFullscreen={toggleMapFullscreen}
-              />
-            }
-            overlayPointerEvents={isMinimized ? 'none' : 'auto'}
-            overlayContent={
-              <div 
-                ref={containerRef}
-                style={{ 
-                  width: '100%', 
-                  height: '100%', 
-                  position: 'relative'
-                }}
-              >
-                {/* White card that shrinks following button path */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    transformOrigin: 'bottom right',
-                    transform: isMinimized 
-                      ? `translate(${translateValues.x}px, ${translateValues.y}px) scale(0.1)` 
-                      : 'translate(0, 0) scale(1)',
-                    transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-                    pointerEvents: isMinimized ? 'none' : 'auto'
-                  }}
-                >
-                  {/* White card background */}
-                  <div 
-                    style={{
-                      position: 'absolute',
-                      top: '0',
-                      left: '0',
-                      width: '100%',
-                      height: '100%',
-                      backgroundColor: 'white',
-                      borderRadius: '16px',
-                      padding: '16px',
-                      boxSizing: 'border-box',
-                      opacity: isMinimized ? 0 : 1,
-                      transition: 'opacity 0.4s ease',
-                    }}
-                  >
-                    {/* Your white card content goes here */}
-                  </div>
-                </div>
-
-                {/* Green chevron button - moves diagonally, constant size */}
-                <div 
-                  onClick={toggleMinimize}
-                  style={{
-                    position: 'absolute',
-                    bottom: '4px',
-                    right: '4px',
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    backgroundColor: '#84cc16',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transform: isMinimized 
-                      ? `translate(${translateValues.x}px, ${translateValues.y}px)` 
-                      : 'translate(0, 0)',
-                    transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease',
-                    zIndex: 20,
-                    pointerEvents: 'auto',
-                    boxShadow: isMinimized 
-                      ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
-                      : '0 2px 8px rgba(0, 0, 0, 0.15)'
-                  }}
-                >
-                  <ChevronDown 
-                    color="black" 
-                    size={20} 
-                    strokeWidth={3} 
-                    style={{ 
-                      transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
-                      transition: 'transform 0.6s ease'
-                    }}
-                  />
-                </div>
-              </div>
-            }
-          />
-
-          {/* Fullscreen map overlay */}
-          {isMapFullscreen && (
-            <div
+        <div
+          style={{
+            width: '90vw',
+            height: '90vh',
+            border: '1px solid white',
+            borderRadius: '24px',
+            backgroundColor: 'transparent',
+            display: 'flex',
+            gap: '24px',
+            padding: '24px',
+            boxSizing: 'border-box',
+            position: 'relative'
+          }}
+        >
+          {/* Left container with ChatBot - hide when map is fullscreen */}
+          <div 
+            style={{
+              width: isMapFullscreen ? '0%' : '50%',
+              height: '100%',
+              position: 'relative',
+              overflow: 'hidden',
+              opacity: isMapFullscreen ? 0 : 1,
+              transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease'
+            }}
+          >
+            <div 
               style={{
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'black',
+                borderRadius: '16px',
+                padding: '16px',
+                boxSizing: 'border-box'
+              }}
+            >
+              <ChatBot />
+            </div>
+            
+            {/* Overlay for white card */}
+            <div 
+              ref={containerRef}
+              style={{ 
                 position: 'absolute',
                 top: 0,
                 left: 0,
-                width: '100%',
+                width: '100%', 
                 height: '100%',
-                zIndex: 30,
-                borderRadius: '24px',
-                overflow: 'hidden'
+                pointerEvents: isMinimized ? 'none' : 'auto'
               }}
             >
-              <MapView 
-                isFullscreen={isMapFullscreen}
-                onToggleFullscreen={toggleMapFullscreen}
-              />
+              {/* White card that shrinks following button path */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  transformOrigin: 'bottom right',
+                  transform: isMinimized 
+                    ? `translate(${translateValues.x}px, ${translateValues.y}px) scale(0.1)` 
+                    : 'translate(0, 0) scale(1)',
+                  transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                  pointerEvents: isMinimized ? 'none' : 'auto'
+                }}
+              >
+                {/* White card background */}
+                <div 
+                  style={{
+                    position: 'absolute',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'white',
+                    borderRadius: '16px',
+                    padding: '16px',
+                    boxSizing: 'border-box',
+                    opacity: isMinimized ? 0 : 1,
+                    transition: 'opacity 0.4s ease',
+                  }}
+                >
+                  {/* Your white card content goes here */}
+                </div>
+              </div>
+
+              {/* Green chevron button - moves diagonally, constant size */}
+              <div 
+                onClick={toggleMinimize}
+                style={{
+                  position: 'absolute',
+                  bottom: '4px',
+                  right: '4px',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  backgroundColor: '#84cc16',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transform: isMinimized 
+                    ? `translate(${translateValues.x}px, ${translateValues.y}px)` 
+                    : 'translate(0, 0)',
+                  transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease',
+                  zIndex: 20,
+                  pointerEvents: 'auto',
+                  boxShadow: isMinimized 
+                    ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
+                    : '0 2px 8px rgba(0, 0, 0, 0.15)'
+                }}
+              >
+                <ChevronDown 
+                  color="black" 
+                  size={20} 
+                  strokeWidth={3} 
+                  style={{ 
+                    transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
+                    transition: 'transform 0.6s ease'
+                  }}
+                />
+              </div>
             </div>
-          )}
+          </div>
+          
+          {/* Right container - Map expands to full width when fullscreen */}
+          <div 
+            style={{
+              width: isMapFullscreen ? 'calc(100% + 24px)' : '50%',
+              height: '100%',
+              backgroundColor: '#1f2937',
+              borderRadius: '16px',
+              padding: '0',
+              boxSizing: 'border-box',
+              overflow: 'hidden',
+              position: isMapFullscreen ? 'absolute' : 'relative',
+              right: isMapFullscreen ? '-24px' : 'auto',
+              top: isMapFullscreen ? '-24px' : 'auto',
+              transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+              zIndex: isMapFullscreen ? 30 : 'auto'
+            }}
+          >
+            <MapView 
+              isFullscreen={isMapFullscreen}
+              onToggleFullscreen={toggleMapFullscreen}
+            />
+          </div>
         </div>
       </div>
     </div>
