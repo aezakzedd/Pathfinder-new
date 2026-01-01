@@ -9,13 +9,14 @@ export default function FloatingCard({ children, className = '', ...props }) {
         borderRadius: '24px',
         backgroundColor: 'transparent',
         display: 'flex',
+        gap: '24px',
         padding: '24px',
         boxSizing: 'border-box',
         ...props.style
       }}
       {...props}
     >
-      {/* Children container - 50% width with gray background */}
+      {/* First children container - 50% width with gray background */}
       <div 
         style={{
           width: '50%',
@@ -28,6 +29,18 @@ export default function FloatingCard({ children, className = '', ...props }) {
       >
         {children}
       </div>
+      
+      {/* Second children container - 50% width with gray background */}
+      <div 
+        style={{
+          width: '50%',
+          height: '100%',
+          backgroundColor: '#374151',
+          borderRadius: '16px',
+          padding: '16px',
+          boxSizing: 'border-box'
+        }}
+      />
     </div>
   )
 }
