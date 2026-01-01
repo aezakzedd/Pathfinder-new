@@ -29,10 +29,10 @@ export default function Explore() {
               {/* Green circle with chevron - bottom right */}
               <div style={{
                 position: 'absolute',
-                bottom: '16px',
-                right: '16px',
-                width: '48px',
-                height: '48px',
+                bottom: '8px',
+                right: '8px',
+                width: '40px',
+                height: '40px',
                 borderRadius: '50%',
                 backgroundColor: '#84cc16',
                 display: 'flex',
@@ -42,7 +42,7 @@ export default function Explore() {
               }}>
                 <ChevronDown 
                   color="black" 
-                  size={24} 
+                  size={20} 
                   strokeWidth={3} 
                   style={{ transform: 'rotate(135deg)' }}
                 />
