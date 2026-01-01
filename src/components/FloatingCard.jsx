@@ -10,6 +10,7 @@ export default function FloatingCard({ children, className = '', ...props }) {
         backgroundColor: 'transparent',
         display: 'flex',
         padding: '24px',
+        boxSizing: 'border-box',
         ...props.style
       }}
       {...props}
@@ -21,7 +22,8 @@ export default function FloatingCard({ children, className = '', ...props }) {
           height: '100%',
           backgroundColor: '#374151',
           borderRadius: '16px',
-          padding: '16px'
+          padding: '16px',
+          boxSizing: 'border-box'
         }}
       >
         {children}
