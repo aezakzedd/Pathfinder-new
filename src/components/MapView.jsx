@@ -24,70 +24,113 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       [125.0, 14.8]   // Northeast corner - more generous for better maneuverability
     ];
 
-    map.current = new maplibregl.Map({
-      container: mapContainer.current,
-      style: `https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`,
-      center: [124.2475, 13.8], // Catanduanes coordinates
-      zoom: DEFAULT_ZOOM,
-      attributionControl: false,
-      maxBounds: bounds, // Restrict camera movement to these expanded bounds
-      
-      // Performance optimizations for Raspberry Pi
-      antialias: false, // Significant GPU savings
-      preserveDrawingBuffer: false, // Enable buffer swapping for better performance
-      fadeDuration: 0, // Remove tile fade animations
-      maxParallelImageRequests: 8, // Reduce concurrent requests (default is 16)
-      refreshExpiredTiles: false, // Don't auto-refresh expired tiles
-      trackResize: true, // Still track resize but we'll debounce it
-      maxZoom: 18, // Reasonable max zoom limit
-      maxPitch: 60, // Limit pitch for better performance
-    });
+    // Fetch and modify the style to show municipality labels at zoom 9
+    fetch(`https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`)
+      .then(response => response.json())
+      .then(style => {
+        // Modify layers to show place labels (municipalities, towns, cities) at lower zoom levels
+        style.layers = style.layers.map(layer => {
+          // Target place label layers (cities, towns, villages)
+          if (layer.id && (
+            layer.id.includes('place') || 
+            layer.id.includes('town') || 
+            layer.id.includes('city') ||
+            layer.id.includes('village')
+          ) && layer.type === 'symbol') {
+            // Set minzoom to 9 or lower to make labels appear earlier
+            return {
+              ...layer,
+              minzoom: Math.min(layer.minzoom || 14, 9)
+            };
+          }
+          return layer;
+        });
 
-    // Add mask overlay when map loads
-    map.current.on('load', () => {
-      // Create mask with rectangular cutout for Catanduanes
-      const maskGeoJSON = {
-        type: 'Feature',
-        geometry: {
-          type: 'Polygon',
-          coordinates: [
-            // Outer ring (covers entire world)
-            [
-              [-180, -90],
-              [180, -90],
-              [180, 90],
-              [-180, 90],
-              [-180, -90]
-            ],
-            // Inner ring (cutout for Catanduanes including Palumbanes Island)
-            [
-              [124.011, 13.35], // Southwest corner
-              [124.011, 14.15], // Northwest corner
-              [124.45, 14.15],  // Northeast corner
-              [124.45, 13.35],  // Southeast corner
-              [124.011, 13.35]  // Close the ring
-            ]
-          ]
-        }
-      };
+        map.current = new maplibregl.Map({
+          container: mapContainer.current,
+          style: style, // Use modified style
+          center: [124.2475, 13.8], // Catanduanes coordinates
+          zoom: DEFAULT_ZOOM,
+          attributionControl: false,
+          maxBounds: bounds, // Restrict camera movement to these expanded bounds
+          
+          // Performance optimizations for Raspberry Pi
+          antialias: false, // Significant GPU savings
+          preserveDrawingBuffer: false, // Enable buffer swapping for better performance
+          fadeDuration: 0, // Remove tile fade animations
+          maxParallelImageRequests: 8, // Reduce concurrent requests (default is 16)
+          refreshExpiredTiles: false, // Don't auto-refresh expired tiles
+          trackResize: true, // Still track resize but we'll debounce it
+          maxZoom: 18, // Reasonable max zoom limit
+          maxPitch: 60, // Limit pitch for better performance
+        });
 
-      // Add source
-      map.current.addSource('mask', {
-        type: 'geojson',
-        data: maskGeoJSON
+        // Add mask overlay when map loads
+        map.current.on('load', () => {
+          // Create mask with rectangular cutout for Catanduanes
+          const maskGeoJSON = {
+            type: 'Feature',
+            geometry: {
+              type: 'Polygon',
+              coordinates: [
+                // Outer ring (covers entire world)
+                [
+                  [-180, -90],
+                  [180, -90],
+                  [180, 90],
+                  [-180, 90],
+                  [-180, -90]
+                ],
+                // Inner ring (cutout for Catanduanes including Palumbanes Island)
+                [
+                  [124.011, 13.35], // Southwest corner
+                  [124.011, 14.15], // Northwest corner
+                  [124.45, 14.15],  // Northeast corner
+                  [124.45, 13.35],  // Southeast corner
+                  [124.011, 13.35]  // Close the ring
+                ]
+              ]
+            }
+          };
+
+          // Add source
+          map.current.addSource('mask', {
+            type: 'geojson',
+            data: maskGeoJSON
+          });
+
+          // Add layer with solid black fill
+          map.current.addLayer({
+            id: 'mask-layer',
+            type: 'fill',
+            source: 'mask',
+            paint: {
+              'fill-color': '#000000',
+              'fill-opacity': 1
+            }
+          });
+        });
+      })
+      .catch(error => {
+        console.error('Error loading map style:', error);
+        // Fallback to default style if fetch fails
+        map.current = new maplibregl.Map({
+          container: mapContainer.current,
+          style: `https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`,
+          center: [124.2475, 13.8],
+          zoom: DEFAULT_ZOOM,
+          attributionControl: false,
+          maxBounds: bounds,
+          antialias: false,
+          preserveDrawingBuffer: false,
+          fadeDuration: 0,
+          maxParallelImageRequests: 8,
+          refreshExpiredTiles: false,
+          trackResize: true,
+          maxZoom: 18,
+          maxPitch: 60,
+        });
       });
-
-      // Add layer with solid black fill
-      map.current.addLayer({
-        id: 'mask-layer',
-        type: 'fill',
-        source: 'mask',
-        paint: {
-          'fill-color': '#000000',
-          'fill-opacity': 1
-        }
-      });
-    });
 
     return () => {
       if (map.current) {
