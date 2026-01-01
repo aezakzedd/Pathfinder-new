@@ -29,8 +29,8 @@ export default function Explore() {
               {/* Green circle with chevron - bottom right */}
               <div style={{
                 position: 'absolute',
-                bottom: '8px',
-                right: '8px',
+                bottom: '4px',
+                right: '4px',
                 width: '40px',
                 height: '40px',
                 borderRadius: '50%',
