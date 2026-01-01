@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Map, Wifi, ChevronDown } from 'lucide-react';
 import FloatingCard from '../../components/FloatingCard';
 import MapView from '../../components/MapView';
+import ChatBot from '../../components/ChatBot';
 
 export default function Explore() {
   const [isMinimized, setIsMinimized] = useState(false);
@@ -42,7 +43,7 @@ export default function Explore() {
       {/* Centered container for FloatingCard */}
       <div className="w-full h-full flex items-center justify-center">
         <FloatingCard 
-          leftContent={null}
+          leftContent={<ChatBot />}
           rightContent={<MapView />}
           overlayContent={
             <div 
