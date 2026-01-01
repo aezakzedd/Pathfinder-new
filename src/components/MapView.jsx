@@ -28,9 +28,6 @@ export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
       maxBounds: bounds // Restrict camera movement to these expanded bounds
     });
 
-    // Add navigation controls
-    map.current.addControl(new maplibregl.NavigationControl(), 'top-right');
-
     // Add mask overlay when map loads
     map.current.on('load', () => {
       // Create mask with rectangular cutout for Catanduanes
