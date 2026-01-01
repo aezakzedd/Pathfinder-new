@@ -9,7 +9,7 @@ const DEFAULT_ZOOM = 9;
 const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
-  const savedState = useRef({ center: [124.2475, 13.8], zoom: DEFAULT_ZOOM });
+  const savedState = useRef({ center: [124.1, 13.8], zoom: DEFAULT_ZOOM }); // Adjusted center
   const resizeTimeout = useRef(null);
   const animationTimeout = useRef(null);
   const previousZoom = useRef(DEFAULT_ZOOM);
@@ -49,7 +49,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         map.current = new maplibregl.Map({
           container: mapContainer.current,
           style: style, // Use modified style
-          center: [124.2475, 13.8], // Catanduanes coordinates
+          center: [124.1, 13.8], // Adjusted: moved left to position province more to the right
           zoom: DEFAULT_ZOOM,
           attributionControl: false,
           maxBounds: bounds, // Restrict camera movement to these expanded bounds
@@ -117,7 +117,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         map.current = new maplibregl.Map({
           container: mapContainer.current,
           style: `https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`,
-          center: [124.2475, 13.8],
+          center: [124.1, 13.8], // Adjusted center in fallback too
           zoom: DEFAULT_ZOOM,
           attributionControl: false,
           maxBounds: bounds,
