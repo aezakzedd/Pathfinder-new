@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import { Maximize, Minimize, Map as MapIcon, List } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { selectedSpots, categoryColors } from '../data/selectedTouristSpots';
+import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedTouristSpots';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
@@ -39,19 +39,22 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           if (feature) {
             spots.push({
               name: feature.properties.name,
-              location: feature.properties.municipality,
+              location: toSentenceCase(feature.properties.municipality),
               barangay: selection.barangay,
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
               image: null // Will be added later when you have images
             });
+          } else {
+            console.warn(`Spot "${selection.spotName}" not found in ${selection.geojsonFile}`);
           }
         } catch (error) {
           console.error(`Error loading ${selection.geojsonFile}:`, error);
         }
       }
       
+      console.log(`Loaded ${spots.length} tourist spots out of ${selectedSpots.length}`);
       setTouristSpots(spots);
     };
 
