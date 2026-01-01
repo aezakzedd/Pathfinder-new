@@ -165,20 +165,30 @@ export default function Explore() {
     willChange: 'transform'
   }), [isMinimized]);
 
-  // Updated right placeholder container to match left container width
-  const rightPlaceholderStyle = useMemo(() => ({
+  // Right container that holds both the white container and map overlay
+  const rightContainerStyle = useMemo(() => ({
     width: 'calc((100% - 24px) / 2)',
     height: '100%',
     position: 'relative'
   }), []);
 
+  // White container underneath the map
+  const whiteUnderContainerStyle = useMemo(() => ({
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'white',
+    borderRadius: '16px',
+    padding: '16px',
+    boxSizing: 'border-box'
+  }), []);
+
   // Smooth map container with ease-in-out for linear, smooth animation
   const mapContainerStyle = useMemo(() => ({
     position: 'absolute',
-    top: isMapFullscreen ? '0' : '24px',
-    right: isMapFullscreen ? '0' : '24px',
-    bottom: isMapFullscreen ? '0' : '24px',
-    left: isMapFullscreen ? '0' : 'calc(50% + 12px)',
+    top: isMapFullscreen ? '0' : '0',
+    right: isMapFullscreen ? 'calc(-50% - 36px)' : '0',
+    bottom: isMapFullscreen ? '0' : '0',
+    left: isMapFullscreen ? 'calc(-50% - 36px)' : '0',
     borderRadius: isMapFullscreen ? '24px' : '16px',
     overflow: 'hidden',
     transition: 'all 0.5s ease-in-out',
@@ -228,15 +238,20 @@ export default function Explore() {
             </div>
           </div>
           
-          {/* Right container placeholder (maintains layout and gap) */}
-          <div style={rightPlaceholderStyle} />
-          
-          {/* Map container - smoothly grows from right to fill entire container */}
-          <div style={mapContainerStyle}>
-            <MapView 
-              isFullscreen={isMapFullscreen}
-              onToggleFullscreen={toggleMapFullscreen}
-            />
+          {/* Right container with white background underneath map */}
+          <div style={rightContainerStyle}>
+            {/* White container underneath */}
+            <div style={whiteUnderContainerStyle}>
+              {/* Your content goes here */}
+            </div>
+            
+            {/* Map container - overlays on top of white container */}
+            <div style={mapContainerStyle}>
+              <MapView 
+                isFullscreen={isMapFullscreen}
+                onToggleFullscreen={toggleMapFullscreen}
+              />
+            </div>
           </div>
         </div>
       </div>
