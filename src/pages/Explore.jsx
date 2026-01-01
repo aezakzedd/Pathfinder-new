@@ -190,15 +190,12 @@ export default function Explore() {
             </div>
           </div>
           
-          {/* Right container - Map expands to full width when fullscreen */}
+          {/* Right container - Map fills completely without gray wrapper */}
           <div 
             style={{
               width: isMapFullscreen ? '100%' : '50%',
               height: '100%',
-              backgroundColor: '#1f2937',
               borderRadius: '16px',
-              padding: '0',
-              boxSizing: 'border-box',
               overflow: 'hidden',
               transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
               zIndex: isMapFullscreen ? 30 : 'auto'
