@@ -1,4 +1,4 @@
-import { Map, Wifi, ArrowUpLeft } from 'lucide-react';
+import { Map, Wifi, ChevronDown } from 'lucide-react';
 import FloatingCard from '../../components/FloatingCard';
 import MapView from '../../components/MapView';
 
@@ -40,7 +40,12 @@ export default function Explore() {
                 justifyContent: 'center',
                 cursor: 'pointer'
               }}>
-                <ArrowUpLeft color="black" size={32} strokeWidth={2.5} />
+                <ChevronDown 
+                  color="black" 
+                  size={32} 
+                  strokeWidth={2.5} 
+                  style={{ transform: 'rotate(-135deg)' }}
+                />
               </div>
             </div>
           }
