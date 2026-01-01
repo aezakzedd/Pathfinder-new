@@ -18,10 +18,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   useEffect(() => {
     if (map.current) return; // Initialize map only once
 
-    // Define expanded bounds to allow panning while keeping focus on Catanduanes
+    // Define more generous bounds to allow better panning while keeping focus on Catanduanes
     const bounds = [
-      [123.85, 13.2],  // Southwest corner - expanded for panning room
-      [124.6, 14.3]    // Northeast corner - expanded for panning room
+      [123.5, 12.8],  // Southwest corner - more generous for better maneuverability
+      [125.0, 14.8]   // Northeast corner - more generous for better maneuverability
     ];
 
     map.current = new maplibregl.Map({
