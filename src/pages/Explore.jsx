@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Map, ChevronDown } from 'lucide-react';
 import FloatingCard from '../components/FloatingCard';
 import MapView from '../components/MapView';
-import ChatBot from '../components/ChatBot';
+import TripPlanner from '../components/TripPlanner';
 import NetworkStatus from '../components/NetworkStatus';
 
 export default function Explore() {
@@ -214,10 +214,10 @@ export default function Explore() {
       {/* Centered container for FloatingCard */}
       <div className="w-full h-full flex items-center justify-center">
         <div style={containerStyle}>
-          {/* Left container with ChatBot */}
+          {/* Left container with TripPlanner */}
           <div style={leftContainerStyle}>
             <div style={leftContentStyle}>
-              <ChatBot />
+              <TripPlanner />
             </div>
             
             {/* Overlay for white card */}
