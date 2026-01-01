@@ -286,13 +286,16 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }} 
       />
 
-      {/* Itinerary view placeholder */}
+      {/* Itinerary view placeholder - properly centered in both modes */}
       {activeView === 'itinerary' && (
         <div
           style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
             width: '100%',
             height: '100%',
-            borderRadius: '16px',
+            borderRadius: isFullscreen ? '24px' : '16px',
             backgroundColor: 'white',
             display: 'flex',
             alignItems: 'center',
