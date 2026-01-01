@@ -72,23 +72,19 @@ export default function Explore() {
     borderRadius: '24px',
     backgroundColor: 'transparent',
     display: 'flex',
-    gap: isMapFullscreen ? '0px' : '24px',
+    gap: '24px',
     padding: '24px',
     boxSizing: 'border-box',
     position: 'relative',
-    transition: 'gap 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
     overflow: 'hidden'
-  }), [isMapFullscreen]);
+  }), []);
 
   const leftContainerStyle = useMemo(() => ({
-    width: isMapFullscreen ? '0%' : '50%',
+    width: '50%',
     height: '100%',
     position: 'relative',
-    overflow: 'hidden',
-    opacity: isMapFullscreen ? 0 : 1,
-    transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
-    willChange: 'width, opacity'
-  }), [isMapFullscreen]);
+    overflow: 'hidden'
+  }), []);
 
   const leftContentStyle = useMemo(() => ({
     width: '100%',
@@ -168,17 +164,20 @@ export default function Explore() {
     willChange: 'transform'
   }), [isMinimized]);
 
+  // Updated map container style - now overlays instead of pushing
   const mapContainerStyle = useMemo(() => ({
-    position: isMapFullscreen ? 'absolute' : 'relative',
+    position: 'absolute',
     top: isMapFullscreen ? 0 : 'auto',
+    right: isMapFullscreen ? 0 : '24px',
+    bottom: isMapFullscreen ? 0 : '24px',
     left: isMapFullscreen ? 0 : 'auto',
-    width: isMapFullscreen ? '100%' : '50%',
-    height: '100%',
+    width: isMapFullscreen ? '100%' : 'calc(50% - 12px)',
+    height: isMapFullscreen ? '100%' : 'calc(100% - 48px)',
     borderRadius: isMapFullscreen ? '24px' : '16px',
     overflow: 'hidden',
     transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
     zIndex: isMapFullscreen ? 30 : 1,
-    willChange: 'width, border-radius'
+    willChange: 'width, height, top, right, bottom, left, border-radius'
   }), [isMapFullscreen]);
 
   return (
@@ -196,7 +195,7 @@ export default function Explore() {
       {/* Centered container for FloatingCard */}
       <div className="w-full h-full flex items-center justify-center">
         <div style={containerStyle}>
-          {/* Left container with ChatBot - hide when map is fullscreen */}
+          {/* Left container with ChatBot */}
           <div style={leftContainerStyle}>
             <div style={leftContentStyle}>
               <ChatBot />
@@ -224,7 +223,10 @@ export default function Explore() {
             </div>
           </div>
           
-          {/* Map container - expands smoothly to fullscreen */}
+          {/* Right container placeholder (maintains layout) */}
+          <div style={{ width: '50%', height: '100%', position: 'relative' }} />
+          
+          {/* Map container - overlays with absolute positioning */}
           <div style={mapContainerStyle}>
             <MapView 
               isFullscreen={isMapFullscreen}
