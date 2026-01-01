@@ -167,8 +167,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }
 
         // Create geo-anchored popup
+        // Card height: 210px (image) + 70px (details) = 280px
+        // Pin height: ~42px
+        // Gap: 20px
+        // Total offset: -(280 + 42 + 20) = -342px
         const popup = new maplibregl.Popup({
-          offset: [0, -50], // Position above the pin (offset by pin height + gap)
+          offset: [0, -342], // Position well above the pin to avoid blocking
           closeButton: false,
           closeOnClick: false,
           className: 'tourist-spot-popup',
