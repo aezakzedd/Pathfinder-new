@@ -214,19 +214,19 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         </button>
       )}
 
-      {/* Map/Itinerary sliding toggle - top right */}
+      {/* Map/Itinerary sliding toggle - top right - smaller and closer */}
       <div
         style={{
           position: 'absolute',
-          top: '12px',
-          right: '12px',
+          top: '8px',
+          right: '8px',
           zIndex: 10,
           display: 'flex',
           backgroundColor: 'white',
-          borderRadius: '20px',
-          padding: '4px',
+          borderRadius: '16px',
+          padding: '3px',
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-          gap: '4px'
+          gap: '3px'
         }}
       >
         {/* Map button */}
@@ -234,9 +234,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           onClick={() => setActiveView('map')}
           style={{
             position: 'relative',
-            padding: '8px 12px',
+            padding: '6px 10px',
             border: 'none',
-            borderRadius: '16px',
+            borderRadius: '13px',
             backgroundColor: activeView === 'map' ? '#1f2937' : 'transparent',
             color: activeView === 'map' ? 'white' : '#6b7280',
             cursor: 'pointer',
@@ -246,7 +246,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             justifyContent: 'center'
           }}
         >
-          <MapIcon size={18} strokeWidth={2} />
+          <MapIcon size={16} strokeWidth={2} />
         </button>
 
         {/* Itinerary button */}
@@ -254,9 +254,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           onClick={() => setActiveView('itinerary')}
           style={{
             position: 'relative',
-            padding: '8px 12px',
+            padding: '6px 10px',
             border: 'none',
-            borderRadius: '16px',
+            borderRadius: '13px',
             backgroundColor: activeView === 'itinerary' ? '#1f2937' : 'transparent',
             color: activeView === 'itinerary' ? 'white' : '#6b7280',
             cursor: 'pointer',
@@ -266,7 +266,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             justifyContent: 'center'
           }}
         >
-          <List size={18} strokeWidth={2} />
+          <List size={16} strokeWidth={2} />
         </button>
       </div>
 
