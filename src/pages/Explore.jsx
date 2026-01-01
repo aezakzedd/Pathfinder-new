@@ -159,15 +159,15 @@ export default function Explore() {
             }
           />
 
-          {/* Fullscreen map overlay */}
+          {/* Fullscreen map overlay - 90% of card dimensions */}
           {isMapFullscreen && (
             <div
               style={{
                 position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
+                top: '5%',
+                left: '5%',
+                width: '90%',
+                height: '90%',
                 zIndex: 30,
                 borderRadius: '24px',
                 overflow: 'hidden'
