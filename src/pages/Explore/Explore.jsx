@@ -51,7 +51,8 @@ export default function Explore() {
               style={{ 
                 width: '100%', 
                 height: '100%', 
-                position: 'relative'
+                position: 'relative',
+                pointerEvents: isMinimized ? 'none' : 'auto'
               }}
             >
               {/* White card that shrinks following button path */}
@@ -67,6 +68,7 @@ export default function Explore() {
                     ? `translate(${translateValues.x}px, ${translateValues.y}px) scale(0.1)` 
                     : 'translate(0, 0) scale(1)',
                   transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                  pointerEvents: isMinimized ? 'none' : 'auto'
                 }}
               >
                 {/* White card background */}
@@ -109,6 +111,7 @@ export default function Explore() {
                     : 'translate(0, 0)',
                   transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease',
                   zIndex: 20,
+                  pointerEvents: 'auto',
                   boxShadow: isMinimized 
                     ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
                     : '0 2px 8px rgba(0, 0, 0, 0.15)'
