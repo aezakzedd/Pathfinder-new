@@ -1,4 +1,5 @@
 // Selected tourist spots - one per municipality with barangay info
+// Using exact names from GeoJSON files
 export const selectedSpots = [
   {
     municipality: 'VIRAC',
@@ -20,19 +21,19 @@ export const selectedSpots = [
   },
   {
     municipality: 'SAN_MIGUEL',
-    spotName: 'San Miguel River Park',
+    spotName: 'San Miguel Beach',
     barangay: 'Salvacion',
     geojsonFile: 'san_miguel.geojson'
   },
   {
     municipality: 'BAGAMANOC',
-    spotName: 'Hiyop Highland',
+    spotName: 'Paday Falls',
     barangay: 'Bagamanoc',
     geojsonFile: 'bagamanoc.geojson'
   },
   {
     municipality: 'VIGA',
-    spotName: 'Tuwad-Tuwadan Lagoon',
+    spotName: 'Cogon Hills',
     barangay: 'Viga',
     geojsonFile: 'viga.geojson'
   },
@@ -68,6 +69,17 @@ export const selectedSpots = [
   }
 ];
 
+// Helper function to convert municipality name to sentence case
+export const toSentenceCase = (str) => {
+  if (!str) return '';
+  // Replace underscores with spaces and convert to title case
+  return str
+    .toLowerCase()
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 // Category colors for the pill badges
 export const categoryColors = {
   BEACH: { bg: '#dbeafe', text: '#1e40af' }, // blue
@@ -87,5 +99,6 @@ export const categoryColors = {
   HIKING: { bg: '#fdba74', text: '#7c2d12' }, // orange
   ISLAND: { bg: '#99f6e4', text: '#134e4a' }, // teal
   BAR: { bg: '#fca5a5', text: '#7f1d1d' }, // rose
+  PARK: { bg: '#bef264', text: '#3f6212' }, // lime
   default: { bg: '#f3f4f6', text: '#1f2937' } // gray
 };
