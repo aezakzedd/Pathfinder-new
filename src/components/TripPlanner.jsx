@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar } from 'lucide-react';
+import { Calendar, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, CloudFog } from 'lucide-react';
 
 export default function TripPlanner() {
   const [dateRange, setDateRange] = useState('Nov 30 - Dec 2');
@@ -37,6 +37,33 @@ export default function TripPlanner() {
       ...prev,
       [activity]: !prev[activity]
     }));
+  };
+
+  // Get weather icon based on condition
+  const getWeatherIcon = (weatherMain) => {
+    const iconProps = { size: 48, color: '#84cc16', strokeWidth: 1.5 };
+    
+    switch (weatherMain) {
+      case 'Clear':
+        return <Sun {...iconProps} />;
+      case 'Clouds':
+        return <Cloud {...iconProps} />;
+      case 'Rain':
+        return <CloudRain {...iconProps} />;
+      case 'Drizzle':
+        return <CloudDrizzle {...iconProps} />;
+      case 'Thunderstorm':
+        return <CloudLightning {...iconProps} />;
+      case 'Snow':
+        return <CloudSnow {...iconProps} />;
+      case 'Mist':
+      case 'Fog':
+      case 'Haze':
+      case 'Smoke':
+        return <CloudFog {...iconProps} />;
+      default:
+        return <Cloud {...iconProps} />;
+    }
   };
 
   return (
@@ -170,37 +197,48 @@ export default function TripPlanner() {
           {loading ? (
             <p style={{ color: '#9ca3af', fontSize: '11px', margin: 0 }}>Loading...</p>
           ) : weather && weather.main ? (
-            <div style={{ marginTop: '4px' }}>
+            <div style={{ marginTop: '4px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+              {/* Weather Icon and Temperature */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
-                marginBottom: '6px'
+                justifyContent: 'center',
+                gap: '12px',
+                marginBottom: '8px'
               }}>
-                <span style={{
-                  fontSize: '28px',
-                  fontWeight: 'bold',
-                  color: 'white'
-                }}>{Math.round(weather.main.temp)}°C</span>
+                {getWeatherIcon(weather.weather[0].main)}
                 <div>
-                  <p style={{
-                    color: 'white',
-                    fontSize: '11px',
-                    textTransform: 'capitalize',
-                    margin: 0
-                  }}>{weather.weather[0].description}</p>
-                  <p style={{
-                    color: '#9ca3af',
-                    fontSize: '9px',
-                    margin: 0
-                  }}>Feels like {Math.round(weather.main.feels_like)}°C</p>
+                  <span style={{
+                    fontSize: '32px',
+                    fontWeight: 'bold',
+                    color: 'white'
+                  }}>{Math.round(weather.main.temp)}°C</span>
                 </div>
               </div>
+              
+              {/* Weather Description */}
+              <p style={{
+                color: 'white',
+                fontSize: '11px',
+                textTransform: 'capitalize',
+                textAlign: 'center',
+                margin: 0,
+                marginBottom: '4px'
+              }}>{weather.weather[0].description}</p>
+              <p style={{
+                color: '#9ca3af',
+                fontSize: '9px',
+                textAlign: 'center',
+                margin: 0,
+                marginBottom: '8px'
+              }}>Feels like {Math.round(weather.main.feels_like)}°C</p>
+              
+              {/* Humidity and Wind */}
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
                 gap: '6px',
-                marginTop: '8px'
+                marginTop: 'auto'
               }}>
                 <div>
                   <p style={{ color: '#9ca3af', fontSize: '9px', margin: 0 }}>Humidity</p>
