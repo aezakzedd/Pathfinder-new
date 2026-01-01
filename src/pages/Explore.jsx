@@ -169,27 +169,43 @@ export default function Explore() {
     willChange: 'transform'
   }), [isMinimized]);
 
-  // Smooth fullscreen animation using flexGrow and negative margins
-  const mapContainerStyle = useMemo(() => ({
-    position: 'relative',
-    width: isMapFullscreen ? 'auto' : '50%',
-    height: '100%',
-    flexGrow: isMapFullscreen ? 1 : 0,
-    flexShrink: 0,
-    // Use negative margins to expand beyond parent padding when fullscreen
-    marginTop: isMapFullscreen ? '-24px' : '0',
-    marginRight: isMapFullscreen ? '-24px' : '0',
-    marginBottom: isMapFullscreen ? '-24px' : '0',
-    marginLeft: isMapFullscreen ? '-24px' : '0',
-    // Adjust border radius
-    borderRadius: isMapFullscreen ? '24px' : '16px',
-    overflow: 'hidden',
-    transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-    zIndex: isMapFullscreen ? 30 : 1,
-    willChange: 'margin, width, border-radius'
-  }), [isMapFullscreen]);
+  // Smooth fullscreen animation - keeps exact original position in normal mode
+  const mapContainerStyle = useMemo(() => {
+    if (isMapFullscreen) {
+      // Fullscreen: use margins to expand beyond padding
+      return {
+        position: 'relative',
+        width: 'auto',
+        height: '100%',
+        flexGrow: 1,
+        flexShrink: 0,
+        marginTop: '-24px',
+        marginRight: '-24px',
+        marginBottom: '-24px',
+        marginLeft: '-24px',
+        borderRadius: '24px',
+        overflow: 'hidden',
+        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+        zIndex: 30,
+        willChange: 'margin, width, border-radius'
+      };
+    } else {
+      // Normal: exact original positioning with no margins
+      return {
+        position: 'relative',
+        width: '50%',
+        height: '100%',
+        flexShrink: 0,
+        borderRadius: '16px',
+        overflow: 'hidden',
+        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+        zIndex: 1,
+        willChange: 'width, border-radius'
+      };
+    }
+  }, [isMapFullscreen]);
 
-  // Inner wrapper to maintain background and prevent content shift
+  // Inner wrapper to maintain background
   const mapInnerStyle = useMemo(() => ({
     width: '100%',
     height: '100%',
