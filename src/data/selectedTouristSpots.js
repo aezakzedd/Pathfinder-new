@@ -1,58 +1,69 @@
-// Selected tourist spots - one per municipality
+// Selected tourist spots - one per municipality with barangay info
 export const selectedSpots = [
   {
     municipality: 'VIRAC',
     spotName: 'Marilima Beach',
+    barangay: 'Balite',
     geojsonFile: 'VIRAC.geojson'
   },
   {
     municipality: 'BATO',
     spotName: 'Bote Lighthouse',
+    barangay: 'Bote',
     geojsonFile: 'BATO.geojson'
   },
   {
     municipality: 'BARAS',
     spotName: 'Binurong Point',
+    barangay: 'Baras',
     geojsonFile: 'baras.geojson'
   },
   {
     municipality: 'SAN_MIGUEL',
     spotName: 'San Miguel River Park',
+    barangay: 'Salvacion',
     geojsonFile: 'san_miguel.geojson'
   },
   {
     municipality: 'BAGAMANOC',
     spotName: 'Hiyop Highland',
+    barangay: 'Bagamanoc',
     geojsonFile: 'bagamanoc.geojson'
   },
   {
     municipality: 'VIGA',
     spotName: 'Tuwad-Tuwadan Lagoon',
+    barangay: 'Viga',
     geojsonFile: 'viga.geojson'
   },
   {
     municipality: 'PANGANIBAN',
     spotName: 'Talisoy Beach',
+    barangay: 'Panganiban',
     geojsonFile: 'panganiban.geojson'
   },
   {
     municipality: 'PANDAN',
     spotName: 'Pandan Church',
+    barangay: 'Pandan Centro',
     geojsonFile: 'pandan.geojson'
   },
   {
     municipality: 'CARAMORAN',
     spotName: 'Tignob Cove',
+    barangay: 'Caramoran',
     geojsonFile: 'caramoran.geojson'
   },
   {
     municipality: 'GIGMOTO',
     spotName: 'Gigmoto Port',
+    barangay: 'Gigmoto',
     geojsonFile: 'gigmoto.geojson'
   },
   {
     municipality: 'SAN_ANDRES',
     spotName: 'Mamangal Beach',
+    barangay: 'San Andres',
     geojsonFile: 'san_andres.geojson'
   }
 ];
