@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
+import { Maximize, Minimize } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 
-export default function MapView() {
+export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
 
@@ -85,15 +86,67 @@ export default function MapView() {
     };
   }, []);
 
+  // Resize map when fullscreen state changes
+  useEffect(() => {
+    if (map.current) {
+      setTimeout(() => {
+        map.current.resize();
+      }, 100);
+    }
+  }, [isFullscreen]);
+
   return (
     <div 
-      ref={mapContainer} 
       style={{ 
         width: '100%', 
         height: '100%',
-        borderRadius: '16px',
-        overflow: 'hidden'
+        position: 'relative'
       }} 
-    />
+    >
+      {/* Fullscreen toggle button */}
+      <button
+        onClick={onToggleFullscreen}
+        style={{
+          position: 'absolute',
+          top: '12px',
+          left: '12px',
+          width: '36px',
+          height: '36px',
+          borderRadius: '4px',
+          backgroundColor: 'white',
+          border: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          zIndex: 10,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = '#f3f4f6';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'white';
+        }}
+      >
+        {isFullscreen ? (
+          <Minimize color="black" size={18} strokeWidth={2} />
+        ) : (
+          <Maximize color="black" size={18} strokeWidth={2} />
+        )}
+      </button>
+
+      {/* Map container */}
+      <div 
+        ref={mapContainer} 
+        style={{ 
+          width: '100%', 
+          height: '100%',
+          borderRadius: '16px',
+          overflow: 'hidden'
+        }} 
+      />
+    </div>
   );
 }
