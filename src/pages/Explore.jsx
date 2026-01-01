@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Map, Wifi, ChevronDown } from 'lucide-react';
 import FloatingCard from '../components/FloatingCard';
 import MapView from '../components/MapView';
@@ -9,46 +9,177 @@ export default function Explore() {
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const containerRef = useRef(null);
   const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
+  const resizeTimeoutRef = useRef(null);
 
-  const calculateTranslateValues = () => {
+  // Memoized calculate function to prevent recreation
+  const calculateTranslateValues = useCallback(() => {
     if (containerRef.current) {
       const container = containerRef.current;
       const width = container.offsetWidth;
       const height = container.offsetHeight;
       
       // Calculate distance from bottom-right (4px, 4px) to top-left (4px, 4px)
-      // Button is 40px, so we need to account for that
       const translateX = -(width - 40 - 8);
       const translateY = -(height - 40 - 8);
       
       setTranslateValues({ x: translateX, y: translateY });
     }
-  };
+  }, []);
+
+  // Debounced resize handler for better performance
+  const handleResize = useCallback(() => {
+    // Clear existing timeout
+    if (resizeTimeoutRef.current) {
+      clearTimeout(resizeTimeoutRef.current);
+    }
+
+    // Debounce resize calculation to avoid excessive calls
+    resizeTimeoutRef.current = setTimeout(() => {
+      calculateTranslateValues();
+    }, 150);
+  }, [calculateTranslateValues]);
 
   useEffect(() => {
     // Calculate on mount
     calculateTranslateValues();
 
-    // Add resize listener
-    const handleResize = () => {
-      calculateTranslateValues();
-    };
-
+    // Add debounced resize listener
     window.addEventListener('resize', handleResize);
 
     // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
     };
+  }, [calculateTranslateValues, handleResize]);
+
+  // Memoized toggle handlers to prevent recreation
+  const toggleMinimize = useCallback(() => {
+    setIsMinimized(prev => !prev);
   }, []);
 
-  const toggleMinimize = () => {
-    setIsMinimized(!isMinimized);
-  };
+  const toggleMapFullscreen = useCallback(() => {
+    setIsMapFullscreen(prev => !prev);
+  }, []);
 
-  const toggleMapFullscreen = () => {
-    setIsMapFullscreen(!isMapFullscreen);
-  };
+  // Memoize styles to prevent recreation on every render
+  const containerStyle = useMemo(() => ({
+    width: '90vw',
+    height: '90vh',
+    border: '1px solid white',
+    borderRadius: '24px',
+    backgroundColor: 'transparent',
+    display: 'flex',
+    gap: isMapFullscreen ? '0px' : '24px',
+    padding: '24px',
+    boxSizing: 'border-box',
+    position: 'relative',
+    transition: 'gap 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+    overflow: 'hidden'
+  }), [isMapFullscreen]);
+
+  const leftContainerStyle = useMemo(() => ({
+    width: isMapFullscreen ? '0%' : '50%',
+    height: '100%',
+    position: 'relative',
+    overflow: 'hidden',
+    opacity: isMapFullscreen ? 0 : 1,
+    transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+    willChange: 'width, opacity'
+  }), [isMapFullscreen]);
+
+  const leftContentStyle = useMemo(() => ({
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'black',
+    borderRadius: '16px',
+    padding: '16px',
+    boxSizing: 'border-box'
+  }), []);
+
+  const overlayContainerStyle = useMemo(() => ({
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    pointerEvents: isMinimized ? 'none' : 'auto'
+  }), [isMinimized]);
+
+  const whiteCardTransformStyle = useMemo(() => ({
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    transformOrigin: 'bottom right',
+    transform: isMinimized 
+      ? `translate(${translateValues.x}px, ${translateValues.y}px) scale(0.1)` 
+      : 'translate(0, 0) scale(1)',
+    transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+    pointerEvents: isMinimized ? 'none' : 'auto',
+    willChange: 'transform'
+  }), [isMinimized, translateValues.x, translateValues.y]);
+
+  const whiteCardBackgroundStyle = useMemo(() => ({
+    position: 'absolute',
+    top: '0',
+    left: '0',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'white',
+    borderRadius: '16px',
+    padding: '16px',
+    boxSizing: 'border-box',
+    opacity: isMinimized ? 0 : 1,
+    transition: 'opacity 0.4s ease',
+    willChange: 'opacity'
+  }), [isMinimized]);
+
+  const buttonStyle = useMemo(() => ({
+    position: 'absolute',
+    bottom: '4px',
+    right: '4px',
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    backgroundColor: '#84cc16',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transform: isMinimized 
+      ? `translate(${translateValues.x}px, ${translateValues.y}px)` 
+      : 'translate(0, 0)',
+    transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease',
+    zIndex: 20,
+    pointerEvents: 'auto',
+    boxShadow: isMinimized 
+      ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
+      : '0 2px 8px rgba(0, 0, 0, 0.15)',
+    willChange: 'transform, box-shadow'
+  }), [isMinimized, translateValues.x, translateValues.y]);
+
+  const chevronStyle = useMemo(() => ({
+    transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
+    transition: 'transform 0.6s ease',
+    willChange: 'transform'
+  }), [isMinimized]);
+
+  const mapContainerStyle = useMemo(() => ({
+    position: isMapFullscreen ? 'absolute' : 'relative',
+    top: isMapFullscreen ? 0 : 'auto',
+    left: isMapFullscreen ? 0 : 'auto',
+    width: isMapFullscreen ? '100%' : '50%',
+    height: '100%',
+    borderRadius: isMapFullscreen ? '24px' : '16px',
+    overflow: 'hidden',
+    transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+    zIndex: isMapFullscreen ? 30 : 1,
+    willChange: 'width, border-radius'
+  }), [isMapFullscreen]);
 
   return (
     <div className="h-screen w-screen bg-black overflow-hidden">
@@ -64,147 +195,37 @@ export default function Explore() {
       
       {/* Centered container for FloatingCard */}
       <div className="w-full h-full flex items-center justify-center">
-        <div
-          style={{
-            width: '90vw',
-            height: '90vh',
-            border: '1px solid white',
-            borderRadius: '24px',
-            backgroundColor: 'transparent',
-            display: 'flex',
-            gap: isMapFullscreen ? '0px' : '24px',
-            padding: '24px',
-            boxSizing: 'border-box',
-            position: 'relative',
-            transition: 'gap 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-            overflow: 'hidden'
-          }}
-        >
+        <div style={containerStyle}>
           {/* Left container with ChatBot - hide when map is fullscreen */}
-          <div 
-            style={{
-              width: isMapFullscreen ? '0%' : '50%',
-              height: '100%',
-              position: 'relative',
-              overflow: 'hidden',
-              opacity: isMapFullscreen ? 0 : 1,
-              transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease'
-            }}
-          >
-            <div 
-              style={{
-                width: '100%',
-                height: '100%',
-                backgroundColor: 'black',
-                borderRadius: '16px',
-                padding: '16px',
-                boxSizing: 'border-box'
-              }}
-            >
+          <div style={leftContainerStyle}>
+            <div style={leftContentStyle}>
               <ChatBot />
             </div>
             
             {/* Overlay for white card */}
-            <div 
-              ref={containerRef}
-              style={{ 
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%', 
-                height: '100%',
-                pointerEvents: isMinimized ? 'none' : 'auto'
-              }}
-            >
+            <div ref={containerRef} style={overlayContainerStyle}>
               {/* White card that shrinks following button path */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  transformOrigin: 'bottom right',
-                  transform: isMinimized 
-                    ? `translate(${translateValues.x}px, ${translateValues.y}px) scale(0.1)` 
-                    : 'translate(0, 0) scale(1)',
-                  transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-                  pointerEvents: isMinimized ? 'none' : 'auto'
-                }}
-              >
+              <div style={whiteCardTransformStyle}>
                 {/* White card background */}
-                <div 
-                  style={{
-                    position: 'absolute',
-                    top: '0',
-                    left: '0',
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: 'white',
-                    borderRadius: '16px',
-                    padding: '16px',
-                    boxSizing: 'border-box',
-                    opacity: isMinimized ? 0 : 1,
-                    transition: 'opacity 0.4s ease',
-                  }}
-                >
+                <div style={whiteCardBackgroundStyle}>
                   {/* Your white card content goes here */}
                 </div>
               </div>
 
               {/* Green chevron button - moves diagonally, constant size */}
-              <div 
-                onClick={toggleMinimize}
-                style={{
-                  position: 'absolute',
-                  bottom: '4px',
-                  right: '4px',
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  backgroundColor: '#84cc16',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transform: isMinimized 
-                    ? `translate(${translateValues.x}px, ${translateValues.y}px)` 
-                    : 'translate(0, 0)',
-                  transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease',
-                  zIndex: 20,
-                  pointerEvents: 'auto',
-                  boxShadow: isMinimized 
-                    ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
-                    : '0 2px 8px rgba(0, 0, 0, 0.15)'
-                }}
-              >
+              <div onClick={toggleMinimize} style={buttonStyle}>
                 <ChevronDown 
                   color="black" 
                   size={20} 
                   strokeWidth={3} 
-                  style={{ 
-                    transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
-                    transition: 'transform 0.6s ease'
-                  }}
+                  style={chevronStyle}
                 />
               </div>
             </div>
           </div>
           
           {/* Map container - expands smoothly to fullscreen */}
-          <div 
-            style={{
-              position: isMapFullscreen ? 'absolute' : 'relative',
-              top: isMapFullscreen ? 0 : 'auto',
-              left: isMapFullscreen ? 0 : 'auto',
-              width: isMapFullscreen ? '100%' : '50%',
-              height: '100%',
-              borderRadius: isMapFullscreen ? '24px' : '16px',
-              overflow: 'hidden',
-              transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-              zIndex: isMapFullscreen ? 30 : 1
-            }}
-          >
+          <div style={mapContainerStyle}>
             <MapView 
               isFullscreen={isMapFullscreen}
               onToggleFullscreen={toggleMapFullscreen}
@@ -213,5 +234,5 @@ export default function Explore() {
         </div>
       </div>
     </div>
-  )
+  );
 }
