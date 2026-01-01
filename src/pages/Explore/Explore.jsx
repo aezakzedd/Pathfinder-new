@@ -112,18 +112,6 @@ export default function Explore() {
                     ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
                     : '0 2px 8px rgba(0, 0, 0, 0.15)'
                 }}
-                onMouseEnter={(e) => {
-                  const currentTransform = isMinimized 
-                    ? `translate(${translateValues.x}px, ${translateValues.y}px) scale(1.1)`
-                    : 'translate(0, 0) scale(1.1)';
-                  e.currentTarget.style.transform = currentTransform;
-                }}
-                onMouseLeave={(e) => {
-                  const currentTransform = isMinimized 
-                    ? `translate(${translateValues.x}px, ${translateValues.y}px) scale(1)`
-                    : 'translate(0, 0) scale(1)';
-                  e.currentTarget.style.transform = currentTransform;
-                }}
               >
                 <ChevronDown 
                   color="black" 
