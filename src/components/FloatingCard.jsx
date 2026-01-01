@@ -1,4 +1,4 @@
-export default function FloatingCard({ leftContent, rightContent, className = '', ...props }) {
+export default function FloatingCard({ leftContent, rightContent, overlayContent, className = '', ...props }) {
   return (
     <div 
       className={`floating-card ${className}`}
@@ -16,18 +16,44 @@ export default function FloatingCard({ leftContent, rightContent, className = ''
       }}
       {...props}
     >
-      {/* Left container */}
+      {/* Left container with overlay */}
       <div 
         style={{
           width: '50%',
           height: '100%',
-          backgroundColor: '#374151',
-          borderRadius: '16px',
-          padding: '16px',
-          boxSizing: 'border-box'
+          position: 'relative'
         }}
       >
-        {leftContent}
+        {/* Base left container */}
+        <div 
+          style={{
+            width: '100%',
+            height: '100%',
+            backgroundColor: '#374151',
+            borderRadius: '16px',
+            padding: '16px',
+            boxSizing: 'border-box'
+          }}
+        >
+          {leftContent}
+        </div>
+        
+        {/* White overlay container */}
+        <div 
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '16px',
+            boxSizing: 'border-box'
+          }}
+        >
+          {overlayContent}
+        </div>
       </div>
       
       {/* Right container - for map */}
