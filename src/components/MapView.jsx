@@ -40,13 +40,13 @@ export default function MapView() {
               [-180, -90]
             ],
             // Inner ring (cutout for Catanduanes including Palumbanes Island)
-            // Counter-clockwise for hole - adjusted to hide Palompon Islands
+            // Counter-clockwise for hole - adjusted to 124.011 to show full province
             [
-              [124.05, 13.35], // Southwest corner - moved east to hide Palompon Islands
-              [124.05, 14.15], // Northwest corner - moved east
-              [124.45, 14.15], // Northeast corner
-              [124.45, 13.35], // Southeast corner
-              [124.05, 13.35]  // Close the ring
+              [124.011, 13.35], // Southwest corner - at specified western boundary
+              [124.011, 14.15], // Northwest corner
+              [124.45, 14.15],  // Northeast corner
+              [124.45, 13.35],  // Southeast corner
+              [124.011, 13.35]  // Close the ring
             ]
           ]
         }
