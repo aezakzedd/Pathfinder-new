@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Maximize, Minimize } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -8,7 +8,8 @@ const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
-  const currentState = useRef({ center: [124.2475, 13.8], zoom: 9 });
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const lockedState = useRef(null);
 
   useEffect(() => {
     if (map.current) return; // Initialize map only once
@@ -30,16 +31,6 @@ export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
 
     // Add navigation controls
     map.current.addControl(new maplibregl.NavigationControl(), 'top-right');
-
-    // Track map state changes
-    map.current.on('moveend', () => {
-      if (map.current) {
-        currentState.current = {
-          center: map.current.getCenter(),
-          zoom: map.current.getZoom()
-        };
-      }
-    });
 
     // Add mask overlay when map loads
     map.current.on('load', () => {
@@ -97,29 +88,57 @@ export default function MapView({ isFullscreen = false, onToggleFullscreen }) {
     };
   }, []);
 
-  // Resize map and maintain exact view when fullscreen state changes
+  // Handle fullscreen transitions with locked state
   useEffect(() => {
-    if (map.current) {
-      // Get current state immediately
-      const beforeState = {
-        center: map.current.getCenter(),
-        zoom: map.current.getZoom()
-      };
+    if (!map.current) return;
 
-      // Wait for CSS transition to complete
-      setTimeout(() => {
-        if (map.current) {
-          // Resize the map canvas
-          map.current.resize();
-          
-          // Immediately restore the exact view without animation
+    // Lock the current state
+    lockedState.current = {
+      center: map.current.getCenter(),
+      zoom: map.current.getZoom(),
+      bearing: map.current.getBearing(),
+      pitch: map.current.getPitch()
+    };
+
+    setIsTransitioning(true);
+
+    // Continuously enforce locked state during transition
+    const enforceInterval = setInterval(() => {
+      if (map.current && lockedState.current) {
+        map.current.jumpTo({
+          center: lockedState.current.center,
+          zoom: lockedState.current.zoom,
+          bearing: lockedState.current.bearing,
+          pitch: lockedState.current.pitch
+        });
+      }
+    }, 16); // ~60fps
+
+    // After transition completes
+    const transitionTimeout = setTimeout(() => {
+      if (map.current) {
+        map.current.resize();
+        
+        // Final enforcement
+        if (lockedState.current) {
           map.current.jumpTo({
-            center: beforeState.center,
-            zoom: beforeState.zoom
+            center: lockedState.current.center,
+            zoom: lockedState.current.zoom,
+            bearing: lockedState.current.bearing,
+            pitch: lockedState.current.pitch
           });
         }
-      }, 550); // Slightly longer than 500ms transition to ensure it completes
-    }
+      }
+      
+      clearInterval(enforceInterval);
+      setIsTransitioning(false);
+      lockedState.current = null;
+    }, 550);
+
+    return () => {
+      clearInterval(enforceInterval);
+      clearTimeout(transitionTimeout);
+    };
   }, [isFullscreen]);
 
   return (
