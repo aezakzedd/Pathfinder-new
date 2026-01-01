@@ -58,14 +58,14 @@ export default function MapView() {
         data: maskGeoJSON
       });
 
-      // Add layer with semi-transparent black fill
+      // Add layer with solid black fill
       map.current.addLayer({
         id: 'mask-layer',
         type: 'fill',
         source: 'mask',
         paint: {
           'fill-color': '#000000',
-          'fill-opacity': 0.6
+          'fill-opacity': 1
         }
       });
     });
