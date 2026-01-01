@@ -44,7 +44,7 @@ export default function Explore() {
                   color="black" 
                   size={32} 
                   strokeWidth={2.5} 
-                  style={{ transform: 'rotate(-135deg)' }}
+                  style={{ transform: 'rotate(135deg)' }}
                 />
               </div>
             </div>
