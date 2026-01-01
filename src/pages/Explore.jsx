@@ -188,13 +188,13 @@ export default function Explore() {
         willChange: 'width, height, top, left, right, bottom'
       };
     } else {
-      // Normal: width 46% and height 92%
+      // Normal: width 46% and height 93.5%
       return {
         position: 'absolute',
-        top: '4%', // Centered vertically: (100% - 92%) / 2 = 4%
+        top: '3.25%', // Centered vertically: (100% - 93.5%) / 2 = 3.25%
         left: 'calc(50% + 24px)', // After left container (50%) + gap (24px)
         width: '46%',
-        height: '92%',
+        height: '93.5%',
         borderRadius: '16px',
         overflow: 'hidden',
         transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
