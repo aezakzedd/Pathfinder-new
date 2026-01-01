@@ -183,16 +183,16 @@ export default function Explore() {
     boxSizing: 'border-box'
   }), []);
 
-  // Map container - slightly smaller than full parent when fullscreen (96% width/height)
+  // Map container - properly sized to cover full parent content area when fullscreen
   const mapContainerStyle = useMemo(() => ({
     position: 'absolute',
-    top: isMapFullscreen ? '2%' : '0',
-    right: isMapFullscreen ? '2%' : '0',
-    bottom: isMapFullscreen ? '2%' : '0',
-    // When fullscreen: 96% of (2x child containers + gap) with centering offset
-    width: isMapFullscreen ? 'calc((200% + 24px) * 0.96)' : '100%',
-    // When fullscreen: move left by (right container width + gap) then center
-    left: isMapFullscreen ? 'calc(-100% - 24px + 2%)' : '0',
+    top: isMapFullscreen ? '0' : '0',
+    right: isMapFullscreen ? '0' : '0',
+    bottom: isMapFullscreen ? '0' : '0',
+    // When fullscreen: width = 2x child containers + gap = full parent content width
+    width: isMapFullscreen ? 'calc(200% + 24px)' : '100%',
+    // When fullscreen: move left by (right container width + gap)
+    left: isMapFullscreen ? 'calc(-100% - 24px)' : '0',
     borderRadius: isMapFullscreen ? '16px' : '16px',
     overflow: 'hidden',
     transition: 'all 0.5s ease-in-out',
@@ -249,7 +249,7 @@ export default function Explore() {
               {/* Your content goes here */}
             </div>
             
-            {/* Map container - 96% size when fullscreen with margin */}
+            {/* Map container - covers full parent width when fullscreen */}
             <div style={mapContainerStyle}>
               <MapView 
                 isFullscreen={isMapFullscreen}
