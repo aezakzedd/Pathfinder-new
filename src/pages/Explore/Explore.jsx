@@ -28,73 +28,81 @@ export default function Explore() {
           leftContent={null}
           rightContent={<MapView />}
           overlayContent={
-            <>
-              {/* White card that animates */}
-              <div 
+            <div style={{ 
+              width: '100%', 
+              height: '100%', 
+              position: 'relative'
+            }}>
+              {/* Container that moves and scales together */}
+              <div
                 style={{
                   position: 'absolute',
-                  top: '0',
-                  left: '0',
+                  top: 0,
+                  left: 0,
                   width: '100%',
                   height: '100%',
-                  backgroundColor: 'white',
-                  borderRadius: '16px',
-                  transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                  transformOrigin: 'bottom right',
-                  transform: isMinimized ? 'scale(0)' : 'scale(1)',
-                  opacity: isMinimized ? 0 : 1,
-                  padding: '16px',
-                  boxSizing: 'border-box'
+                  transformOrigin: 'top left',
+                  transform: isMinimized 
+                    ? 'translate(4px, 4px) scale(0.08)' 
+                    : 'translate(0, 0) scale(1)',
+                  transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
               >
-                {/* Your white card content goes here */}
-              </div>
-
-              {/* Green chevron button - moves diagonally */}
-              <div 
-                onClick={toggleMinimize}
-                style={{
-                  position: 'absolute',
-                  top: isMinimized ? '4px' : 'auto',
-                  left: isMinimized ? '4px' : 'auto',
-                  bottom: isMinimized ? 'auto' : '4px',
-                  right: isMinimized ? 'auto' : '4px',
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  backgroundColor: '#84cc16',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                  zIndex: 20,
-                  boxShadow: isMinimized 
-                    ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
-                    : '0 2px 8px rgba(0, 0, 0, 0.15)'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isMinimized) {
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isMinimized) {
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }
-                }}
-              >
-                <ChevronDown 
-                  color="black" 
-                  size={20} 
-                  strokeWidth={3} 
-                  style={{ 
-                    transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
-                    transition: 'transform 0.5s ease'
+                {/* White card */}
+                <div 
+                  style={{
+                    position: 'absolute',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'white',
+                    borderRadius: '16px',
+                    padding: '16px',
+                    boxSizing: 'border-box',
+                    opacity: isMinimized ? 0 : 1,
+                    transition: 'opacity 0.3s ease',
                   }}
-                />
+                >
+                  {/* Your white card content goes here */}
+                </div>
+
+                {/* Green chevron button - positioned at bottom-right of this container */}
+                <div 
+                  onClick={toggleMinimize}
+                  style={{
+                    position: 'absolute',
+                    bottom: '4px',
+                    right: '4px',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    backgroundColor: '#84cc16',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'box-shadow 0.3s ease',
+                    zIndex: 20,
+                    boxShadow: isMinimized 
+                      ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
+                      : '0 2px 8px rgba(0, 0, 0, 0.15)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <ChevronDown 
+                    color="black" 
+                    size={20} 
+                    strokeWidth={3} 
+                    style={{ 
+                      transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
+                      transition: 'transform 0.6s ease'
+                    }}
+                  />
+                </div>
               </div>
-            </>
+            </div>
           }
         />
       </div>
