@@ -221,25 +221,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           }
         }, 0);
         
-        // Calculate offset to center both marker and info card
-        // Card height: 280px, offset: 342px above marker
-        // We need to shift the center point up by half of the total height (card + gap + marker)
-        // Total visible height: ~400px (card + marker + gap)
-        // Offset center by ~200px (in map units) to show both
-        
+        // Use padding to keep info card visible while centering on marker coordinates
+        // Card is 342px above marker, so add top padding to shift viewport
         const targetZoom = Math.max(map.current.getZoom(), 12);
         
-        // Convert pixel offset to lat offset (approximate)
-        // At zoom 12, 1 degree latitude ≈ 11132000 meters ≈ 890560 pixels at equator
-        // For our purposes, we need to offset by ~200 pixels upward
-        const pixelOffset = 200;
-        const metersPerPixel = 156543.03392 * Math.cos(spot.coordinates[1] * Math.PI / 180) / Math.pow(2, targetZoom);
-        const latOffset = (pixelOffset * metersPerPixel) / 111320; // degrees latitude
-        
-        // Pan to marker location with offset to show full card
         map.current.flyTo({
-          center: [spot.coordinates[0], spot.coordinates[1] + latOffset],
+          center: spot.coordinates, // Keep centered on actual marker coordinates
           zoom: targetZoom,
+          padding: { top: 200, bottom: 50, left: 0, right: 0 }, // Add top padding to show card
           duration: 800
         });
       });
