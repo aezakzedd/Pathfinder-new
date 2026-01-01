@@ -128,7 +128,7 @@ export default function Explore() {
     left: '0',
     width: '100%',
     height: '100%',
-    backgroundColor: 'white',
+    backgroundColor: '#d1d5db', // Grey background (Tailwind gray-300)
     borderRadius: '16px',
     padding: '16px',
     boxSizing: 'border-box',
@@ -222,11 +222,11 @@ export default function Explore() {
               <ChatBot />
             </div>
             
-            {/* Overlay for white card with TravellerInformation */}
+            {/* Overlay for grey card with TravellerInformation */}
             <div ref={containerRef} style={overlayContainerStyle}>
-              {/* White card that shrinks following button path */}
+              {/* Grey card that shrinks following button path */}
               <div style={whiteCardTransformStyle}>
-                {/* White card background with TravellerInformation */}
+                {/* Grey card background with TravellerInformation */}
                 <div style={whiteCardBackgroundStyle}>
                   <TravellerInformation />
                 </div>
