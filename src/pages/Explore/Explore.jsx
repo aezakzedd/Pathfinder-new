@@ -1,5 +1,6 @@
 import { Map, Wifi } from 'lucide-react';
 import FloatingCard from '../../components/FloatingCard';
+import MapView from '../../components/MapView';
 
 export default function Explore() {
   return (
@@ -16,7 +17,10 @@ export default function Explore() {
       
       {/* Centered container for FloatingCard */}
       <div className="w-full h-full flex items-center justify-center">
-        <FloatingCard />
+        <FloatingCard 
+          leftContent={null}
+          rightContent={<MapView />}
+        />
       </div>
     </div>
   )
