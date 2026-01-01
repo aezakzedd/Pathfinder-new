@@ -3,7 +3,7 @@ import { Map, ChevronDown } from 'lucide-react';
 import FloatingCard from '../components/FloatingCard';
 import MapView from '../components/MapView';
 import ChatBot from '../components/ChatBot';
-import TripPlanner from '../components/TripPlanner';
+import TravellerInformation from '../components/TravellerInformation';
 import NetworkStatus from '../components/NetworkStatus';
 
 export default function Explore() {
@@ -222,13 +222,13 @@ export default function Explore() {
               <ChatBot />
             </div>
             
-            {/* Overlay for white card with TripPlanner */}
+            {/* Overlay for white card with TravellerInformation */}
             <div ref={containerRef} style={overlayContainerStyle}>
               {/* White card that shrinks following button path */}
               <div style={whiteCardTransformStyle}>
-                {/* White card background with TripPlanner */}
+                {/* White card background with TravellerInformation */}
                 <div style={whiteCardBackgroundStyle}>
-                  <TripPlanner />
+                  <TravellerInformation />
                 </div>
               </div>
 
