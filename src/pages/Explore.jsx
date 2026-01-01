@@ -183,16 +183,16 @@ export default function Explore() {
     boxSizing: 'border-box'
   }), []);
 
-  // Map container - expands to fill entire content area of main container
-  // Right container is positioned at calc(50% + 12px) from left edge of content area
+  // Map container - properly sized to cover full parent content area when fullscreen
   const mapContainerStyle = useMemo(() => ({
     position: 'absolute',
     top: isMapFullscreen ? '0' : '0',
     right: isMapFullscreen ? '0' : '0',
     bottom: isMapFullscreen ? '0' : '0',
-    // To reach left edge of content area from right container:
-    // Right container starts at calc(50% + 12px), so go back by that amount
-    left: isMapFullscreen ? 'calc(-50% - 12px)' : '0',
+    // When fullscreen: width = 2x child containers + gap = full parent content width
+    width: isMapFullscreen ? 'calc(200% + 24px)' : '100%',
+    // When fullscreen: move left by (right container width + gap)
+    left: isMapFullscreen ? 'calc(-100% - 24px)' : '0',
     borderRadius: isMapFullscreen ? '16px' : '16px',
     overflow: 'hidden',
     transition: 'all 0.5s ease-in-out',
@@ -249,7 +249,7 @@ export default function Explore() {
               {/* Your content goes here */}
             </div>
             
-            {/* Map container - stays within content area bounds */}
+            {/* Map container - covers full parent width when fullscreen */}
             <div style={mapContainerStyle}>
               <MapView 
                 isFullscreen={isMapFullscreen}
