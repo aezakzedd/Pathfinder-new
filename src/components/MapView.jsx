@@ -15,7 +15,7 @@ export default function MapView() {
       container: mapContainer.current,
       style: `https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`,
       center: [124.2475, 13.8], // Catanduanes coordinates
-      zoom: 10.5,
+      zoom: 8.5,
       attributionControl: false
     });
 
