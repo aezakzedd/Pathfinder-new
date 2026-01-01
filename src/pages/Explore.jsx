@@ -169,38 +169,38 @@ export default function Explore() {
     willChange: 'transform'
   }), [isMinimized]);
 
-  // Smooth fullscreen animation - map width set to 47.5%
+  // Fixed: Expand from original position using absolute positioning with smooth transitions
   const mapContainerStyle = useMemo(() => {
     if (isMapFullscreen) {
-      // Fullscreen: use margins to expand beyond padding
+      // Fullscreen: position absolute to overlay entire container
       return {
-        position: 'relative',
-        width: 'auto',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100%',
         height: '100%',
-        flexGrow: 1,
-        flexShrink: 0,
-        marginTop: '-24px',
-        marginRight: '-24px',
-        marginBottom: '-24px',
-        marginLeft: '-24px',
         borderRadius: '24px',
         overflow: 'hidden',
         transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
         zIndex: 30,
-        willChange: 'margin, width, border-radius'
+        willChange: 'width, height, top, left, right, bottom'
       };
     } else {
-      // Normal: width set to 47.5%
+      // Normal: calculate position to stay in flex layout
+      // Position absolutely but anchored to where it would be in flex
       return {
-        position: 'relative',
+        position: 'absolute',
+        top: 0,
+        left: 'calc(50% + 24px)', // After left container (50%) + gap (24px)
         width: '47.5%',
         height: '100%',
-        flexShrink: 0,
         borderRadius: '16px',
         overflow: 'hidden',
         transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
         zIndex: 1,
-        willChange: 'width, border-radius'
+        willChange: 'width, height, top, left'
       };
     }
   }, [isMapFullscreen]);
@@ -257,7 +257,7 @@ export default function Explore() {
             </div>
           </div>
           
-          {/* Map container - expands smoothly to fullscreen */}
+          {/* Map container - expands from original position to fullscreen */}
           <div style={mapContainerStyle}>
             <div style={mapInnerStyle}>
               <MapView 
