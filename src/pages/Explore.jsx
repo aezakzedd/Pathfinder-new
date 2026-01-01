@@ -67,8 +67,8 @@ export default function Explore() {
 
   // Memoize styles to prevent recreation on every render
   const containerStyle = useMemo(() => ({
-    width: '94vw',
-    height: '94vh',
+    width: '90vw',
+    height: '90vh',
     border: '1px solid white',
     borderRadius: '24px',
     backgroundColor: 'transparent',
