@@ -11,12 +11,19 @@ export default function MapView() {
   useEffect(() => {
     if (map.current) return; // Initialize map only once
 
+    // Define bounds for Catanduanes province
+    const bounds = [
+      [124.011, 13.35], // Southwest corner
+      [124.45, 14.15]   // Northeast corner
+    ];
+
     map.current = new maplibregl.Map({
       container: mapContainer.current,
       style: `https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`,
       center: [124.2475, 13.8], // Catanduanes coordinates
       zoom: 9,
-      attributionControl: false
+      attributionControl: false,
+      maxBounds: bounds // Restrict camera movement to these bounds
     });
 
     // Add navigation controls
