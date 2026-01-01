@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import { Maximize, Minimize, Map as MapIcon, List } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { touristSpots } from '../data/touristSpots';
+import { selectedSpots, categoryColors } from '../data/selectedTouristSpots';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
@@ -18,12 +18,46 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const previousZoom = useRef(DEFAULT_ZOOM);
   const [activeView, setActiveView] = useState('map');
   const [selectedSpot, setSelectedSpot] = useState(null);
+  const [touristSpots, setTouristSpots] = useState([]);
+
+  // Load GeoJSON data and extract selected spots
+  useEffect(() => {
+    const loadTouristSpots = async () => {
+      const spots = [];
+      
+      for (const selection of selectedSpots) {
+        try {
+          const response = await fetch(`/data/${selection.geojsonFile}`);
+          const geojson = await response.json();
+          
+          // Find the specific spot by name
+          const feature = geojson.features.find(
+            f => f.properties.name === selection.spotName
+          );
+          
+          if (feature) {
+            spots.push({
+              name: feature.properties.name,
+              location: feature.properties.municipality,
+              coordinates: feature.geometry.coordinates,
+              description: feature.properties.description,
+              categories: feature.properties.categories || [],
+              image: null // Will be added later when you have images
+            });
+          }
+        } catch (error) {
+          console.error(`Error loading ${selection.geojsonFile}:`, error);
+        }
+      }
+      
+      setTouristSpots(spots);
+    };
+
+    loadTouristSpots();
+  }, []);
 
   // Calculate marker scale based on zoom level
   const getMarkerScale = (zoom) => {
-    // At zoom 9 (default), scale = 1
-    // At zoom 12, scale = 0.7
-    // At zoom 15+, scale = 0.5
     const baseZoom = 9;
     const scale = Math.max(0.5, 1 - (zoom - baseZoom) * 0.1);
     return scale;
@@ -41,8 +75,32 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     });
   }, []);
 
+  // Get category pill HTML
+  const getCategoryPill = (category) => {
+    const colors = categoryColors[category] || categoryColors.default;
+    return `
+      <span style="
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        background-color: ${colors.bg};
+        color: ${colors.text};
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: capitalize;
+        margin-right: 4px;
+        margin-bottom: 4px;
+      ">${category.toLowerCase().replace('_', ' ')}</span>
+    `;
+  };
+
   // Create info card HTML content
   const createInfoCardHTML = (spot) => {
+    const categoryHTML = spot.categories
+      .slice(0, 2) // Show max 2 categories
+      .map(cat => getCategoryPill(cat))
+      .join('');
+
     return `
       <div style="
         width: 280px;
@@ -105,19 +163,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             font-size: 15px;
             font-weight: 600;
             color: #111827;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
           ">${spot.name}</h3>
 
-          <!-- Rating -->
-          <div style="display: flex; align-items: center; gap: 4px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="#111827" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-            </svg>
-            <span style="font-size: 13px; font-weight: 600; color: #111827;">${spot.rating}</span>
-            <span style="font-size: 13px; color: #6b7280;">(${spot.reviewCount})</span>
+          <!-- Categories -->
+          <div style="display: flex; flex-wrap: wrap; gap: 0;">
+            ${categoryHTML}
           </div>
         </div>
       </div>
@@ -126,7 +180,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
   // Add tourist spot markers
   const addTouristSpotMarkers = useCallback(() => {
-    if (!map.current) return;
+    if (!map.current || touristSpots.length === 0) return;
 
     // Clear existing markers
     markersRef.current.forEach(marker => marker.remove());
@@ -165,7 +219,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       // Create marker with proper anchor at the bottom point of the pin
       const marker = new maplibregl.Marker({
         element: markerEl,
-        anchor: 'bottom' // Anchors at the bottom point of the pin
+        anchor: 'bottom'
       })
         .setLngLat(spot.coordinates)
         .addTo(map.current);
@@ -187,7 +241,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         // Create geo-anchored popup
         const popup = new maplibregl.Popup({
-          offset: [0, -342], // Position well above the pin to avoid blocking
+          offset: [0, -342],
           closeButton: false,
           closeOnClick: false,
           className: 'tourist-spot-popup',
@@ -222,20 +276,19 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }, 0);
         
         // Use padding to keep info card visible while centering on marker coordinates
-        // Increased top padding to shift view more towards bottom
         const targetZoom = Math.max(map.current.getZoom(), 12);
         
         map.current.flyTo({
-          center: spot.coordinates, // Keep centered on actual marker coordinates
+          center: spot.coordinates,
           zoom: targetZoom,
-          padding: { top: 300, bottom: 50, left: 0, right: 0 }, // Increased top padding from 200 to 300
+          padding: { top: 300, bottom: 50, left: 0, right: 0 },
           duration: 800
         });
       });
 
       markersRef.current.push(marker);
     });
-  }, []);
+  }, [touristSpots]);
 
   useEffect(() => {
     if (map.current) return; // Initialize map only once
@@ -248,26 +301,24 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     fontAwesomeLink.crossOrigin = 'anonymous';
     document.head.appendChild(fontAwesomeLink);
 
-    // Define more generous bounds to allow better panning while keeping focus on Catanduanes
+    // Define bounds
     const bounds = [
-      [123.5, 12.8],  // Southwest corner - more generous for better maneuverability
-      [125.0, 14.8]   // Northeast corner - more generous for better maneuverability
+      [123.5, 12.8],
+      [125.0, 14.8]
     ];
 
-    // Fetch and modify the style to show municipality labels at zoom 9
+    // Fetch and modify the style
     fetch(`https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`)
       .then(response => response.json())
       .then(style => {
-        // Modify layers to show place labels (municipalities, towns, cities) at lower zoom levels
+        // Modify layers to show place labels at lower zoom levels
         style.layers = style.layers.map(layer => {
-          // Target place label layers (cities, towns, villages)
           if (layer.id && (
             layer.id.includes('place') || 
             layer.id.includes('town') || 
             layer.id.includes('city') ||
             layer.id.includes('village')
           ) && layer.type === 'symbol') {
-            // Set minzoom to 9 or lower to make labels appear earlier
             return {
               ...layer,
               minzoom: Math.min(layer.minzoom || 14, 9)
@@ -278,24 +329,22 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         map.current = new maplibregl.Map({
           container: mapContainer.current,
-          style: style, // Use modified style
-          center: [124.2, 13.8], // Adjusted to 124.2 longitude
+          style: style,
+          center: [124.2, 13.8],
           zoom: DEFAULT_ZOOM,
           attributionControl: false,
-          maxBounds: bounds, // Restrict camera movement to these expanded bounds
-          
-          // Performance optimizations for Raspberry Pi
-          antialias: false, // Significant GPU savings
-          preserveDrawingBuffer: false, // Enable buffer swapping for better performance
-          fadeDuration: 0, // Remove tile fade animations
-          maxParallelImageRequests: 8, // Reduce concurrent requests (default is 16)
-          refreshExpiredTiles: false, // Don't auto-refresh expired tiles
-          trackResize: true, // Still track resize but we'll debounce it
-          maxZoom: 18, // Reasonable max zoom limit
-          maxPitch: 60, // Limit pitch for better performance
+          maxBounds: bounds,
+          antialias: false,
+          preserveDrawingBuffer: false,
+          fadeDuration: 0,
+          maxParallelImageRequests: 8,
+          refreshExpiredTiles: false,
+          trackResize: true,
+          maxZoom: 18,
+          maxPitch: 60,
         });
 
-        // Add zoom event listener to update marker sizes
+        // Add zoom event listener
         map.current.on('zoom', () => {
           const currentZoom = map.current.getZoom();
           updateMarkerSizes(currentZoom);
@@ -303,13 +352,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         // Add mask overlay when map loads
         map.current.on('load', () => {
-          // Create mask with rectangular cutout for Catanduanes
           const maskGeoJSON = {
             type: 'Feature',
             geometry: {
               type: 'Polygon',
               coordinates: [
-                // Outer ring (covers entire world)
                 [
                   [-180, -90],
                   [180, -90],
@@ -317,25 +364,22 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
                   [-180, 90],
                   [-180, -90]
                 ],
-                // Inner ring (cutout for Catanduanes including Palumbanes Island)
                 [
-                  [124.011, 13.35], // Southwest corner
-                  [124.011, 14.15], // Northwest corner
-                  [124.45, 14.15],  // Northeast corner
-                  [124.45, 13.35],  // Southeast corner
-                  [124.011, 13.35]  // Close the ring
+                  [124.011, 13.35],
+                  [124.011, 14.15],
+                  [124.45, 14.15],
+                  [124.45, 13.35],
+                  [124.011, 13.35]
                 ]
               ]
             }
           };
 
-          // Add source
           map.current.addSource('mask', {
             type: 'geojson',
             data: maskGeoJSON
           });
 
-          // Add layer with solid black fill
           map.current.addLayer({
             id: 'mask-layer',
             type: 'fill',
@@ -352,42 +396,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       })
       .catch(error => {
         console.error('Error loading map style:', error);
-        // Fallback to default style if fetch fails
-        map.current = new maplibregl.Map({
-          container: mapContainer.current,
-          style: `https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`,
-          center: [124.2, 13.8], // Adjusted center in fallback too
-          zoom: DEFAULT_ZOOM,
-          attributionControl: false,
-          maxBounds: bounds,
-          antialias: false,
-          preserveDrawingBuffer: false,
-          fadeDuration: 0,
-          maxParallelImageRequests: 8,
-          refreshExpiredTiles: false,
-          trackResize: true,
-          maxZoom: 18,
-          maxPitch: 60,
-        });
-
-        map.current.on('zoom', () => {
-          const currentZoom = map.current.getZoom();
-          updateMarkerSizes(currentZoom);
-        });
-
-        map.current.on('load', () => {
-          addTouristSpotMarkers();
-        });
       });
 
     return () => {
-      // Clean up popup
       if (popupRef.current) {
         popupRef.current.remove();
         popupRef.current = null;
       }
       
-      // Clean up markers
       markersRef.current.forEach(marker => marker.remove());
       markersRef.current = [];
       
@@ -398,11 +414,17 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     };
   }, [addTouristSpotMarkers, updateMarkerSizes]);
 
-  // Debounced resize handler for better performance
+  // Re-add markers when tourist spots are loaded
+  useEffect(() => {
+    if (map.current && touristSpots.length > 0) {
+      addTouristSpotMarkers();
+    }
+  }, [touristSpots, addTouristSpotMarkers]);
+
+  // Debounced resize handler
   const handleResize = useCallback(() => {
     if (!map.current) return;
     
-    // Save current state before resize
     const currentZoom = map.current.getZoom();
     const currentCenter = map.current.getCenter();
     
@@ -411,26 +433,20 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       zoom: currentZoom
     };
 
-    // Clear existing timeout
     if (resizeTimeout.current) {
       clearTimeout(resizeTimeout.current);
     }
 
-    // Debounce resize to avoid excessive calls
     resizeTimeout.current = setTimeout(() => {
       if (map.current) {
         map.current.resize();
         
-        // Determine zoom to use after resize
         let targetZoom = savedState.current.zoom;
         
-        // If the previous zoom was at default (9), keep it at 9
-        // This prevents zoom drift when going fullscreen at default zoom
         if (Math.abs(previousZoom.current - DEFAULT_ZOOM) < 0.01) {
           targetZoom = DEFAULT_ZOOM;
         }
         
-        // Restore the exact center and zoom after resize
         map.current.jumpTo({
           center: savedState.current.center,
           zoom: targetZoom
@@ -439,19 +455,16 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }, 100);
   }, []);
 
-  // Resize map AFTER animation completes when fullscreen state changes
+  // Resize map after animation
   useEffect(() => {
-    // Save the current zoom before fullscreen toggle
     if (map.current) {
       previousZoom.current = map.current.getZoom();
     }
 
-    // Clear any existing animation timeout
     if (animationTimeout.current) {
       clearTimeout(animationTimeout.current);
     }
 
-    // Wait for CSS animation to complete (700ms) plus a small buffer
     animationTimeout.current = setTimeout(() => {
       handleResize();
     }, 750);
@@ -463,7 +476,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     };
   }, [isFullscreen, handleResize]);
 
-  // Memoized button handler to prevent recreation
+  // Memoized button handler
   const handleToggleFullscreen = useCallback(() => {
     if (onToggleFullscreen) {
       onToggleFullscreen();
@@ -478,7 +491,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         position: 'relative'
       }} 
     >
-      {/* Fullscreen toggle button - top left - only show in map mode */}
+      {/* Fullscreen toggle button */}
       {activeView === 'map' && (
         <button
           onClick={handleToggleFullscreen}
@@ -515,7 +528,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         </button>
       )}
 
-      {/* Map/Itinerary sliding toggle - top right - smaller and closer */}
+      {/* Map/Itinerary toggle */}
       <div
         style={{
           position: 'absolute',
@@ -530,7 +543,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           gap: '3px'
         }}
       >
-        {/* Map button */}
         <button
           onClick={() => setActiveView('map')}
           style={{
@@ -550,7 +562,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           <MapIcon size={16} strokeWidth={2} />
         </button>
 
-        {/* Itinerary button */}
         <button
           onClick={() => setActiveView('itinerary')}
           style={{
@@ -583,7 +594,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }} 
       />
 
-      {/* Itinerary view placeholder - properly centered in both modes */}
+      {/* Itinerary view placeholder */}
       {activeView === 'itinerary' && (
         <div
           style={{
