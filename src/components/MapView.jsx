@@ -5,6 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
+const FULLSCREEN_ZOOM = 8.3; // More zoomed out for fullscreen view
 
 const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen }) {
   const mapContainer = useRef(null);
@@ -13,6 +14,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const resizeTimeout = useRef(null);
   const animationTimeout = useRef(null);
   const previousZoom = useRef(DEFAULT_ZOOM);
+  const wasAtDefaultZoom = useRef(true);
   const [activeView, setActiveView] = useState('map'); // 'map' or 'itinerary'
 
   useEffect(() => {
@@ -123,9 +125,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         // Determine zoom to use after resize
         let targetZoom = savedState.current.zoom;
         
-        // If the previous zoom was at default (9), keep it at 9
-        // This prevents zoom drift when going fullscreen at default zoom
-        if (Math.abs(previousZoom.current - DEFAULT_ZOOM) < 0.01) {
+        // If entering fullscreen and user was at default zoom, use fullscreen zoom
+        // If exiting fullscreen and was at fullscreen zoom, restore to default
+        if (isFullscreen && wasAtDefaultZoom.current) {
+          targetZoom = FULLSCREEN_ZOOM;
+        } else if (!isFullscreen && Math.abs(savedState.current.zoom - FULLSCREEN_ZOOM) < 0.3) {
           targetZoom = DEFAULT_ZOOM;
         }
         
@@ -136,13 +140,17 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         });
       }
     }, 100);
-  }, []);
+  }, [isFullscreen]);
 
   // Resize map AFTER animation completes when fullscreen state changes
   useEffect(() => {
     // Save the current zoom before fullscreen toggle
     if (map.current) {
-      previousZoom.current = map.current.getZoom();
+      const currentZoom = map.current.getZoom();
+      previousZoom.current = currentZoom;
+      
+      // Track if user is at default zoom (within tolerance)
+      wasAtDefaultZoom.current = Math.abs(currentZoom - DEFAULT_ZOOM) < 0.3;
     }
 
     // Clear any existing animation timeout
