@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, memo, useState } from 'react';
-import { Maximize, Minimize, Map as MapIcon, List, X, Star, MapPin } from 'lucide-react';
+import { Maximize, Minimize, Map as MapIcon, List } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { touristSpots } from '../data/touristSpots';
@@ -118,24 +118,29 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
     // Add markers for each tourist spot
     touristSpots.forEach(spot => {
-      // Create custom marker element with SVG pin icon
+      // Create custom marker element with Font Awesome icon
       const markerEl = document.createElement('div');
+      markerEl.className = 'custom-marker';
       markerEl.innerHTML = `
-        <svg width="36" height="45" viewBox="0 0 36 45" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3)); cursor: pointer; transition: transform 0.2s ease;">
-          <path d="M18 0C8.059 0 0 8.059 0 18C0 29.25 18 45 18 45C18 45 36 29.25 36 18C36 8.059 27.941 0 18 0Z" fill="#84cc16"/>
-          <path d="M18 0C8.059 0 0 8.059 0 18C0 29.25 18 45 18 45C18 45 36 29.25 36 18C36 8.059 27.941 0 18 0Z" stroke="white" stroke-width="2"/>
-          <circle cx="18" cy="16" r="6" fill="white"/>
-        </svg>
+        <i class="fa-solid fa-location-dot" style="
+          font-size: 42px;
+          color: #84cc16;
+          filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+          cursor: pointer;
+          transition: transform 0.2s ease;
+        "></i>
       `;
       
-      const svgElement = markerEl.querySelector('svg');
+      const iconElement = markerEl.querySelector('i');
       
-      // Add hover effect
+      // Add hover effect with bounce animation
       markerEl.addEventListener('mouseenter', () => {
-        svgElement.style.transform = 'scale(1.15)';
+        iconElement.classList.add('fa-bounce');
+        iconElement.style.transform = 'scale(1.15)';
       });
       markerEl.addEventListener('mouseleave', () => {
-        svgElement.style.transform = 'scale(1)';
+        iconElement.classList.remove('fa-bounce');
+        iconElement.style.transform = 'scale(1)';
       });
 
       // Create marker with proper anchor at the bottom point of the pin
@@ -146,8 +151,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         .setLngLat(spot.coordinates)
         .addTo(map.current);
 
-      // Add click event to show info card
+      // Add click event to show info card with bounce animation
       markerEl.addEventListener('click', () => {
+        // Trigger bounce animation
+        iconElement.classList.add('fa-bounce');
+        setTimeout(() => {
+          iconElement.classList.remove('fa-bounce');
+        }, 1000);
+
         setSelectedSpot(spot);
         
         // Remove existing popup if any
@@ -205,6 +216,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
   useEffect(() => {
     if (map.current) return; // Initialize map only once
+
+    // Load Font Awesome CSS
+    const fontAwesomeLink = document.createElement('link');
+    fontAwesomeLink.rel = 'stylesheet';
+    fontAwesomeLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css';
+    fontAwesomeLink.integrity = 'sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==';
+    fontAwesomeLink.crossOrigin = 'anonymous';
+    document.head.appendChild(fontAwesomeLink);
 
     // Define more generous bounds to allow better panning while keeping focus on Catanduanes
     const bounds = [
@@ -566,6 +585,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           }
           .tourist-spot-popup .maplibregl-popup-content {
             border-radius: 12px;
+          }
+          .custom-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
           }
         `}
       </style>
