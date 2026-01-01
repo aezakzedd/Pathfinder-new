@@ -50,13 +50,15 @@ export default function Explore() {
                 {/* Your white card content goes here */}
               </div>
 
-              {/* Green chevron button - always visible */}
+              {/* Green chevron button - moves diagonally */}
               <div 
                 onClick={toggleMinimize}
                 style={{
                   position: 'absolute',
-                  bottom: '4px',
-                  right: '4px',
+                  top: isMinimized ? '4px' : 'auto',
+                  left: isMinimized ? '4px' : 'auto',
+                  bottom: isMinimized ? 'auto' : '4px',
+                  right: isMinimized ? 'auto' : '4px',
                   width: '40px',
                   height: '40px',
                   borderRadius: '50%',
@@ -65,14 +67,22 @@ export default function Explore() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  transition: 'transform 0.2s ease, box-shadow 0.3s ease',
+                  transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
                   zIndex: 20,
                   boxShadow: isMinimized 
                     ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
                     : '0 2px 8px rgba(0, 0, 0, 0.15)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                onMouseEnter={(e) => {
+                  if (!isMinimized) {
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isMinimized) {
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }
+                }}
               >
                 <ChevronDown 
                   color="black" 
