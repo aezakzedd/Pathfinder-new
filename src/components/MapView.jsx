@@ -183,12 +183,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           onClick={handleToggleFullscreen}
           style={{
             position: 'absolute',
-            // Simple approach: when fullscreen, offset to compensate for container shift
-            // Map container shifts left by calc(-200% - 48px)
-            // Button needs to appear at the parent's edge, so add that back plus desired spacing
-            top: isFullscreen ? '36px' : '12px',
-            left: isFullscreen ? '50%' : '12px',
-            transform: isFullscreen ? 'translateX(-45vw)' : 'none',
+            // Normal: standard 12px from edges
+            // Fullscreen: adjust for map container's new position and width
+            top: isFullscreen ? '12px' : '12px',
+            // In fullscreen, map container shifts left by calc(-100% - 24px)
+            // So button at 12px from map container's left = actual left edge + 12px
+            // We want button at 12px from actual left, which means:
+            // 12px from map container's left + map's left offset
+            // = 12px + 0 (since map is already at the parent's left edge)
+            left: '12px',
             width: '36px',
             height: '36px',
             borderRadius: '4px',
@@ -201,7 +204,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             zIndex: 10,
             boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
             transition: 'all 0.5s ease-in-out',
-            willChange: 'top, left, transform, background-color'
+            willChange: 'top, left, background-color'
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = '#f3f4f6';
@@ -295,7 +298,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             left: 0,
             width: '100%',
             height: '100%',
-            borderRadius: isFullscreen ? '24px' : '16px',
+            borderRadius: isFullscreen ? '16px' : '16px',
             backgroundColor: 'white',
             display: 'flex',
             alignItems: 'center',
