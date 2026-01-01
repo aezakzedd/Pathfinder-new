@@ -1,4 +1,4 @@
-export default function FloatingCard({ leftContent, rightContent, overlayContent, className = '', ...props }) {
+export default function FloatingCard({ leftContent, rightContent, overlayContent, overlayPointerEvents = 'auto', className = '', ...props }) {
   return (
     <div 
       className={`floating-card ${className}`}
@@ -38,7 +38,7 @@ export default function FloatingCard({ leftContent, rightContent, overlayContent
           {leftContent}
         </div>
         
-        {/* Overlay container - now without fixed background */}
+        {/* Overlay container */}
         {overlayContent && (
           <div 
             style={{
@@ -48,7 +48,7 @@ export default function FloatingCard({ leftContent, rightContent, overlayContent
               width: '100%',
               height: '100%',
               borderRadius: '16px',
-              pointerEvents: 'auto'
+              pointerEvents: overlayPointerEvents
             }}
           >
             {overlayContent}
