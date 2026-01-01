@@ -43,33 +43,37 @@ export default function TripPlanner() {
     <div style={{
       width: '100%',
       height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '16px',
-      overflowY: 'auto',
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gridTemplateRows: '1fr 1fr',
+      gap: '12px',
       padding: '8px'
     }}>
       {/* Journey Dates Card */}
       <div style={{
         backgroundColor: '#1f2937',
         borderRadius: '12px',
-        padding: '16px'
+        padding: '14px',
+        display: 'flex',
+        flexDirection: 'column'
       }}>
         <h3 style={{
           color: 'white',
-          fontSize: '14px',
+          fontSize: '13px',
           fontWeight: '600',
-          marginBottom: '12px'
+          marginBottom: '10px',
+          margin: 0
         }}>Journey Dates</h3>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
           backgroundColor: '#374151',
-          padding: '10px',
-          borderRadius: '8px'
+          padding: '8px',
+          borderRadius: '8px',
+          marginTop: '8px'
         }}>
-          <Calendar size={16} color="white" />
+          <Calendar size={14} color="white" />
           <input
             type="text"
             value={dateRange}
@@ -78,7 +82,7 @@ export default function TripPlanner() {
               backgroundColor: 'transparent',
               border: 'none',
               color: 'white',
-              fontSize: '14px',
+              fontSize: '12px',
               outline: 'none',
               flex: 1
             }}
@@ -86,8 +90,10 @@ export default function TripPlanner() {
         </div>
         <p style={{
           color: '#9ca3af',
-          fontSize: '11px',
-          marginTop: '8px'
+          fontSize: '10px',
+          marginTop: 'auto',
+          paddingTop: '8px',
+          margin: 0
         }}>Selected period is 3 days to Catanduanes</p>
       </div>
 
@@ -95,13 +101,16 @@ export default function TripPlanner() {
       <div style={{
         backgroundColor: '#1f2937',
         borderRadius: '12px',
-        padding: '16px'
+        padding: '14px',
+        display: 'flex',
+        flexDirection: 'column'
       }}>
         <h3 style={{
           color: 'white',
-          fontSize: '14px',
+          fontSize: '13px',
           fontWeight: '600',
-          marginBottom: '12px'
+          marginBottom: '10px',
+          margin: 0
         }}>Budget</h3>
         <input
           type="range"
@@ -112,23 +121,26 @@ export default function TripPlanner() {
           onChange={(e) => setBudget(Number(e.target.value))}
           style={{
             width: '100%',
-            accentColor: '#84cc16'
+            accentColor: '#84cc16',
+            marginTop: '8px'
           }}
         />
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
-          marginTop: '8px'
+          marginTop: '6px'
         }}>
-          <span style={{ color: '#9ca3af', fontSize: '11px' }}>₱1,000</span>
-          <span style={{ color: 'white', fontSize: '14px', fontWeight: '600' }}>₱{budget.toLocaleString()}</span>
-          <span style={{ color: '#9ca3af', fontSize: '11px' }}>₱50,000</span>
+          <span style={{ color: '#9ca3af', fontSize: '9px' }}>₱1,000</span>
+          <span style={{ color: 'white', fontSize: '12px', fontWeight: '600' }}>₱{budget.toLocaleString()}</span>
+          <span style={{ color: '#9ca3af', fontSize: '9px' }}>₱50,000</span>
         </div>
         <p style={{
           color: '#9ca3af',
-          fontSize: '11px',
-          marginTop: '4px',
-          textAlign: 'center'
+          fontSize: '10px',
+          marginTop: 'auto',
+          paddingTop: '4px',
+          textAlign: 'center',
+          margin: 0
         }}>Price range for your trip</p>
       </div>
 
@@ -136,39 +148,42 @@ export default function TripPlanner() {
       <div style={{
         backgroundColor: '#1f2937',
         borderRadius: '12px',
-        padding: '16px'
+        padding: '14px',
+        display: 'flex',
+        flexDirection: 'column'
       }}>
         <h3 style={{
           color: 'white',
-          fontSize: '14px',
+          fontSize: '13px',
           fontWeight: '600',
-          marginBottom: '12px'
+          marginBottom: '10px',
+          margin: 0
         }}>Weather in Catanduanes</h3>
         {loading ? (
-          <p style={{ color: '#9ca3af', fontSize: '12px' }}>Loading weather...</p>
+          <p style={{ color: '#9ca3af', fontSize: '11px', margin: 0 }}>Loading...</p>
         ) : weather && weather.main ? (
-          <div>
+          <div style={{ marginTop: '4px' }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '12px',
-              marginBottom: '8px'
+              gap: '10px',
+              marginBottom: '6px'
             }}>
               <span style={{
-                fontSize: '32px',
+                fontSize: '28px',
                 fontWeight: 'bold',
                 color: 'white'
               }}>{Math.round(weather.main.temp)}°C</span>
               <div>
                 <p style={{
                   color: 'white',
-                  fontSize: '13px',
+                  fontSize: '11px',
                   textTransform: 'capitalize',
                   margin: 0
                 }}>{weather.weather[0].description}</p>
                 <p style={{
                   color: '#9ca3af',
-                  fontSize: '11px',
+                  fontSize: '9px',
                   margin: 0
                 }}>Feels like {Math.round(weather.main.feels_like)}°C</p>
               </div>
@@ -176,21 +191,21 @@ export default function TripPlanner() {
             <div style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
-              gap: '8px',
-              marginTop: '12px'
+              gap: '6px',
+              marginTop: '8px'
             }}>
               <div>
-                <p style={{ color: '#9ca3af', fontSize: '10px', margin: 0 }}>Humidity</p>
-                <p style={{ color: 'white', fontSize: '12px', margin: 0 }}>{weather.main.humidity}%</p>
+                <p style={{ color: '#9ca3af', fontSize: '9px', margin: 0 }}>Humidity</p>
+                <p style={{ color: 'white', fontSize: '11px', margin: 0 }}>{weather.main.humidity}%</p>
               </div>
               <div>
-                <p style={{ color: '#9ca3af', fontSize: '10px', margin: 0 }}>Wind</p>
-                <p style={{ color: 'white', fontSize: '12px', margin: 0 }}>{Math.round(weather.wind.speed)} m/s</p>
+                <p style={{ color: '#9ca3af', fontSize: '9px', margin: 0 }}>Wind</p>
+                <p style={{ color: 'white', fontSize: '11px', margin: 0 }}>{Math.round(weather.wind.speed)} m/s</p>
               </div>
             </div>
           </div>
         ) : (
-          <p style={{ color: '#9ca3af', fontSize: '12px' }}>Weather data unavailable</p>
+          <p style={{ color: '#9ca3af', fontSize: '11px', margin: 0 }}>Weather unavailable</p>
         )}
       </div>
 
@@ -198,18 +213,23 @@ export default function TripPlanner() {
       <div style={{
         backgroundColor: '#1f2937',
         borderRadius: '12px',
-        padding: '16px'
+        padding: '14px',
+        display: 'flex',
+        flexDirection: 'column'
       }}>
         <h3 style={{
           color: 'white',
-          fontSize: '14px',
+          fontSize: '13px',
           fontWeight: '600',
-          marginBottom: '12px'
+          marginBottom: '8px',
+          margin: 0
         }}>What Would You Like To Do?</h3>
         <div style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '10px'
+          gap: '6px',
+          marginTop: '4px',
+          flex: 1
         }}>
           {Object.entries(activities).map(([key, value]) => (
             <label
@@ -217,9 +237,9 @@ export default function TripPlanner() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '6px',
                 cursor: 'pointer',
-                padding: '8px',
+                padding: '5px 6px',
                 borderRadius: '6px',
                 backgroundColor: value ? '#374151' : 'transparent',
                 transition: 'background-color 0.2s'
@@ -230,15 +250,15 @@ export default function TripPlanner() {
                 checked={value}
                 onChange={() => handleActivityChange(key)}
                 style={{
-                  width: '16px',
-                  height: '16px',
+                  width: '14px',
+                  height: '14px',
                   cursor: 'pointer',
                   accentColor: '#84cc16'
                 }}
               />
               <span style={{
                 color: 'white',
-                fontSize: '13px',
+                fontSize: '11px',
                 textTransform: 'capitalize'
               }}>{key}</span>
             </label>
@@ -246,8 +266,10 @@ export default function TripPlanner() {
         </div>
         <p style={{
           color: '#9ca3af',
-          fontSize: '11px',
-          marginTop: '12px'
+          fontSize: '10px',
+          marginTop: 'auto',
+          paddingTop: '6px',
+          margin: 0
         }}>Select your preferred activities</p>
       </div>
     </div>
