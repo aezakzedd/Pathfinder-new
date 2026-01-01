@@ -1,10 +1,27 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Map, Wifi, ChevronDown } from 'lucide-react';
 import FloatingCard from '../../components/FloatingCard';
 import MapView from '../../components/MapView';
 
 export default function Explore() {
   const [isMinimized, setIsMinimized] = useState(false);
+  const containerRef = useRef(null);
+  const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (containerRef.current) {
+      const container = containerRef.current;
+      const width = container.offsetWidth;
+      const height = container.offsetHeight;
+      
+      // Calculate distance from bottom-right (4px, 4px) to top-left (4px, 4px)
+      // Button is 40px, so we need to account for that
+      const translateX = -(width - 40 - 8);
+      const translateY = -(height - 40 - 8);
+      
+      setTranslateValues({ x: translateX, y: translateY });
+    }
+  }, []);
 
   const toggleMinimize = () => {
     setIsMinimized(!isMinimized);
@@ -28,12 +45,15 @@ export default function Explore() {
           leftContent={null}
           rightContent={<MapView />}
           overlayContent={
-            <div style={{ 
-              width: '100%', 
-              height: '100%', 
-              position: 'relative'
-            }}>
-              {/* White card that shrinks diagonally */}
+            <div 
+              ref={containerRef}
+              style={{ 
+                width: '100%', 
+                height: '100%', 
+                position: 'relative'
+              }}
+            >
+              {/* White card that shrinks following button path */}
               <div
                 style={{
                   position: 'absolute',
@@ -43,12 +63,12 @@ export default function Explore() {
                   height: '100%',
                   transformOrigin: 'bottom right',
                   transform: isMinimized 
-                    ? 'scale(0.1)' 
-                    : 'scale(1)',
+                    ? `translate(${translateValues.x}px, ${translateValues.y}px) scale(0.1)` 
+                    : 'translate(0, 0) scale(1)',
                   transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
               >
-                {/* White card */}
+                {/* White card background */}
                 <div 
                   style={{
                     position: 'absolute',
@@ -61,14 +81,14 @@ export default function Explore() {
                     padding: '16px',
                     boxSizing: 'border-box',
                     opacity: isMinimized ? 0 : 1,
-                    transition: 'opacity 0.3s ease',
+                    transition: 'opacity 0.4s ease',
                   }}
                 >
                   {/* Your white card content goes here */}
                 </div>
               </div>
 
-              {/* Green chevron button - moves diagonally with constant size */}
+              {/* Green chevron button - moves diagonally, constant size */}
               <div 
                 onClick={toggleMinimize}
                 style={{
@@ -84,7 +104,7 @@ export default function Explore() {
                   justifyContent: 'center',
                   cursor: 'pointer',
                   transform: isMinimized 
-                    ? 'translate(calc(-100% + 8px - 4px), calc(-100% + 8px - 4px))' 
+                    ? `translate(${translateValues.x}px, ${translateValues.y}px)` 
                     : 'translate(0, 0)',
                   transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease',
                   zIndex: 20,
@@ -94,13 +114,13 @@ export default function Explore() {
                 }}
                 onMouseEnter={(e) => {
                   const currentTransform = isMinimized 
-                    ? 'translate(calc(-100% + 8px - 4px), calc(-100% + 8px - 4px)) scale(1.1)'
+                    ? `translate(${translateValues.x}px, ${translateValues.y}px) scale(1.1)`
                     : 'translate(0, 0) scale(1.1)';
                   e.currentTarget.style.transform = currentTransform;
                 }}
                 onMouseLeave={(e) => {
                   const currentTransform = isMinimized 
-                    ? 'translate(calc(-100% + 8px - 4px), calc(-100% + 8px - 4px)) scale(1)'
+                    ? `translate(${translateValues.x}px, ${translateValues.y}px) scale(1)`
                     : 'translate(0, 0) scale(1)';
                   e.currentTarget.style.transform = currentTransform;
                 }}
