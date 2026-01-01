@@ -72,10 +72,11 @@ export default function Explore() {
             borderRadius: '24px',
             backgroundColor: 'transparent',
             display: 'flex',
-            gap: '24px',
+            gap: isMapFullscreen ? '0px' : '24px',
             padding: '24px',
             boxSizing: 'border-box',
-            position: 'relative'
+            position: 'relative',
+            transition: 'gap 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
           {/* Left container with ChatBot - hide when map is fullscreen */}
@@ -192,17 +193,14 @@ export default function Explore() {
           {/* Right container - Map expands to full width when fullscreen */}
           <div 
             style={{
-              width: isMapFullscreen ? 'calc(100% + 24px)' : '50%',
+              width: isMapFullscreen ? '100%' : '50%',
               height: '100%',
               backgroundColor: '#1f2937',
               borderRadius: '16px',
               padding: '0',
               boxSizing: 'border-box',
               overflow: 'hidden',
-              position: isMapFullscreen ? 'absolute' : 'relative',
-              right: isMapFullscreen ? '-24px' : 'auto',
-              top: isMapFullscreen ? '-24px' : 'auto',
-              transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
               zIndex: isMapFullscreen ? 30 : 'auto'
             }}
           >
