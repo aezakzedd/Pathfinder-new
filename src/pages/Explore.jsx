@@ -172,21 +172,18 @@ export default function Explore() {
     position: 'relative'
   }), []);
 
-  // Smooth map container - grows in size from right position to fill container
+  // Smooth map container with explicit dimensions for smooth transitions
   const mapContainerStyle = useMemo(() => ({
     position: 'absolute',
-    // Animate from right side position to full container
-    top: isMapFullscreen ? '0px' : '24px',
-    right: isMapFullscreen ? '0px' : '24px',
-    bottom: isMapFullscreen ? '0px' : '24px',
-    left: isMapFullscreen ? '0px' : 'auto',
-    // When not fullscreen, set explicit width
-    width: isMapFullscreen ? 'auto' : 'calc((100% - 72px) / 2)',
+    // Use explicit pixel values for smooth animation
+    top: isMapFullscreen ? '0' : '24px',
+    right: isMapFullscreen ? '0' : '24px',
+    bottom: isMapFullscreen ? '0' : '24px',
+    left: isMapFullscreen ? '0' : 'calc(50% + 12px)', // Start from middle + half gap
     borderRadius: isMapFullscreen ? '24px' : '16px',
     overflow: 'hidden',
-    transition: 'all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)',
-    zIndex: isMapFullscreen ? 30 : 1,
-    willChange: 'top, right, bottom, left, width, border-radius'
+    transition: 'top 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), right 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), bottom 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), left 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), border-radius 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)',
+    zIndex: isMapFullscreen ? 30 : 1
   }), [isMapFullscreen]);
 
   return (
