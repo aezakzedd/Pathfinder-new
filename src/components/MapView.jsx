@@ -1,9 +1,8 @@
 import { useEffect, useRef, useCallback, memo, useState } from 'react';
-import { Maximize, Minimize, Map as MapIcon, List } from 'lucide-react';
+import { Maximize, Minimize, Map as MapIcon, List, X, Star, MapPin } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { touristSpots } from '../data/touristSpots';
-import TouristSpotCard from './TouristSpotCard';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
@@ -12,12 +11,102 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const mapContainer = useRef(null);
   const map = useRef(null);
   const markersRef = useRef([]);
+  const popupRef = useRef(null);
   const savedState = useRef({ center: [124.2, 13.8], zoom: DEFAULT_ZOOM });
   const resizeTimeout = useRef(null);
   const animationTimeout = useRef(null);
   const previousZoom = useRef(DEFAULT_ZOOM);
   const [activeView, setActiveView] = useState('map');
   const [selectedSpot, setSelectedSpot] = useState(null);
+
+  // Create info card HTML content
+  const createInfoCardHTML = (spot) => {
+    return `
+      <div style="
+        width: 280px;
+        background-color: white;
+        border-radius: 12px;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      ">
+        <!-- Close button -->
+        <button id="close-card-btn" style="
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background-color: rgba(0, 0, 0, 0.5);
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          z-index: 10;
+          transition: background-color 0.2s;
+        ">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+
+        <!-- Image section -->
+        <div style="
+          width: 100%;
+          height: 210px;
+          background-color: #e5e7eb;
+          position: relative;
+          overflow: hidden;
+        ">
+          ${spot.image ? 
+            `<img src="${spot.image}" alt="${spot.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none';" />` :
+            `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 14px;">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+            </div>`
+          }
+        </div>
+
+        <!-- Details section -->
+        <div style="padding: 12px 14px; background-color: white;">
+          <!-- Location -->
+          <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <span style="color: #6b7280; font-size: 11px; font-weight: 500;">${spot.location}</span>
+          </div>
+
+          <!-- Name -->
+          <h3 style="
+            margin: 0;
+            font-size: 15px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          ">${spot.name}</h3>
+
+          <!-- Rating -->
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="#111827" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span style="font-size: 13px; font-weight: 600; color: #111827;">${spot.rating}</span>
+            <span style="font-size: 13px; color: #6b7280;">(${spot.reviewCount})</span>
+          </div>
+        </div>
+      </div>
+    `;
+  };
 
   // Add tourist spot markers
   const addTouristSpotMarkers = useCallback(() => {
@@ -60,6 +149,48 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       // Add click event to show info card
       markerEl.addEventListener('click', () => {
         setSelectedSpot(spot);
+        
+        // Remove existing popup if any
+        if (popupRef.current) {
+          popupRef.current.remove();
+        }
+
+        // Create geo-anchored popup
+        const popup = new maplibregl.Popup({
+          offset: [0, -50], // Position above the pin (offset by pin height + gap)
+          closeButton: false,
+          closeOnClick: false,
+          className: 'tourist-spot-popup',
+          maxWidth: 'none'
+        })
+          .setLngLat(spot.coordinates)
+          .setHTML(createInfoCardHTML(spot))
+          .addTo(map.current);
+
+        popupRef.current = popup;
+
+        // Add close button event listener after popup is added to DOM
+        setTimeout(() => {
+          const closeBtn = document.getElementById('close-card-btn');
+          if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+              if (popupRef.current) {
+                popupRef.current.remove();
+                popupRef.current = null;
+              }
+              setSelectedSpot(null);
+            });
+            
+            // Add hover effect to close button
+            closeBtn.addEventListener('mouseenter', () => {
+              closeBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            });
+            closeBtn.addEventListener('mouseleave', () => {
+              closeBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            });
+          }
+        }, 0);
+        
         // Smooth pan to marker location
         map.current.flyTo({
           center: spot.coordinates,
@@ -197,6 +328,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       });
 
     return () => {
+      // Clean up popup
+      if (popupRef.current) {
+        popupRef.current.remove();
+        popupRef.current = null;
+      }
+      
       // Clean up markers
       markersRef.current.forEach(marker => marker.remove());
       markersRef.current = [];
@@ -279,11 +416,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       onToggleFullscreen();
     }
   }, [onToggleFullscreen]);
-
-  // Handle closing the tourist spot card
-  const handleCloseCard = useCallback(() => {
-    setSelectedSpot(null);
-  }, []);
 
   return (
     <div 
@@ -398,11 +530,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }} 
       />
 
-      {/* Tourist Spot Info Card */}
-      {activeView === 'map' && selectedSpot && (
-        <TouristSpotCard spot={selectedSpot} onClose={handleCloseCard} />
-      )}
-
       {/* Itinerary view placeholder - properly centered in both modes */}
       {activeView === 'itinerary' && (
         <div
@@ -425,6 +552,23 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           Itinerary View
         </div>
       )}
+
+      {/* Custom CSS for popup */}
+      <style>
+        {`
+          .maplibregl-popup-content {
+            padding: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+          }
+          .maplibregl-popup-tip {
+            display: none !important;
+          }
+          .tourist-spot-popup .maplibregl-popup-content {
+            border-radius: 12px;
+          }
+        `}
+      </style>
     </div>
   );
 });
