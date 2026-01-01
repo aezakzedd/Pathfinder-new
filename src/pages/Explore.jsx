@@ -172,17 +172,16 @@ export default function Explore() {
     position: 'relative'
   }), []);
 
-  // Smooth map container with explicit dimensions for smooth transitions
+  // Smooth map container with ease-in-out for linear, smooth animation
   const mapContainerStyle = useMemo(() => ({
     position: 'absolute',
-    // Use explicit pixel values for smooth animation
     top: isMapFullscreen ? '0' : '24px',
     right: isMapFullscreen ? '0' : '24px',
     bottom: isMapFullscreen ? '0' : '24px',
-    left: isMapFullscreen ? '0' : 'calc(50% + 12px)', // Start from middle + half gap
+    left: isMapFullscreen ? '0' : 'calc(50% + 12px)',
     borderRadius: isMapFullscreen ? '24px' : '16px',
     overflow: 'hidden',
-    transition: 'top 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), right 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), bottom 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), left 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), border-radius 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)',
+    transition: 'all 0.5s ease-in-out',
     zIndex: isMapFullscreen ? 30 : 1
   }), [isMapFullscreen]);
 
