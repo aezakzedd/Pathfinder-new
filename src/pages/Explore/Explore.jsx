@@ -41,10 +41,10 @@ export default function Explore() {
                   left: 0,
                   width: '100%',
                   height: '100%',
-                  transformOrigin: 'top left',
+                  transformOrigin: 'bottom right',
                   transform: isMinimized 
-                    ? 'translate(4px, 4px) scale(0.1)' 
-                    : 'translate(0, 0) scale(1)',
+                    ? 'scale(0.1)' 
+                    : 'scale(1)',
                   transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
               >
@@ -68,15 +68,13 @@ export default function Explore() {
                 </div>
               </div>
 
-              {/* Green chevron button - separate, maintains size */}
+              {/* Green chevron button - moves diagonally with constant size */}
               <div 
                 onClick={toggleMinimize}
                 style={{
                   position: 'absolute',
-                  top: isMinimized ? '4px' : 'auto',
-                  left: isMinimized ? '4px' : 'auto',
-                  bottom: isMinimized ? 'auto' : '4px',
-                  right: isMinimized ? 'auto' : '4px',
+                  bottom: '4px',
+                  right: '4px',
                   width: '40px',
                   height: '40px',
                   borderRadius: '50%',
@@ -85,14 +83,27 @@ export default function Explore() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: isMinimized 
+                    ? 'translate(calc(-100% + 8px - 4px), calc(-100% + 8px - 4px))' 
+                    : 'translate(0, 0)',
+                  transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease',
                   zIndex: 20,
                   boxShadow: isMinimized 
                     ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
                     : '0 2px 8px rgba(0, 0, 0, 0.15)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                onMouseEnter={(e) => {
+                  const currentTransform = isMinimized 
+                    ? 'translate(calc(-100% + 8px - 4px), calc(-100% + 8px - 4px)) scale(1.1)'
+                    : 'translate(0, 0) scale(1.1)';
+                  e.currentTarget.style.transform = currentTransform;
+                }}
+                onMouseLeave={(e) => {
+                  const currentTransform = isMinimized 
+                    ? 'translate(calc(-100% + 8px - 4px), calc(-100% + 8px - 4px)) scale(1)'
+                    : 'translate(0, 0) scale(1)';
+                  e.currentTarget.style.transform = currentTransform;
+                }}
               >
                 <ChevronDown 
                   color="black" 
