@@ -6,6 +6,7 @@ import ChatBot from '../components/ChatBot';
 
 export default function Explore() {
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const containerRef = useRef(null);
   const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
 
@@ -45,6 +46,10 @@ export default function Explore() {
     setIsMinimized(!isMinimized);
   };
 
+  const toggleMapFullscreen = () => {
+    setIsMapFullscreen(!isMapFullscreen);
+  };
+
   return (
     <div className="h-screen w-screen bg-black overflow-hidden">
       {/* Map icon - top left */}
@@ -59,94 +64,122 @@ export default function Explore() {
       
       {/* Centered container for FloatingCard */}
       <div className="w-full h-full flex items-center justify-center">
-        <FloatingCard 
-          leftContent={<ChatBot />}
-          rightContent={<MapView />}
-          overlayPointerEvents={isMinimized ? 'none' : 'auto'}
-          overlayContent={
-            <div 
-              ref={containerRef}
-              style={{ 
-                width: '100%', 
-                height: '100%', 
-                position: 'relative'
-              }}
-            >
-              {/* White card that shrinks following button path */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  transformOrigin: 'bottom right',
-                  transform: isMinimized 
-                    ? `translate(${translateValues.x}px, ${translateValues.y}px) scale(0.1)` 
-                    : 'translate(0, 0) scale(1)',
-                  transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-                  pointerEvents: isMinimized ? 'none' : 'auto'
+        <div style={{ position: 'relative', width: '90vw', height: '90vh' }}>
+          <FloatingCard 
+            leftContent={<ChatBot />}
+            rightContent={
+              <MapView 
+                isFullscreen={isMapFullscreen}
+                onToggleFullscreen={toggleMapFullscreen}
+              />
+            }
+            overlayPointerEvents={isMinimized ? 'none' : 'auto'}
+            overlayContent={
+              <div 
+                ref={containerRef}
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  position: 'relative'
                 }}
               >
-                {/* White card background */}
-                <div 
+                {/* White card that shrinks following button path */}
+                <div
                   style={{
                     position: 'absolute',
-                    top: '0',
-                    left: '0',
+                    top: 0,
+                    left: 0,
                     width: '100%',
                     height: '100%',
-                    backgroundColor: 'white',
-                    borderRadius: '16px',
-                    padding: '16px',
-                    boxSizing: 'border-box',
-                    opacity: isMinimized ? 0 : 1,
-                    transition: 'opacity 0.4s ease',
+                    transformOrigin: 'bottom right',
+                    transform: isMinimized 
+                      ? `translate(${translateValues.x}px, ${translateValues.y}px) scale(0.1)` 
+                      : 'translate(0, 0) scale(1)',
+                    transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                    pointerEvents: isMinimized ? 'none' : 'auto'
                   }}
                 >
-                  {/* Your white card content goes here */}
+                  {/* White card background */}
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      top: '0',
+                      left: '0',
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: 'white',
+                      borderRadius: '16px',
+                      padding: '16px',
+                      boxSizing: 'border-box',
+                      opacity: isMinimized ? 0 : 1,
+                      transition: 'opacity 0.4s ease',
+                    }}
+                  >
+                    {/* Your white card content goes here */}
+                  </div>
+                </div>
+
+                {/* Green chevron button - moves diagonally, constant size */}
+                <div 
+                  onClick={toggleMinimize}
+                  style={{
+                    position: 'absolute',
+                    bottom: '4px',
+                    right: '4px',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    backgroundColor: '#84cc16',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transform: isMinimized 
+                      ? `translate(${translateValues.x}px, ${translateValues.y}px)` 
+                      : 'translate(0, 0)',
+                    transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease',
+                    zIndex: 20,
+                    pointerEvents: 'auto',
+                    boxShadow: isMinimized 
+                      ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
+                      : '0 2px 8px rgba(0, 0, 0, 0.15)'
+                  }}
+                >
+                  <ChevronDown 
+                    color="black" 
+                    size={20} 
+                    strokeWidth={3} 
+                    style={{ 
+                      transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
+                      transition: 'transform 0.6s ease'
+                    }}
+                  />
                 </div>
               </div>
+            }
+          />
 
-              {/* Green chevron button - moves diagonally, constant size */}
-              <div 
-                onClick={toggleMinimize}
-                style={{
-                  position: 'absolute',
-                  bottom: '4px',
-                  right: '4px',
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  backgroundColor: '#84cc16',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transform: isMinimized 
-                    ? `translate(${translateValues.x}px, ${translateValues.y}px)` 
-                    : 'translate(0, 0)',
-                  transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease',
-                  zIndex: 20,
-                  pointerEvents: 'auto',
-                  boxShadow: isMinimized 
-                    ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
-                    : '0 2px 8px rgba(0, 0, 0, 0.15)'
-                }}
-              >
-                <ChevronDown 
-                  color="black" 
-                  size={20} 
-                  strokeWidth={3} 
-                  style={{ 
-                    transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
-                    transition: 'transform 0.6s ease'
-                  }}
-                />
-              </div>
+          {/* Fullscreen map overlay */}
+          {isMapFullscreen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                zIndex: 30,
+                borderRadius: '24px',
+                overflow: 'hidden'
+              }}
+            >
+              <MapView 
+                isFullscreen={isMapFullscreen}
+                onToggleFullscreen={toggleMapFullscreen}
+              />
             </div>
-          }
-        />
+          )}
+        </div>
       </div>
     </div>
   )
