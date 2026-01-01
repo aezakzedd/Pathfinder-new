@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
+const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
+
 export default function MapView() {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -11,7 +13,7 @@ export default function MapView() {
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+      style: `https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`,
       center: [124.2475, 13.8], // Catanduanes coordinates
       zoom: 9.5,
       attributionControl: false
