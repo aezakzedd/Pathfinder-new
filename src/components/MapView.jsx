@@ -64,10 +64,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           ${spot.image ? 
             `<img src="${spot.image}" alt="${spot.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none';" />` :
             `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 14px;">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-              </svg>
+              <i class="fa-solid fa-location-dot" style="font-size: 48px; color: #9ca3af;"></i>
             </div>`
           }
         </div>
@@ -76,10 +73,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         <div style="padding: 12px 14px; background-color: white;">
           <!-- Location -->
           <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-              <circle cx="12" cy="10" r="3"></circle>
-            </svg>
+            <i class="fa-solid fa-location-dot fa-bounce" style="font-size: 12px; color: #6b7280;"></i>
             <span style="color: #6b7280; font-size: 11px; font-weight: 500;">${spot.location}</span>
           </div>
 
