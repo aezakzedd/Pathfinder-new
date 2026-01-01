@@ -169,20 +169,30 @@ export default function Explore() {
     willChange: 'transform'
   }), [isMinimized]);
 
-  // Fixed map container style - maintains proper spacing and smooth animation
-  const mapContainerStyle = useMemo(() => ({
-    width: isMapFullscreen ? '100%' : '50%',
-    height: '100%',
-    position: 'relative',
+  // Map container wrapper - transitions from 50% to calc(100% + 24px) to fill entire space
+  const mapContainerWrapperStyle = useMemo(() => ({
+    width: isMapFullscreen ? 'calc(100% + 24px)' : '50%',
+    height: isMapFullscreen ? 'calc(100% + 24px)' : '100%',
+    position: isMapFullscreen ? 'absolute' : 'relative',
+    top: isMapFullscreen ? '-24px' : 'auto',
+    right: isMapFullscreen ? '-24px' : 'auto',
     flexShrink: 0,
+    transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1), height 0.5s cubic-bezier(0.4, 0, 0.2, 1), top 0.5s cubic-bezier(0.4, 0, 0.2, 1), right 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+    zIndex: isMapFullscreen ? 30 : 1,
+    willChange: 'width, height'
+  }), [isMapFullscreen]);
+
+  // Inner map container - maintains styling and border radius
+  const mapContainerStyle = useMemo(() => ({
+    width: '100%',
+    height: '100%',
     backgroundColor: '#1f2937',
-    borderRadius: '16px',
+    borderRadius: isMapFullscreen ? '24px' : '16px',
     padding: '0',
     boxSizing: 'border-box',
     overflow: 'hidden',
-    transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-    zIndex: isMapFullscreen ? 30 : 1,
-    willChange: 'width'
+    transition: 'border-radius 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+    willChange: 'border-radius'
   }), [isMapFullscreen]);
 
   return (
@@ -228,12 +238,14 @@ export default function Explore() {
             </div>
           </div>
           
-          {/* Map container - expands smoothly to fullscreen */}
-          <div style={mapContainerStyle}>
-            <MapView 
-              isFullscreen={isMapFullscreen}
-              onToggleFullscreen={toggleMapFullscreen}
-            />
+          {/* Map container wrapper - expands smoothly to fullscreen */}
+          <div style={mapContainerWrapperStyle}>
+            <div style={mapContainerStyle}>
+              <MapView 
+                isFullscreen={isMapFullscreen}
+                onToggleFullscreen={toggleMapFullscreen}
+              />
+            </div>
           </div>
         </div>
       </div>
