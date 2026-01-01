@@ -11,10 +11,10 @@ export default function MapView() {
   useEffect(() => {
     if (map.current) return; // Initialize map only once
 
-    // Define bounds for Catanduanes province
+    // Define expanded bounds to allow panning while keeping focus on Catanduanes
     const bounds = [
-      [124.011, 13.35], // Southwest corner
-      [124.45, 14.15]   // Northeast corner
+      [123.85, 13.2],  // Southwest corner - expanded for panning room
+      [124.6, 14.3]    // Northeast corner - expanded for panning room
     ];
 
     map.current = new maplibregl.Map({
@@ -23,7 +23,7 @@ export default function MapView() {
       center: [124.2475, 13.8], // Catanduanes coordinates
       zoom: 9,
       attributionControl: false,
-      maxBounds: bounds // Restrict camera movement to these bounds
+      maxBounds: bounds // Restrict camera movement to these expanded bounds
     });
 
     // Add navigation controls
