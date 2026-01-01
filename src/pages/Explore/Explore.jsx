@@ -1,12 +1,17 @@
-import { Map } from 'lucide-react';
+import { Map, Wifi } from 'lucide-react';
 import FloatingCard from '../../components/FloatingCard';
 
 export default function Explore() {
   return (
     <div className="h-screen w-screen bg-black overflow-hidden">
-      {/* Map icon */}
+      {/* Map icon - top left */}
       <div className="absolute z-20" style={{ top: '1.2vh', left: '1.2vw' }}>
         <Map color="white" size={28} strokeWidth={2} />
+      </div>
+      
+      {/* Online icon - top right */}
+      <div className="absolute z-20" style={{ top: '1.2vh', right: '1.2vw' }}>
+        <Wifi color="white" size={28} strokeWidth={2} />
       </div>
       
       {/* Centered container for FloatingCard */}
