@@ -31,8 +31,8 @@ export default function Explore() {
                 position: 'absolute',
                 bottom: '16px',
                 right: '16px',
-                width: '64px',
-                height: '64px',
+                width: '48px',
+                height: '48px',
                 borderRadius: '50%',
                 backgroundColor: '#84cc16',
                 display: 'flex',
@@ -42,8 +42,8 @@ export default function Explore() {
               }}>
                 <ChevronDown 
                   color="black" 
-                  size={32} 
-                  strokeWidth={2.5} 
+                  size={24} 
+                  strokeWidth={3} 
                   style={{ transform: 'rotate(135deg)' }}
                 />
               </div>
