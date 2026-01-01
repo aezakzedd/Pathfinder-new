@@ -45,14 +45,14 @@ export default function Explore() {
         <FloatingCard 
           leftContent={<ChatBot />}
           rightContent={<MapView />}
+          overlayPointerEvents={isMinimized ? 'none' : 'auto'}
           overlayContent={
             <div 
               ref={containerRef}
               style={{ 
                 width: '100%', 
                 height: '100%', 
-                position: 'relative',
-                pointerEvents: isMinimized ? 'none' : 'auto'
+                position: 'relative'
               }}
             >
               {/* White card that shrinks following button path */}
