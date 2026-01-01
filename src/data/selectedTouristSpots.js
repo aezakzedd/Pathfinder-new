@@ -1,5 +1,5 @@
 // Selected tourist spots - one per municipality with barangay info
-// Using exact names from GeoJSON files
+// Using EXACT names from GeoJSON files - verified against all files
 export const selectedSpots = [
   {
     municipality: 'VIRAC',
@@ -39,31 +39,31 @@ export const selectedSpots = [
   },
   {
     municipality: 'PANGANIBAN',
-    spotName: 'Talisoy Beach',
+    spotName: 'Tuwad-Tuwadan Lagoon',
     barangay: 'Panganiban',
     geojsonFile: 'panganiban.geojson'
   },
   {
     municipality: 'PANDAN',
-    spotName: 'Pandan Church',
+    spotName: 'Immaculate Conception Parish Church',
     barangay: 'Pandan Centro',
     geojsonFile: 'pandan.geojson'
   },
   {
     municipality: 'CARAMORAN',
-    spotName: 'Tignob Cove',
+    spotName: 'Mamangal Beach',
     barangay: 'Caramoran',
     geojsonFile: 'caramoran.geojson'
   },
   {
     municipality: 'GIGMOTO',
-    spotName: 'Gigmoto Port',
+    spotName: 'Gigmoto Lighthouse',
     barangay: 'Gigmoto',
     geojsonFile: 'gigmoto.geojson'
   },
   {
     municipality: 'SAN_ANDRES',
-    spotName: 'Mamangal Beach',
+    spotName: 'San Andres Beach',
     barangay: 'San Andres',
     geojsonFile: 'san_andres.geojson'
   }
