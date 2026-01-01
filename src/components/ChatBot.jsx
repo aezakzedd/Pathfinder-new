@@ -44,9 +44,10 @@ export default function ChatBot() {
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: 'black',
-      padding: '24px',
+      padding: '0',
       boxSizing: 'border-box',
-      position: 'relative'
+      position: 'relative',
+      overflow: 'hidden'
     }}>
       {/* Initial state with suggestions */}
       {showSuggestions && messages.length === 0 && (
@@ -54,29 +55,31 @@ export default function ChatBot() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '24px',
-          marginBottom: '40px',
+          gap: 'clamp(16px, 3vh, 24px)',
+          marginBottom: 'clamp(24px, 5vh, 40px)',
+          width: '90%',
           maxWidth: '600px',
-          width: '100%'
+          padding: '0 16px'
         }}>
           {/* Icon */}
           <div style={{
-            width: '48px',
-            height: '48px',
+            width: 'clamp(40px, 6vw, 48px)',
+            height: 'clamp(40px, 6vw, 48px)',
             borderRadius: '50%',
             backgroundColor: 'white',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            flexShrink: 0
           }}>
             <Sparkles color="black" size={24} strokeWidth={2} />
           </div>
 
           {/* Heading */}
-          <div style={{ textAlign: 'center' }}>
+          <div style={{ textAlign: 'center', width: '100%' }}>
             <h2 style={{
               color: 'white',
-              fontSize: '24px',
+              fontSize: 'clamp(18px, 3vw, 24px)',
               fontWeight: '600',
               margin: '0 0 8px 0'
             }}>
@@ -84,7 +87,7 @@ export default function ChatBot() {
             </h2>
             <p style={{
               color: 'rgba(255, 255, 255, 0.6)',
-              fontSize: '14px',
+              fontSize: 'clamp(12px, 2vw, 14px)',
               margin: '0',
               lineHeight: '1.5'
             }}>
@@ -96,23 +99,25 @@ export default function ChatBot() {
           <div style={{
             display: 'flex',
             flexWrap: 'wrap',
-            gap: '12px',
-            justifyContent: 'center'
+            gap: '8px',
+            justifyContent: 'center',
+            width: '100%'
           }}>
             {suggestions.map((suggestion, index) => (
               <button
                 key={index}
                 onClick={() => handleSuggestionClick(suggestion)}
                 style={{
-                  padding: '10px 20px',
+                  padding: '8px 16px',
                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '24px',
+                  borderRadius: '20px',
                   color: 'white',
-                  fontSize: '14px',
+                  fontSize: 'clamp(11px, 1.8vw, 14px)',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
@@ -134,15 +139,14 @@ export default function ChatBot() {
       {messages.length > 0 && (
         <div style={{
           position: 'absolute',
-          top: '24px',
-          left: '24px',
-          right: '24px',
-          bottom: '100px',
+          top: '16px',
+          left: '16px',
+          right: '16px',
+          bottom: '80px',
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          gap: '12px',
-          padding: '16px'
+          gap: '12px'
         }}>
           {messages.map((msg, index) => (
             <div
@@ -154,7 +158,8 @@ export default function ChatBot() {
                 padding: '10px 16px',
                 borderRadius: '12px',
                 maxWidth: '70%',
-                wordWrap: 'break-word'
+                wordWrap: 'break-word',
+                fontSize: 'clamp(12px, 2vw, 14px)'
               }}
             >
               {msg.text}
@@ -167,12 +172,14 @@ export default function ChatBot() {
       <form 
         onSubmit={handleSendMessage}
         style={{
-          width: '100%',
+          width: '90%',
           maxWidth: '600px',
           display: 'flex',
           alignItems: 'center',
           position: 'relative',
-          marginTop: 'auto'
+          marginTop: 'auto',
+          marginBottom: '16px',
+          padding: '0 8px'
         }}
       >
         <input
@@ -182,13 +189,13 @@ export default function ChatBot() {
           placeholder="Ask Anything"
           style={{
             width: '100%',
-            height: '56px',
-            padding: '0 60px 0 24px',
+            height: 'clamp(48px, 7vh, 56px)',
+            padding: '0 60px 0 20px',
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
             borderRadius: '28px',
             color: 'white',
-            fontSize: '15px',
+            fontSize: 'clamp(13px, 2vw, 15px)',
             outline: 'none',
             transition: 'all 0.2s ease'
           }}
@@ -205,9 +212,9 @@ export default function ChatBot() {
           type="submit"
           style={{
             position: 'absolute',
-            right: '4px',
-            width: '48px',
-            height: '48px',
+            right: '12px',
+            width: 'clamp(40px, 6vw, 48px)',
+            height: 'clamp(40px, 6vw, 48px)',
             borderRadius: '50%',
             backgroundColor: 'rgba(255, 255, 255, 0.1)',
             border: 'none',
@@ -215,7 +222,8 @@ export default function ChatBot() {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            transition: 'all 0.2s ease'
+            transition: 'all 0.2s ease',
+            flexShrink: 0
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = ACCENT_COLOR;
