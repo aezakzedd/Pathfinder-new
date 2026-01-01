@@ -11,7 +11,9 @@
   "dependencies": {
     "react": "latest",
     "react-dom": "latest",
-    "lucide-react": "latest"
+    "lucide-react": "latest",
+    "maplibre-gl": "latest",
+    "react-map-gl": "latest"
   },
   "devDependencies": {
     "vite": "latest",
