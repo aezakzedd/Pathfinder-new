@@ -183,9 +183,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           onClick={handleToggleFullscreen}
           style={{
             position: 'absolute',
-            // When fullscreen, adjust for map container's shifted position
+            // Simple approach: when fullscreen, offset to compensate for container shift
+            // Map container shifts left by calc(-200% - 48px)
+            // Button needs to appear at the parent's edge, so add that back plus desired spacing
             top: isFullscreen ? '36px' : '12px',
-            left: isFullscreen ? 'calc(200% + 60px)' : '12px',
+            left: isFullscreen ? '50%' : '12px',
+            transform: isFullscreen ? 'translateX(-45vw)' : 'none',
             width: '36px',
             height: '36px',
             borderRadius: '4px',
@@ -198,7 +201,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             zIndex: 10,
             boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
             transition: 'all 0.5s ease-in-out',
-            willChange: 'top, left, background-color'
+            willChange: 'top, left, transform, background-color'
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = '#f3f4f6';
