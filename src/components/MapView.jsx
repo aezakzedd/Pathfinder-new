@@ -222,13 +222,13 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }, 0);
         
         // Use padding to keep info card visible while centering on marker coordinates
-        // Card is 342px above marker, so add top padding to shift viewport
+        // Increased top padding to shift view more towards bottom
         const targetZoom = Math.max(map.current.getZoom(), 12);
         
         map.current.flyTo({
           center: spot.coordinates, // Keep centered on actual marker coordinates
           zoom: targetZoom,
-          padding: { top: 200, bottom: 50, left: 0, right: 0 }, // Add top padding to show card
+          padding: { top: 300, bottom: 50, left: 0, right: 0 }, // Increased top padding from 200 to 300
           duration: 800
         });
       });
