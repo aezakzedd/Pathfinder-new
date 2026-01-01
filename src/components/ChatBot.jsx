@@ -213,7 +213,7 @@ export default function ChatBot() {
             width: 'clamp(40px, 6vw, 48px)',
             height: 'clamp(40px, 6vw, 48px)',
             borderRadius: '50%',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            backgroundColor: 'transparent',
             border: 'none',
             display: 'flex',
             alignItems: 'center',
@@ -226,7 +226,7 @@ export default function ChatBot() {
             e.currentTarget.style.backgroundColor = ACCENT_COLOR;
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
           <Send color="white" size={20} strokeWidth={2} />
