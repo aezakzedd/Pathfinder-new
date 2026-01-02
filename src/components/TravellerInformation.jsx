@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronLeft, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
+import { ChevronRight, ChevronLeft } from 'lucide-react';
 
 export default function TravellerInformation() {
   const [step, setStep] = useState(1); // 1: Dates, 2: Budget, 3: Preferences
@@ -80,11 +80,10 @@ export default function TravellerInformation() {
     }
   };
 
-  const renderCalendar = (monthOffset = 0) => {
-    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + monthOffset, 1);
-    const daysInMonth = getDaysInMonth(date);
-    const firstDay = getFirstDayOfMonth(date);
-    const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const renderCalendar = () => {
+    const daysInMonth = getDaysInMonth(currentMonth);
+    const firstDay = getFirstDayOfMonth(currentMonth);
+    const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
     const days = [];
     const today = new Date();
@@ -92,12 +91,12 @@ export default function TravellerInformation() {
 
     // Empty cells for days before month starts
     for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} style={{ padding: '8px' }} />);
+      days.push(<div key={`empty-${i}`} style={{ padding: '6px' }} />);
     }
 
     // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
-      const currentDate = new Date(date.getFullYear(), date.getMonth(), day);
+      const currentDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
       const isStart = isSameDay(currentDate, startDate);
       const isEnd = isSameDay(currentDate, endDate);
       const inRange = isInRange(currentDate, startDate, endDate);
@@ -121,10 +120,13 @@ export default function TravellerInformation() {
               isPast ? '#9ca3af' : 
               '#1f2937',
             fontWeight: (isStart || isEnd) ? '700' : '400',
-            fontSize: '14px',
+            fontSize: '13px',
             opacity: isPast ? 0.4 : 1,
             transition: 'all 0.2s ease',
-            position: 'relative'
+            minHeight: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
           onMouseEnter={(e) => {
             if (!isPast && !isStart && !isEnd) {
@@ -145,28 +147,66 @@ export default function TravellerInformation() {
     }
 
     return (
-      <div style={{ flex: 1, minWidth: '280px' }}>
+      <div style={{ width: '100%' }}>
+        {/* Calendar Header with Navigation */}
         <div style={{
-          fontWeight: '600',
-          fontSize: '16px',
-          color: '#1f2937',
-          marginBottom: '16px',
-          textAlign: 'center'
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px'
         }}>
-          {monthName}
+          <button
+            onClick={previousMonth}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              color: '#1f2937'
+            }}
+          >
+            <ChevronLeft size={20} />
+          </button>
+          
+          <div style={{
+            fontWeight: '600',
+            fontSize: '15px',
+            color: '#1f2937'
+          }}>
+            {monthName}
+          </div>
+          
+          <button
+            onClick={nextMonth}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              color: '#1f2937'
+            }}
+          >
+            <ChevronRight size={20} />
+          </button>
         </div>
+
+        {/* Calendar Grid */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(7, 1fr)',
-          gap: '4px'
+          gap: '2px'
         }}>
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
             <div
               key={index}
               style={{
-                padding: '8px',
+                padding: '8px 4px',
                 textAlign: 'center',
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: '600',
                 color: '#6b7280'
               }}
@@ -226,7 +266,7 @@ export default function TravellerInformation() {
         <div style={{
           display: 'flex',
           gap: '8px',
-          marginBottom: '32px'
+          marginBottom: '24px'
         }}>
           {[1, 2, 3].map((s) => (
             <div
@@ -246,89 +286,44 @@ export default function TravellerInformation() {
         {step === 1 && (
           <div style={{
             width: '100%',
-            maxWidth: '700px',
+            maxWidth: '420px',
             textAlign: 'center',
             animation: 'fadeIn 0.3s ease-in'
           }}>
             <h2 style={{
               color: 'white',
-              fontSize: '24px',
+              fontSize: '22px',
               fontWeight: '700',
-              marginBottom: '12px',
-              margin: '0 0 12px 0'
+              marginBottom: '8px',
+              margin: '0 0 8px 0'
             }}>When are you going?</h2>
             <p style={{
               color: '#9ca3af',
-              fontSize: '14px',
-              marginBottom: '32px',
-              margin: '0 0 32px 0'
+              fontSize: '13px',
+              marginBottom: '20px',
+              margin: '0 0 20px 0'
             }}>Choose a date range, up to 7 days.</p>
 
             {/* Calendar Container */}
             <div style={{
               backgroundColor: 'white',
               borderRadius: '16px',
-              padding: '24px',
+              padding: '20px',
               boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
             }}>
-              {/* Calendar Navigation */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '24px'
-              }}>
-                <button
-                  onClick={previousMonth}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    color: '#1f2937'
-                  }}
-                >
-                  <ChevronLeft size={24} />
-                </button>
-                <button
-                  onClick={nextMonth}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    color: '#1f2937'
-                  }}
-                >
-                  <ChevronRight size={24} />
-                </button>
-              </div>
-
-              {/* Two Month View */}
-              <div style={{
-                display: 'flex',
-                gap: '32px',
-                justifyContent: 'center'
-              }}>
-                {renderCalendar(0)}
-                {renderCalendar(1)}
-              </div>
+              {renderCalendar()}
             </div>
 
             {days > 0 && (
               <div style={{
                 backgroundColor: '#1f2937',
-                padding: '12px',
+                padding: '10px',
                 borderRadius: '8px',
-                marginTop: '24px'
+                marginTop: '16px'
               }}>
                 <p style={{
                   color: '#84cc16',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: '600',
                   margin: 0
                 }}>
@@ -535,8 +530,8 @@ export default function TravellerInformation() {
       <div style={{
         display: 'flex',
         gap: '12px',
-        marginTop: '24px',
-        paddingTop: '16px',
+        marginTop: '20px',
+        paddingTop: '12px',
         width: '100%',
         justifyContent: 'center',
         flexShrink: 0
