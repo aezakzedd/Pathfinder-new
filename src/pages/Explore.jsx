@@ -6,7 +6,6 @@ import ChatBot from '../components/ChatBot';
 import TravellerInformation from '../components/TravellerInformation';
 import NetworkStatus from '../components/NetworkStatus';
 import TouristSpotDetails from '../components/TouristSpotDetails';
-import { touristSpots } from '../data/touristSpots';
 
 export default function Explore() {
   const [isMinimized, setIsMinimized] = useState(false);
@@ -14,7 +13,7 @@ export default function Explore() {
   const containerRef = useRef(null);
   const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
   const resizeTimeoutRef = useRef(null);
-  const [selectedSpot, setSelectedSpot] = useState(touristSpots[0]); // Default to first spot (Binurong Point)
+  const [selectedSpot, setSelectedSpot] = useState(null); // Changed from touristSpots[0] to null
 
   // Memoized calculate function to prevent recreation
   const calculateTranslateValues = useCallback(() => {
@@ -250,7 +249,7 @@ export default function Explore() {
           
           {/* Right container with TouristSpotDetails underneath map */}
           <div style={rightContainerStyle}>
-            {/* TouristSpotDetails with image carousel */}
+            {/* TouristSpotDetails with image carousel - only shows when spot selected */}
             <div style={whiteUnderContainerStyle}>
               <TouristSpotDetails spot={selectedSpot} />
             </div>
