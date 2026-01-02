@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, memo, useState } from 'react';
-import { Maximize, Minimize, Map as MapIcon, List } from 'lucide-react';
+import { Maximize, Minimize, Map as MapIcon, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedTouristSpots';
@@ -30,6 +30,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [itinerary, setItinerary] = useState([]);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // Sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarImage, setSidebarImage] = useState(null);
+  const [sidebarSpot, setSidebarSpot] = useState(null);
 
   // Load GeoJSON data and extract selected spots
   useEffect(() => {
@@ -102,6 +107,22 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   };
 
+  // Handle image click to open sidebar
+  const handleImageClick = (image, spot) => {
+    setSidebarImage(image);
+    setSidebarSpot(spot);
+    setSidebarOpen(true);
+  };
+
+  // Close sidebar
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+    setTimeout(() => {
+      setSidebarImage(null);
+      setSidebarSpot(null);
+    }, 300);
+  };
+
   // Calculate marker scale based on zoom level
   const getMarkerScale = (zoom) => {
     const baseZoom = 9;
@@ -163,6 +184,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             alt="${spot.name} ${idx + 1}"
             class="carousel-image"
             data-index="${idx}"
+            data-image-url="${img}"
             style="
               width: 100%;
               height: 100%;
@@ -172,6 +194,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               left: 0;
               opacity: ${idx === 0 ? '1' : '0'};
               transition: opacity 0.3s ease;
+              cursor: pointer;
             "
           />
         `).join('')}
@@ -444,6 +467,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               counter.textContent = `${index + 1} / ${totalImages}`;
             }
           }
+
+          // Add click handlers to images
+          images.forEach((img) => {
+            img.addEventListener('click', (e) => {
+              const imageUrl = e.target.getAttribute('data-image-url');
+              handleImageClick(imageUrl, spot);
+            });
+          });
 
           if (prevBtn) {
             prevBtn.addEventListener('click', (e) => {
@@ -723,6 +754,100 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         position: 'relative'
       }} 
     >
+      {/* Sidebar overlay */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: sidebarOpen ? 'calc((90vw - 24px - 48px) / 2)' : '0',
+          height: '100vh',
+          backgroundColor: '#1f2937',
+          zIndex: 100,
+          transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden',
+          boxShadow: sidebarOpen ? '4px 0 20px rgba(0, 0, 0, 0.3)' : 'none'
+        }}
+      >
+        {/* Close button */}
+        <button
+          onClick={closeSidebar}
+          style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s',
+            zIndex: 10
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+          }}
+        >
+          <X color="white" size={24} strokeWidth={2} />
+        </button>
+
+        {/* Sidebar content */}
+        {sidebarImage && sidebarSpot && (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '40px'
+            }}
+          >
+            <img
+              src={sidebarImage}
+              alt={sidebarSpot.name}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '80vh',
+                objectFit: 'contain',
+                borderRadius: '12px',
+                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+              }}
+            />
+            <h2
+              style={{
+                color: 'white',
+                fontSize: '24px',
+                fontWeight: '600',
+                marginTop: '20px',
+                textAlign: 'center'
+              }}
+            >
+              {sidebarSpot.name}
+            </h2>
+            <p
+              style={{
+                color: '#9ca3af',
+                fontSize: '14px',
+                marginTop: '8px',
+                textAlign: 'center'
+              }}
+            >
+              {sidebarSpot.location}
+            </p>
+          </div>
+        )}
+      </div>
+
       {activeView === 'map' && (
         <button
           onClick={handleToggleFullscreen}
