@@ -916,20 +916,23 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             }
           };
 
-          map.current.addSource('mask', {
-            type: 'geojson',
-            data: maskGeoJSON
-          });
+          // Check if source already exists before adding
+          if (!map.current.getSource('mask')) {
+            map.current.addSource('mask', {
+              type: 'geojson',
+              data: maskGeoJSON
+            });
 
-          map.current.addLayer({
-            id: 'mask-layer',
-            type: 'fill',
-            source: 'mask',
-            paint: {
-              'fill-color': '#000000',
-              'fill-opacity': 1
-            }
-          });
+            map.current.addLayer({
+              id: 'mask-layer',
+              type: 'fill',
+              source: 'mask',
+              paint: {
+                'fill-color': '#000000',
+                'fill-opacity': 1
+              }
+            });
+          }
 
           // Try to add markers if data is already loaded
           if (dataLoaded && touristSpots.length > 0) {
