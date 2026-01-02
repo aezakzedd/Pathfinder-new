@@ -276,7 +276,7 @@ export default function TravellerInformation() {
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      padding: '16px 20px',
+      padding: '12px 20px',
       boxSizing: 'border-box',
       overflow: 'auto'
     }}>
@@ -284,7 +284,7 @@ export default function TravellerInformation() {
       <div style={{
         display: 'flex',
         gap: '8px',
-        marginBottom: '32px',
+        marginBottom: '36px',
         justifyContent: 'center',
         flexShrink: 0
       }}>
