@@ -8,7 +8,7 @@ import NetworkStatus from '../components/NetworkStatus';
 
 export default function Explore() {
   const [isMinimized, setIsMinimized] = useState(true); // Minimized by default
-  const [hasMounted, setHasMounted] = useState(false); // Track first mount
+  const [hasMounted, setHasMounted] = useState(true); // Track first mount
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const containerRef = useRef(null);
   const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
