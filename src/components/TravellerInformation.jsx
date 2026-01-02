@@ -1,323 +1,504 @@
 import { useState } from 'react';
-import { Calendar, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, CloudFog } from 'lucide-react';
+import { Calendar, ChevronRight, ChevronLeft } from 'lucide-react';
 
-export default function TravellerInformation({ budget, setBudget }) {
-  const [dateRange, setDateRange] = useState('Nov 30 - Dec 2');
-  const [activities, setActivities] = useState({
-    swimming: false,
+export default function TravellerInformation() {
+  const [step, setStep] = useState(1); // 1: Dates, 2: Budget, 3: Preferences
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [budget, setBudget] = useState(10000);
+  const [preferences, setPreferences] = useState({
+    beach: false,
     hiking: false,
     sightseeing: false,
     waterfalls: false,
-    historical: false
+    historical: false,
+    adventure: false,
+    relaxation: false,
+    cultural: false
   });
-  const [weather, setWeather] = useState(null);
-  const [loading, setLoading] = useState(true);
 
-  // Fetch weather data for Catanduanes
-  useState(() => {
-    const fetchWeather = async () => {
-      try {
-        const response = await fetch(
-          `https://api.openweathermap.org/data/2.5/weather?q=Virac,Catanduanes,PH&units=metric&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}`
-        );
-        const data = await response.json();
-        setWeather(data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching weather:', error);
-        setLoading(false);
-      }
-    };
-    fetchWeather();
-  }, []);
+  const handleNext = () => {
+    if (step < 3) setStep(step + 1);
+  };
 
-  const handleActivityChange = (activity) => {
-    setActivities(prev => ({
+  const handlePrevious = () => {
+    if (step > 1) setStep(step - 1);
+  };
+
+  const togglePreference = (key) => {
+    setPreferences(prev => ({
       ...prev,
-      [activity]: !prev[activity]
+      [key]: !prev[key]
     }));
   };
 
-  // Get weather icon based on condition
-  const getWeatherIcon = (weatherMain) => {
-    const iconProps = { size: 48, color: '#84cc16', strokeWidth: 1.5 };
-    
-    switch (weatherMain) {
-      case 'Clear':
-        return <Sun {...iconProps} />;
-      case 'Clouds':
-        return <Cloud {...iconProps} />;
-      case 'Rain':
-        return <CloudRain {...iconProps} />;
-      case 'Drizzle':
-        return <CloudDrizzle {...iconProps} />;
-      case 'Thunderstorm':
-        return <CloudLightning {...iconProps} />;
-      case 'Snow':
-        return <CloudSnow {...iconProps} />;
-      case 'Mist':
-      case 'Fog':
-      case 'Haze':
-      case 'Smoke':
-        return <CloudFog {...iconProps} />;
-      default:
-        return <Cloud {...iconProps} />;
+  // Calculate days between dates
+  const calculateDays = () => {
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const diffTime = Math.abs(end - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      return diffDays;
     }
+    return 0;
   };
+
+  const days = calculateDays();
 
   return (
     <div style={{
       width: '100%',
       height: '100%',
       display: 'flex',
+      flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'center'
+      justifyContent: 'center',
+      padding: '32px'
     }}>
+      {/* Step Indicator */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gridTemplateRows: '1fr 1fr',
-        gap: '12px',
-        width: 'calc(100% - 48px)',
-        height: 'calc(100% - 48px)',
-        maxWidth: '90%',
-        maxHeight: '90%'
+        display: 'flex',
+        gap: '8px',
+        marginBottom: '32px'
       }}>
-        {/* Journey Dates Card */}
-        <div style={{
-          backgroundColor: '#000000',
-          borderRadius: '12px',
-          padding: '14px',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <h3 style={{
-            color: 'white',
-            fontSize: '13px',
-            fontWeight: '600',
-            marginBottom: '10px',
-            margin: 0
-          }}>Journey Dates</h3>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            backgroundColor: '#1f2937',
-            padding: '8px',
-            borderRadius: '8px',
-            marginTop: '8px'
-          }}>
-            <Calendar size={14} color="white" />
-            <input
-              type="text"
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              style={{
-                backgroundColor: 'transparent',
-                border: 'none',
-                color: 'white',
-                fontSize: '12px',
-                outline: 'none',
-                flex: 1
-              }}
-            />
-          </div>
-          <p style={{
-            color: '#9ca3af',
-            fontSize: '10px',
-            marginTop: 'auto',
-            paddingTop: '8px',
-            margin: 0
-          }}>Selected period is 3 days to Catanduanes</p>
-        </div>
-
-        {/* Budget Card */}
-        <div style={{
-          backgroundColor: '#000000',
-          borderRadius: '12px',
-          padding: '14px',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <h3 style={{
-            color: 'white',
-            fontSize: '13px',
-            fontWeight: '600',
-            marginBottom: '10px',
-            margin: 0
-          }}>Budget</h3>
-          <input
-            type="range"
-            min="1000"
-            max="50000"
-            step="1000"
-            value={budget}
-            onChange={(e) => setBudget(Number(e.target.value))}
+        {[1, 2, 3].map((s) => (
+          <div
+            key={s}
             style={{
-              width: '100%',
-              accentColor: '#84cc16',
-              marginTop: '8px'
+              width: step === s ? '32px' : '8px',
+              height: '8px',
+              borderRadius: '4px',
+              backgroundColor: step >= s ? '#84cc16' : '#374151',
+              transition: 'all 0.3s ease'
             }}
           />
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginTop: '6px'
-          }}>
-            <span style={{ color: '#9ca3af', fontSize: '9px' }}>₱1,000</span>
-            <span style={{ color: 'white', fontSize: '12px', fontWeight: '600' }}>₱{budget.toLocaleString()}</span>
-            <span style={{ color: '#9ca3af', fontSize: '9px' }}>₱50,000</span>
-          </div>
+        ))}
+      </div>
+
+      {/* Step 1: Journey Dates */}
+      {step === 1 && (
+        <div style={{
+          width: '100%',
+          maxWidth: '400px',
+          textAlign: 'center',
+          animation: 'fadeIn 0.3s ease-in'
+        }}>
+          <h2 style={{
+            color: 'white',
+            fontSize: '24px',
+            fontWeight: '700',
+            marginBottom: '12px'
+          }}>When are you traveling?</h2>
           <p style={{
             color: '#9ca3af',
-            fontSize: '10px',
-            marginTop: 'auto',
-            paddingTop: '4px',
-            textAlign: 'center',
-            margin: 0
-          }}>Price range for your trip</p>
-        </div>
+            fontSize: '14px',
+            marginBottom: '32px'
+          }}>Select your journey dates to Catanduanes</p>
 
-        {/* Weather Card */}
-        <div style={{
-          backgroundColor: '#000000',
-          borderRadius: '12px',
-          padding: '14px',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <h3 style={{
-            color: 'white',
-            fontSize: '13px',
-            fontWeight: '600',
-            marginBottom: '10px',
-            margin: 0
-          }}>Weather in Catanduanes</h3>
-          {loading ? (
-            <p style={{ color: '#9ca3af', fontSize: '11px', margin: 0 }}>Loading...</p>
-          ) : weather && weather.main ? (
-            <div style={{ marginTop: '4px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-              {/* Weather Icon and Temperature */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '12px',
-                marginBottom: '8px'
-              }}>
-                {getWeatherIcon(weather.weather[0].main)}
-                <div>
-                  <span style={{
-                    fontSize: '32px',
-                    fontWeight: 'bold',
-                    color: 'white'
-                  }}>{Math.round(weather.main.temp)}°C</span>
-                </div>
-              </div>
-              
-              {/* Weather Description */}
-              <p style={{
-                color: 'white',
-                fontSize: '11px',
-                textTransform: 'capitalize',
-                textAlign: 'center',
-                margin: 0,
-                marginBottom: '4px'
-              }}>{weather.weather[0].description}</p>
-              <p style={{
-                color: '#9ca3af',
-                fontSize: '9px',
-                textAlign: 'center',
-                margin: 0,
-                marginBottom: '8px'
-              }}>Feels like {Math.round(weather.main.feels_like)}°C</p>
-              
-              {/* Humidity and Wind */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '6px',
-                marginTop: 'auto'
-              }}>
-                <div>
-                  <p style={{ color: '#9ca3af', fontSize: '9px', margin: 0 }}>Humidity</p>
-                  <p style={{ color: 'white', fontSize: '11px', margin: 0 }}>{weather.main.humidity}%</p>
-                </div>
-                <div>
-                  <p style={{ color: '#9ca3af', fontSize: '9px', margin: 0 }}>Wind</p>
-                  <p style={{ color: 'white', fontSize: '11px', margin: 0 }}>{Math.round(weather.wind.speed)} m/s</p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <p style={{ color: '#9ca3af', fontSize: '11px', margin: 0 }}>Weather unavailable</p>
-          )}
-        </div>
-
-        {/* Activities Card */}
-        <div style={{
-          backgroundColor: '#000000',
-          borderRadius: '12px',
-          padding: '14px',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <h3 style={{
-            color: 'white',
-            fontSize: '13px',
-            fontWeight: '600',
-            marginBottom: '8px',
-            margin: 0
-          }}>What Would You Like To Do?</h3>
           <div style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '6px',
-            marginTop: '4px',
-            flex: 1
+            gap: '16px',
+            marginBottom: '24px'
           }}>
-            {Object.entries(activities).map(([key, value]) => (
-              <label
-                key={key}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                  padding: '5px 6px',
-                  borderRadius: '6px',
-                  backgroundColor: value ? '#374151' : 'transparent',
-                  transition: 'background-color 0.2s'
-                }}
-              >
+            {/* Start Date */}
+            <div style={{
+              textAlign: 'left'
+            }}>
+              <label style={{
+                color: '#9ca3af',
+                fontSize: '12px',
+                marginBottom: '8px',
+                display: 'block'
+              }}>Start Date</label>
+              <div style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <Calendar size={18} color="#9ca3af" style={{
+                  position: 'absolute',
+                  left: '12px',
+                  pointerEvents: 'none'
+                }} />
                 <input
-                  type="checkbox"
-                  checked={value}
-                  onChange={() => handleActivityChange(key)}
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
                   style={{
-                    width: '14px',
-                    height: '14px',
+                    width: '100%',
+                    padding: '12px 12px 12px 40px',
+                    backgroundColor: '#1f2937',
+                    border: '2px solid #374151',
+                    borderRadius: '12px',
+                    color: 'white',
+                    fontSize: '14px',
+                    outline: 'none',
                     cursor: 'pointer',
-                    accentColor: '#84cc16'
+                    transition: 'border-color 0.2s',
+                    colorScheme: 'dark'
                   }}
+                  onFocus={(e) => e.target.style.borderColor = '#84cc16'}
+                  onBlur={(e) => e.target.style.borderColor = '#374151'}
                 />
-                <span style={{
-                  color: 'white',
-                  fontSize: '11px',
-                  textTransform: 'capitalize'
-                }}>{key}</span>
-              </label>
-            ))}
+              </div>
+            </div>
+
+            {/* End Date */}
+            <div style={{
+              textAlign: 'left'
+            }}>
+              <label style={{
+                color: '#9ca3af',
+                fontSize: '12px',
+                marginBottom: '8px',
+                display: 'block'
+              }}>End Date</label>
+              <div style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <Calendar size={18} color="#9ca3af" style={{
+                  position: 'absolute',
+                  left: '12px',
+                  pointerEvents: 'none'
+                }} />
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate}
+                  style={{
+                    width: '100%',
+                    padding: '12px 12px 12px 40px',
+                    backgroundColor: '#1f2937',
+                    border: '2px solid #374151',
+                    borderRadius: '12px',
+                    color: 'white',
+                    fontSize: '14px',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    transition: 'border-color 0.2s',
+                    colorScheme: 'dark'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#84cc16'}
+                  onBlur={(e) => e.target.style.borderColor = '#374151'}
+                />
+              </div>
+            </div>
           </div>
+
+          {days > 0 && (
+            <div style={{
+              backgroundColor: '#1f2937',
+              padding: '12px',
+              borderRadius: '8px',
+              marginBottom: '24px'
+            }}>
+              <p style={{
+                color: '#84cc16',
+                fontSize: '14px',
+                fontWeight: '600',
+                margin: 0
+              }}>
+                {days} {days === 1 ? 'day' : 'days'} trip to Catanduanes
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Step 2: Budget */}
+      {step === 2 && (
+        <div style={{
+          width: '100%',
+          maxWidth: '400px',
+          textAlign: 'center',
+          animation: 'fadeIn 0.3s ease-in'
+        }}>
+          <h2 style={{
+            color: 'white',
+            fontSize: '24px',
+            fontWeight: '700',
+            marginBottom: '12px'
+          }}>What's your budget?</h2>
           <p style={{
             color: '#9ca3af',
-            fontSize: '10px',
-            marginTop: 'auto',
-            paddingTop: '6px',
-            margin: 0
-          }}>Select your preferred activities</p>
+            fontSize: '14px',
+            marginBottom: '32px'
+          }}>Set your budget range for the trip</p>
+
+          <div style={{
+            backgroundColor: '#1f2937',
+            padding: '32px',
+            borderRadius: '16px',
+            marginBottom: '24px'
+          }}>
+            <div style={{
+              fontSize: '48px',
+              fontWeight: '700',
+              color: '#84cc16',
+              marginBottom: '24px'
+            }}>
+              ₱{budget.toLocaleString()}
+            </div>
+
+            <input
+              type="range"
+              min="1000"
+              max="50000"
+              step="500"
+              value={budget}
+              onChange={(e) => setBudget(Number(e.target.value))}
+              style={{
+                width: '100%',
+                height: '8px',
+                borderRadius: '4px',
+                backgroundColor: '#374151',
+                outline: 'none',
+                cursor: 'pointer',
+                WebkitAppearance: 'none',
+                appearance: 'none'
+              }}
+            />
+            
+            <style>{`
+              input[type='range']::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #84cc16;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+              }
+              input[type='range']::-moz-range-thumb {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #84cc16;
+                cursor: pointer;
+                border: none;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+              }
+              input[type='range']::-webkit-slider-runnable-track {
+                background: linear-gradient(to right, #84cc16 0%, #84cc16 ${((budget - 1000) / (50000 - 1000)) * 100}%, #374151 ${((budget - 1000) / (50000 - 1000)) * 100}%, #374151 100%);
+                height: 8px;
+                border-radius: 4px;
+              }
+            `}</style>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: '12px'
+            }}>
+              <span style={{ color: '#9ca3af', fontSize: '12px' }}>₱1,000</span>
+              <span style={{ color: '#9ca3af', fontSize: '12px' }}>₱50,000</span>
+            </div>
+          </div>
+
+          {days > 0 && (
+            <div style={{
+              backgroundColor: '#1f2937',
+              padding: '12px',
+              borderRadius: '8px'
+            }}>
+              <p style={{
+                color: '#9ca3af',
+                fontSize: '12px',
+                margin: 0
+              }}>
+                ₱{Math.round(budget / days).toLocaleString()} per day
+              </p>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* Step 3: Preferences */}
+      {step === 3 && (
+        <div style={{
+          width: '100%',
+          maxWidth: '500px',
+          textAlign: 'center',
+          animation: 'fadeIn 0.3s ease-in'
+        }}>
+          <h2 style={{
+            color: 'white',
+            fontSize: '24px',
+            fontWeight: '700',
+            marginBottom: '12px'
+          }}>What interests you?</h2>
+          <p style={{
+            color: '#9ca3af',
+            fontSize: '14px',
+            marginBottom: '32px'
+          }}>Select your preferences for the trip</p>
+
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '12px',
+            justifyContent: 'center',
+            marginBottom: '24px'
+          }}>
+            {Object.keys(preferences).map((key) => (
+              <button
+                key={key}
+                onClick={() => togglePreference(key)}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '24px',
+                  border: preferences[key] ? '2px solid #84cc16' : '2px solid #374151',
+                  backgroundColor: preferences[key] ? '#84cc16' : '#1f2937',
+                  color: preferences[key] ? '#000000' : 'white',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  textTransform: 'capitalize',
+                  transition: 'all 0.2s ease',
+                  outline: 'none'
+                }}
+                onMouseEnter={(e) => {
+                  if (!preferences[key]) {
+                    e.target.style.borderColor = '#84cc16';
+                    e.target.style.backgroundColor = '#374151';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!preferences[key]) {
+                    e.target.style.borderColor = '#374151';
+                    e.target.style.backgroundColor = '#1f2937';
+                  }
+                }}
+              >
+                {key}
+              </button>
+            ))}
+          </div>
+
+          <div style={{
+            backgroundColor: '#1f2937',
+            padding: '12px',
+            borderRadius: '8px'
+          }}>
+            <p style={{
+              color: '#9ca3af',
+              fontSize: '12px',
+              margin: 0
+            }}>
+              {Object.values(preferences).filter(Boolean).length} preferences selected
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Navigation Buttons */}
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        marginTop: 'auto',
+        paddingTop: '32px'
+      }}>
+        {step > 1 && (
+          <button
+            onClick={handlePrevious}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 24px',
+              backgroundColor: '#374151',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#4b5563'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#374151'}
+          >
+            <ChevronLeft size={18} />
+            Previous
+          </button>
+        )}
+        
+        {step < 3 ? (
+          <button
+            onClick={handleNext}
+            disabled={step === 1 && (!startDate || !endDate)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 24px',
+              backgroundColor: (step === 1 && (!startDate || !endDate)) ? '#374151' : '#84cc16',
+              color: (step === 1 && (!startDate || !endDate)) ? '#9ca3af' : '#000000',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: (step === 1 && (!startDate || !endDate)) ? 'not-allowed' : 'pointer',
+              transition: 'background-color 0.2s',
+              opacity: (step === 1 && (!startDate || !endDate)) ? 0.5 : 1
+            }}
+            onMouseEnter={(e) => {
+              if (!(step === 1 && (!startDate || !endDate))) {
+                e.target.style.backgroundColor = '#a3e635';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!(step === 1 && (!startDate || !endDate))) {
+                e.target.style.backgroundColor = '#84cc16';
+              }
+            }}
+          >
+            Next
+            <ChevronRight size={18} />
+          </button>
+        ) : (
+          <button
+            onClick={() => console.log('Generate Itinerary', { startDate, endDate, budget, preferences })}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 32px',
+              backgroundColor: '#84cc16',
+              color: '#000000',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#a3e635'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#84cc16'}
+          >
+            Generate Itinerary
+          </button>
+        )}
       </div>
+
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
