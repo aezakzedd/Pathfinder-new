@@ -249,6 +249,7 @@ export default function Explore() {
   }), []);
 
   // Map container - properly sized to cover full parent content area when fullscreen
+  // z-index is 2 in normal mode so budget tracker (z-index 1) stays behind the map
   const mapContainerStyle = useMemo(() => ({
     position: 'absolute',
     top: isMapFullscreen ? '0' : '0',
@@ -261,7 +262,7 @@ export default function Explore() {
     borderRadius: isMapFullscreen ? '16px' : '16px',
     overflow: 'hidden',
     transition: 'all 0.5s ease-in-out',
-    zIndex: isMapFullscreen ? 30 : 1
+    zIndex: isMapFullscreen ? 30 : 2
   }), [isMapFullscreen]);
 
   return (
@@ -325,7 +326,7 @@ export default function Explore() {
           <div style={rightContainerStyle}>
             {/* White container - Itinerary View */}
             <div style={whiteUnderContainerStyle}>
-              {/* Budget Tracker - Top Left Corner */}
+              {/* Budget Tracker - Top Left Corner - z-index 1 (behind map which has z-index 2) */}
               <div style={{
                 position: 'absolute',
                 top: '16px',
@@ -335,7 +336,7 @@ export default function Explore() {
                 padding: '12px 16px',
                 minWidth: '180px',
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-                zIndex: 10,
+                zIndex: 1,
                 border: '1px solid #374151'
               }}>
                 <div style={{
@@ -442,7 +443,7 @@ export default function Explore() {
               </div>
             </div>
             
-            {/* Map container - covers full parent width when fullscreen */}
+            {/* Map container - covers full parent width when fullscreen - z-index 2 (above budget tracker) */}
             <div style={mapContainerStyle}>
               <MapView 
                 isFullscreen={isMapFullscreen}
