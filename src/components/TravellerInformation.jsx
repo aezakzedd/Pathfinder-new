@@ -276,42 +276,41 @@ export default function TravellerInformation() {
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'space-between',
       padding: '20px',
       boxSizing: 'border-box',
       overflow: 'auto'
     }}>
-      {/* Top section with step indicator and content */}
+      {/* Step Indicator - Fixed at top */}
       <div style={{
-        width: '100%',
+        display: 'flex',
+        gap: '8px',
+        marginBottom: '16px',
+        justifyContent: 'center',
+        flexShrink: 0
+      }}>
+        {[1, 2, 3].map((s) => (
+          <div
+            key={s}
+            style={{
+              width: step === s ? '32px' : '8px',
+              height: '8px',
+              borderRadius: '4px',
+              backgroundColor: step >= s ? '#84cc16' : '#374151',
+              transition: 'all 0.3s ease'
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Content area - flex grow to push buttons to bottom */}
+      <div style={{
+        flex: 1,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        flex: 1,
         justifyContent: 'center',
         minHeight: 0
       }}>
-        {/* Step Indicator */}
-        <div style={{
-          display: 'flex',
-          gap: '8px',
-          marginBottom: '16px'
-        }}>
-          {[1, 2, 3].map((s) => (
-            <div
-              key={s}
-              style={{
-                width: step === s ? '32px' : '8px',
-                height: '8px',
-                borderRadius: '4px',
-                backgroundColor: step >= s ? '#84cc16' : '#374151',
-                transition: 'all 0.3s ease'
-              }}
-            />
-          ))}
-        </div>
-
         {/* Step 1: Journey Dates with Calendar */}
         {step === 1 && (
           <div style={{
@@ -356,16 +355,16 @@ export default function TravellerInformation() {
           }}>
             <h2 style={{
               color: 'white',
-              fontSize: '24px',
+              fontSize: '20px',
               fontWeight: '700',
-              marginBottom: '12px',
-              margin: '0 0 12px 0'
+              marginBottom: '6px',
+              margin: '0 0 6px 0'
             }}>What's your budget?</h2>
             <p style={{
               color: '#9ca3af',
-              fontSize: '14px',
-              marginBottom: '32px',
-              margin: '0 0 32px 0'
+              fontSize: '12px',
+              marginBottom: '16px',
+              margin: '0 0 16px 0'
             }}>Set your budget range for the trip</p>
 
             <div style={{
@@ -467,16 +466,16 @@ export default function TravellerInformation() {
           }}>
             <h2 style={{
               color: 'white',
-              fontSize: '24px',
+              fontSize: '20px',
               fontWeight: '700',
-              marginBottom: '12px',
-              margin: '0 0 12px 0'
+              marginBottom: '6px',
+              margin: '0 0 6px 0'
             }}>What interests you?</h2>
             <p style={{
               color: '#9ca3af',
-              fontSize: '14px',
-              marginBottom: '32px',
-              margin: '0 0 32px 0'
+              fontSize: '12px',
+              marginBottom: '16px',
+              margin: '0 0 16px 0'
             }}>Select your preferences for the trip</p>
 
             <div style={{
