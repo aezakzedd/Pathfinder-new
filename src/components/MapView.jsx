@@ -9,7 +9,7 @@ import ItineraryView from './ItineraryView';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
-const SIDEBAR_WIDTH = 480; // Increased from 420 to eliminate gap
+const SIDEBAR_WIDTH = 480;
 
 // Platform configuration
 const PLATFORMS = {
@@ -35,11 +35,27 @@ const PLATFORMS = {
   }
 };
 
-// Helper function to get asset paths - SIMPLIFIED STRUCTURE: src/assets/Binurong_Point/Binurong_Point1.jpg
+// Helper function to get asset paths
 const getAssetPath = (spotName, filename) => {
-  // Convert spot name to folder name (replace spaces with underscores)
   const folderName = spotName.replace(/ /g, '_');
   return `/src/assets/${folderName}/${filename}`;
+};
+
+// Helper function to fetch route between two coordinates using OSRM (free open-source routing)
+const fetchRoute = async (start, end) => {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${start[0]},${start[1]};${end[0]},${end[1]}?overview=full&geometries=geojson`;
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.routes && data.routes.length > 0) {
+      return data.routes[0].geometry;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching route:', error);
+    return null;
+  }
 };
 
 // Loading Skeleton Component
@@ -57,7 +73,6 @@ const VideoSkeleton = () => (
       overflow: 'hidden'
     }}
   >
-    {/* Shimmer effect */}
     <div
       style={{
         position: 'absolute',
@@ -69,7 +84,6 @@ const VideoSkeleton = () => (
         animation: 'shimmer 2s infinite'
       }}
     />
-    {/* Loading icon */}
     <div
       style={{
         width: '48px',
@@ -114,7 +128,6 @@ const PerformanceMonitor = ({ show }) => {
         frameCount.current = 0;
         lastTime.current = now;
 
-        // Measure memory if available
         if (performance.memory) {
           const usedMB = Math.round(performance.memory.usedJSHeapSize / 1048576);
           setMemory(usedMB);
@@ -181,7 +194,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [sidebarPlace, setSidebarPlace] = useState(null);
 
   // Video optimization states
-  const [loadedVideos, setLoadedVideos] = useState(new Set([0])); // Start with first video
+  const [loadedVideos, setLoadedVideos] = useState(new Set([0]));
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const videoRefs = useRef([]);
   const iframeRefs = useRef([]);
@@ -203,23 +216,102 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-  // Video queue system: Keep only current, previous, and next videos loaded
+  // Draw routing lines when itinerary changes
+  useEffect(() => {
+    if (!map.current || !mapLoaded.current || itinerary.length < 2) {
+      // Remove existing route if any
+      if (map.current && map.current.getSource('route')) {
+        if (map.current.getLayer('route-line')) map.current.removeLayer('route-line');
+        if (map.current.getLayer('route-outline')) map.current.removeLayer('route-outline');
+        map.current.removeSource('route');
+      }
+      return;
+    }
+
+    const drawRoutes = async () => {
+      console.log('Drawing routes for', itinerary.length, 'places');
+      
+      // Fetch all route segments
+      const routeSegments = [];
+      for (let i = 0; i < itinerary.length - 1; i++) {
+        const start = itinerary[i].coordinates;
+        const end = itinerary[i + 1].coordinates;
+        const route = await fetchRoute(start, end);
+        if (route) {
+          routeSegments.push(route);
+        }
+      }
+
+      if (routeSegments.length === 0) return;
+
+      // Combine all segments into one MultiLineString
+      const combinedGeometry = {
+        type: 'FeatureCollection',
+        features: routeSegments.map(geometry => ({
+          type: 'Feature',
+          geometry: geometry
+        }))
+      };
+
+      // Remove existing route layers and source
+      if (map.current.getSource('route')) {
+        if (map.current.getLayer('route-line')) map.current.removeLayer('route-line');
+        if (map.current.getLayer('route-outline')) map.current.removeLayer('route-outline');
+        map.current.removeSource('route');
+      }
+
+      // Add new route source
+      map.current.addSource('route', {
+        type: 'geojson',
+        data: combinedGeometry
+      });
+
+      // Add outline layer (white border)
+      map.current.addLayer({
+        id: 'route-outline',
+        type: 'line',
+        source: 'route',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#ffffff',
+          'line-width': 6,
+          'line-opacity': 0.8
+        }
+      });
+
+      // Add main line layer (green)
+      map.current.addLayer({
+        id: 'route-line',
+        type: 'line',
+        source: 'route',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#84cc16',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
+
+      console.log('✅ Routes drawn successfully');
+    };
+
+    drawRoutes();
+  }, [itinerary]);
+
+  // Video queue system
   const updateVideoQueue = useCallback((centerIndex) => {
-    const videoCount = 3; // We have 3 test videos
+    const videoCount = 3;
     const newQueue = new Set();
 
-    // Add current video
     newQueue.add(centerIndex);
-
-    // Add previous video if exists
-    if (centerIndex > 0) {
-      newQueue.add(centerIndex - 1);
-    }
-
-    // Add next video if exists
-    if (centerIndex < videoCount - 1) {
-      newQueue.add(centerIndex + 1);
-    }
+    if (centerIndex > 0) newQueue.add(centerIndex - 1);
+    if (centerIndex < videoCount - 1) newQueue.add(centerIndex + 1);
 
     setLoadedVideos(newQueue);
     setCurrentVideoIndex(centerIndex);
@@ -245,28 +337,21 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             console.log(`👁️ Video ${index} is now visible - Playing`);
             updateVideoQueue(index);
             
-            // Autoplay when video comes into view
             if (iframe) {
               const platform = getVideoPlatform(index);
               if (platform === 'youtube') {
-                // Send play command to YouTube iframe
                 iframe.contentWindow?.postMessage(
                   JSON.stringify({ event: 'command', func: 'playVideo', args: '' }),
                   '*'
                 );
-              } else if (platform === 'facebook') {
-                // Facebook autoplay is handled by URL parameter
-                console.log('📸 Facebook video autoplaying');
               }
             }
           } else {
             console.log(`👁️ Video ${index} left view - Pausing`);
             
-            // Pause when video leaves view
             if (iframe) {
               const platform = getVideoPlatform(index);
               if (platform === 'youtube') {
-                // Send pause command to YouTube iframe
                 iframe.contentWindow?.postMessage(
                   JSON.stringify({ event: 'command', func: 'pauseVideo', args: '' }),
                   '*'
@@ -278,12 +363,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       },
       {
         root: null,
-        threshold: 0.5, // Trigger when 50% visible
+        threshold: 0.5,
         rootMargin: '0px'
       }
     );
 
-    // Observe all video containers
     videoRefs.current.forEach((ref) => {
       if (ref) observerRef.current.observe(ref);
     });
@@ -307,7 +391,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           limit: `${Math.round(performance.memory.jsHeapSizeLimit / 1048576)} MB`
         });
       }
-    }, 5000); // Log every 5 seconds
+    }, 5000);
 
     return () => clearInterval(logPerformance);
   }, [modalOpen]);
@@ -329,14 +413,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           }
           
           const geojson = await response.json();
-          
-          // Find the specific spot by name
           const feature = geojson.features.find(
             f => f.properties.name === selection.spotName
           );
           
           if (feature) {
-            // Add images for Binurong Point using new simplified folder structure
             let images = [];
             if (feature.properties.name === 'Binurong Point') {
               images = [
@@ -356,7 +437,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             console.log(`✓ Found: ${feature.properties.name}`);
           } else {
             console.error(`✗ Spot "${selection.spotName}" not found in ${selection.geojsonFile}`);
-            console.log('Available spots:', geojson.features.map(f => f.properties.name));
           }
         } catch (error) {
           console.error(`Error loading ${selection.geojsonFile}:`, error);
@@ -371,37 +451,40 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     loadTouristSpots();
   }, []);
 
-  // Add to itinerary handler with button update
-  const addToItinerary = (spot, buttonElement) => {
-    const isAlreadyAdded = itinerary.some(item => item.name === spot.name);
-    
-    if (!isAlreadyAdded) {
-      setItinerary(prev => [...prev, spot]);
-      console.log('Added to itinerary:', spot.name);
+  // Add to itinerary handler - NO map reload
+  const addToItinerary = useCallback((spot, buttonElement) => {
+    setItinerary(prev => {
+      const isAlreadyAdded = prev.some(item => item.name === spot.name);
       
-      // Update button to show check icon
-      if (buttonElement) {
-        buttonElement.innerHTML = `
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
-          <span class="btn-text" style="
-            max-width: 0;
-            opacity: 0;
-            margin-left: 0;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            font-size: 11px;
-            font-weight: 600;
-            color: white;
-          ">Added!</span>
-        `;
-        buttonElement.style.backgroundColor = '#22c55e';
-        buttonElement.style.pointerEvents = 'none';
+      if (!isAlreadyAdded) {
+        console.log('Added to itinerary:', spot.name);
+        
+        // Update button to show check icon
+        if (buttonElement) {
+          buttonElement.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span class="btn-text" style="
+              max-width: 0;
+              opacity: 0;
+              margin-left: 0;
+              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+              font-size: 11px;
+              font-weight: 600;
+              color: white;
+            ">Added!</span>
+          `;
+          buttonElement.style.backgroundColor = '#22c55e';
+          buttonElement.style.pointerEvents = 'none';
+        }
+        
+        return [...prev, spot];
       }
-    } else {
-      console.log('Already in itinerary:', spot.name);
-    }
-  };
+      
+      return prev;
+    });
+  }, []);
 
   // Remove from itinerary handler
   const removeFromItinerary = (index) => {
@@ -409,42 +492,36 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     console.log('Removed from itinerary at index:', index);
   };
 
-  // Handle card click from itinerary - opens video modal + sidebar
+  // Handle card click from itinerary
   const handleCardClick = useCallback((place) => {
-    // Use first image if available, otherwise null
     const imageUrl = place.images && place.images.length > 0 ? place.images[0] : null;
     
     setModalImage(imageUrl);
     setModalSpot(place);
     setModalOpen(true);
-    // Open sidebar when modal opens
     setSidebarPlace(place);
     setSidebarOpen(true);
-    // Reset to first video when opening modal
     setLoadedVideos(new Set([0]));
     setCurrentVideoIndex(0);
     
     console.log('Opened modal from itinerary card:', place.name);
   }, []);
 
-  // Handle image click to open modal - opens sidebar automatically
+  // Handle image click to open modal
   const handleImageClick = (image, spot) => {
     setModalImage(image);
     setModalSpot(spot);
     setModalOpen(true);
-    // Open sidebar when modal opens
     setSidebarPlace(spot);
     setSidebarOpen(true);
-    // Reset to first video when opening modal
     setLoadedVideos(new Set([0]));
     setCurrentVideoIndex(0);
   };
 
-  // Close modal - also closes sidebar
+  // Close modal
   const closeModal = () => {
     setModalOpen(false);
     setSidebarOpen(false);
-    // Pause all videos when closing
     iframeRefs.current.forEach((iframe, index) => {
       if (iframe) {
         const platform = getVideoPlatform(index);
@@ -511,17 +588,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   };
 
-  // Create info card HTML content with image carousel
+  // Create info card HTML - FIXED: Close button positioning
   const createInfoCardHTML = (spot) => {
     const categoryHTML = spot.categories
       .slice(0, 2)
       .map(cat => getCategoryPill(cat))
       .join('');
 
-    // Check if already in itinerary
     const isInItinerary = itinerary.some(item => item.name === spot.name);
 
-    // Create carousel HTML if images exist
     const hasImages = spot.images && spot.images.length > 0;
     const carouselHTML = hasImages ? `
       <div id="carousel-container" style="
@@ -553,7 +628,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         `).join('')}
         
         ${spot.images.length > 1 ? `
-          <!-- Previous Button -->
           <button id="carousel-prev-btn" style="
             position: absolute;
             left: 8px;
@@ -576,7 +650,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             </svg>
           </button>
           
-          <!-- Next Button -->
           <button id="carousel-next-btn" style="
             position: absolute;
             right: 8px;
@@ -599,7 +672,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             </svg>
           </button>
           
-          <!-- Image Counter -->
           <div id="image-counter" style="
             position: absolute;
             bottom: 8px;
@@ -636,77 +708,79 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         border-radius: 12px;
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
         overflow: hidden;
+        position: relative;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
       ">
-        <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 10;">
-          <button id="add-to-itinerary-btn" class="add-itinerary-btn" style="
-            height: 28px;
-            min-width: 28px;
-            border-radius: 14px;
-            background-color: ${isInItinerary ? '#22c55e' : 'rgba(132, 204, 22, 0.9)'};
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: ${isInItinerary ? 'default' : 'pointer'};
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden;
-            white-space: nowrap;
-            padding: 0 10px;
-            pointer-events: ${isInItinerary ? 'none' : 'auto'};
-          ">
-            ${isInItinerary ? `
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-              <span class="btn-text" style="
-                max-width: 0;
-                opacity: 0;
-                margin-left: 0;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                font-size: 11px;
-                font-weight: 600;
-                color: white;
-              ">Added!</span>
-            ` : `
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              <span class="btn-text" style="
-                max-width: 0;
-                opacity: 0;
-                margin-left: 0;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                font-size: 11px;
-                font-weight: 600;
-                color: white;
-              ">Add to Itinerary</span>
-            `}
-          </button>
-
-          <button id="close-card-btn" style="
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background-color: rgba(0, 0, 0, 0.5);
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background-color 0.2s;
-          ">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-
         ${carouselHTML}
 
-        <div style="padding: 12px 14px; background-color: white;">
+        <div style="padding: 12px 14px 12px 14px; background-color: white; position: relative;">
+          <!-- Buttons positioned absolutely on top right of white content area -->
+          <div style="position: absolute; top: -198px; right: 8px; display: flex; gap: 6px; z-index: 11;">
+            <button id="add-to-itinerary-btn" class="add-itinerary-btn" style="
+              height: 28px;
+              min-width: 28px;
+              border-radius: 14px;
+              background-color: ${isInItinerary ? '#22c55e' : 'rgba(132, 204, 22, 0.9)'};
+              border: none;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              cursor: ${isInItinerary ? 'default' : 'pointer'};
+              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+              overflow: hidden;
+              white-space: nowrap;
+              padding: 0 10px;
+              pointer-events: ${isInItinerary ? 'none' : 'auto'};
+            ">
+              ${isInItinerary ? `
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span class="btn-text" style="
+                  max-width: 0;
+                  opacity: 0;
+                  margin-left: 0;
+                  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                  font-size: 11px;
+                  font-weight: 600;
+                  color: white;
+                ">Added!</span>
+              ` : `
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span class="btn-text" style="
+                  max-width: 0;
+                  opacity: 0;
+                  margin-left: 0;
+                  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                  font-size: 11px;
+                  font-weight: 600;
+                  color: white;
+                ">Add to Itinerary</span>
+              `}
+            </button>
+
+            <button id="close-card-btn" style="
+              width: 28px;
+              height: 28px;
+              border-radius: 50%;
+              background-color: rgba(0, 0, 0, 0.5);
+              border: none;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+              transition: background-color 0.2s;
+            ">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
             <i class="fa-solid fa-location-dot fa-bounce" style="font-size: 12px; color: #6b7280;"></i>
             <span style="color: #6b7280; font-size: 11px; font-weight: 500;">${spot.location}</span>
@@ -720,7 +794,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             margin-bottom: 8px;
             overflow: hidden;
             text-overflow: ellipsis;
-            white-space: nowrap;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-height: 1.4;
+            max-height: 2.8em;
+            padding-right: 64px;
           ">${spot.name}</h3>
 
           <div style="display: flex; flex-wrap: wrap; gap: 0;">
@@ -743,9 +822,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   };
 
-  // Add tourist spot markers - improved with better state checking
+  // Add tourist spot markers - with dependency on itinerary for button state
   const addTouristSpotMarkers = useCallback(() => {
-    // Check if we have everything we need
     if (!map.current || !mapLoaded.current || touristSpots.length === 0) {
       console.log('⏳ Waiting for prerequisites:', {
         hasMap: !!map.current,
@@ -757,14 +835,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
     console.log(`🗺️ Adding ${touristSpots.length} markers to map...`);
 
-    // Clear existing markers
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
 
     const currentZoom = map.current.getZoom();
     const scale = getMarkerScale(currentZoom);
 
-    // Add markers for each tourist spot
     touristSpots.forEach((spot, index) => {
       const markerEl = document.createElement('div');
       markerEl.className = 'custom-marker';
@@ -819,7 +895,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         popupRef.current = popup;
 
-        // Setup carousel and button listeners after popup is added
         setTimeout(() => {
           let currentIdx = 0;
           const images = document.querySelectorAll('.carousel-image');
@@ -837,7 +912,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             }
           }
 
-          // Add click handlers to images
           images.forEach((img) => {
             img.addEventListener('click', (e) => {
               const imageUrl = e.target.getAttribute('data-image-url');
@@ -912,7 +986,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     });
 
     console.log(`✅ Successfully added ${markersRef.current.length} markers!`);
-  }, [touristSpots, itinerary]);
+  }, [touristSpots, itinerary, addToItinerary]);
 
   // Initialize map
   useEffect(() => {
@@ -960,7 +1034,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           antialias: false,
           preserveDrawingBuffer: false,
           fadeDuration: 0,
-          maxParallelImageRequests: 4, // Reduced from 8 for Raspberry Pi
+          maxParallelImageRequests: 4,
           refreshExpiredTiles: false,
           trackResize: true,
           maxZoom: 18,
@@ -999,7 +1073,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             }
           };
 
-          // Check if source already exists before adding
           if (!map.current.getSource('mask')) {
             map.current.addSource('mask', {
               type: 'geojson',
@@ -1017,7 +1090,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             });
           }
 
-          // Try to add markers if data is already loaded
           if (dataLoaded && touristSpots.length > 0) {
             console.log('🎯 Data already loaded, adding markers immediately');
             addTouristSpotMarkers();
@@ -1045,11 +1117,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     };
   }, [updateMarkerSizes, dataLoaded, touristSpots, addTouristSpotMarkers]);
 
-  // CRITICAL: Add markers when BOTH map is ready AND tourist spots are loaded
+  // Add markers when both map and data ready
   useEffect(() => {
     if (mapLoaded.current && dataLoaded && touristSpots.length > 0) {
       console.log('🎯 Both map and data ready, adding markers...');
-      // Small delay to ensure map is fully rendered
       const timer = setTimeout(() => {
         addTouristSpotMarkers();
       }, 100);
@@ -1058,24 +1129,20 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   }, [dataLoaded, touristSpots, addTouristSpotMarkers]);
 
-  // Re-render markers when itinerary changes to update button state
+  // Update popup when itinerary changes (for button state)
   useEffect(() => {
-    if (mapLoaded.current && touristSpots.length > 0 && popupRef.current) {
-      // Update the current popup if it's open
-      if (selectedSpot) {
-        const newHTML = createInfoCardHTML(selectedSpot);
-        popupRef.current.setHTML(newHTML);
-        
-        // Re-attach event listeners after updating HTML
-        setTimeout(() => {
-          const addBtn = document.getElementById('add-to-itinerary-btn');
-          if (addBtn) {
-            addBtn.addEventListener('click', () => addToItinerary(selectedSpot, addBtn));
-          }
-        }, 0);
-      }
+    if (mapLoaded.current && touristSpots.length > 0 && popupRef.current && selectedSpot) {
+      const newHTML = createInfoCardHTML(selectedSpot);
+      popupRef.current.setHTML(newHTML);
+      
+      setTimeout(() => {
+        const addBtn = document.getElementById('add-to-itinerary-btn');
+        if (addBtn) {
+          addBtn.addEventListener('click', () => addToItinerary(selectedSpot, addBtn));
+        }
+      }, 0);
     }
-  }, [itinerary]);
+  }, [itinerary, selectedSpot, addToItinerary]);
 
   // Debounced resize handler
   const handleResize = useCallback(() => {
@@ -1190,7 +1257,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             {!isLoaded ? (
               <VideoSkeleton />
             ) : platform === 'youtube' ? (
-              // YouTube embed (landscape)
               <iframe 
                 ref={(el) => (iframeRefs.current[index] = el)}
                 width="100%" 
@@ -1209,7 +1275,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
                 }}
               />
             ) : (
-              // Facebook video (portrait)
               <iframe 
                 ref={(el) => (iframeRefs.current[index] = el)}
                 src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0&autoplay=true" 
@@ -1230,7 +1295,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             )}
           </div>
           
-          {/* Minimal overlay with just location and platform pill */}
           {modalSpot && isLoaded && (
             <div
               style={{
@@ -1245,7 +1309,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
                 zIndex: 10
               }}
             >
-              {/* Location text */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{
                   margin: 0,
@@ -1260,7 +1323,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
                 </p>
               </div>
 
-              {/* Platform pill */}
               <div
                 style={{
                   padding: '6px 14px',
@@ -1292,9 +1354,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     );
   };
 
-  // Modal content component - Videos centered within left container area
+  // Modal content component
   const ModalContent = () => {
-    // Calculate available width for video container when sidebar is open
     const videoContainerWidth = sidebarOpen 
       ? `calc(100vw - ${SIDEBAR_WIDTH}px)` 
       : '100vw';
@@ -1311,17 +1372,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           backgroundColor: 'rgba(0, 0, 0, 0.85)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
-          zIndex: 9998, // Below sidebar (9999)
+          zIndex: 9998,
           display: 'flex',
           flexDirection: 'row',
           opacity: modalOpen ? 1 : 0,
           transition: 'opacity 0.3s ease',
         }}
       >
-        {/* Performance Monitor */}
         <PerformanceMonitor show={showPerformance} />
 
-        {/* Video container - width adjusts, videos centered within this container */}
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
@@ -1332,13 +1391,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             scrollBehavior: 'smooth',
             WebkitOverflowScrolling: 'touch',
             transition: 'width 0.3s ease',
-            // Hide scrollbar
-            scrollbarWidth: 'none', // Firefox
-            msOverflowStyle: 'none' // IE and Edge
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
           }}
           className="video-scroll-container"
         >
-          {/* Render 3 video cards with lazy loading */}
           {[0, 1, 2].map((index) => (
             <VideoCard 
               key={index} 
@@ -1348,7 +1405,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           ))}
         </div>
 
-        {/* Spacer for sidebar - only visible when sidebar is open */}
         {sidebarOpen && (
           <div
             style={{
@@ -1360,7 +1416,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           />
         )}
 
-        {/* Debug info (only visible when performance monitor is on) */}
         {showPerformance && (
           <div
             style={{
@@ -1395,10 +1450,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         position: 'relative'
       }} 
     >
-      {/* Modal rendered via Portal to document.body - ensures it appears above everything */}
       {modalOpen && createPortal(<ModalContent />, document.body)}
 
-      {/* PlaceDetailsSidebar rendered via Portal */}
       {createPortal(
         <PlaceDetailsSidebar 
           place={sidebarPlace} 
@@ -1548,7 +1601,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             align-items: center;
             justify-content: center;
           }
-          /* Hide scrollbar for Chrome, Safari and Opera */
           .video-scroll-container::-webkit-scrollbar {
             display: none;
           }
