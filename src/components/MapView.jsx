@@ -7,11 +7,11 @@ import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedT
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
 
-// Helper function to get image paths - NEW STRUCTURE: assets/images/tourist-spots/Binurong_Point/Binurong_Point1.jpg
-const getImagePath = (spotName, filename) => {
+// Helper function to get asset paths - SIMPLIFIED STRUCTURE: src/assets/Binurong_Point/Binurong_Point1.jpg
+const getAssetPath = (spotName, filename) => {
   // Convert spot name to folder name (replace spaces with underscores)
   const folderName = spotName.replace(/ /g, '_');
-  return `/src/assets/images/tourist-spots/${folderName}/${filename}`;
+  return `/src/assets/${folderName}/${filename}`;
 };
 
 const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen }) {
@@ -55,12 +55,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           );
           
           if (feature) {
-            // Add images for Binurong Point using new folder structure
+            // Add images for Binurong Point using new simplified folder structure
             let images = [];
             if (feature.properties.name === 'Binurong Point') {
               images = [
-                getImagePath('Binurong Point', 'Binurong_Point1.jpg'),
-                getImagePath('Binurong Point', 'Binurong_Point2.jpg')
+                getAssetPath('Binurong Point', 'Binurong_Point1.jpg'),
+                getAssetPath('Binurong Point', 'Binurong_Point2.jpg')
               ];
             }
             
