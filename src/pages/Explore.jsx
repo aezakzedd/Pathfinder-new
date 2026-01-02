@@ -245,10 +245,13 @@ export default function Explore() {
     borderRadius: '16px',
     padding: '16px',
     boxSizing: 'border-box',
-    position: 'relative'
+    position: 'relative',
+    // Hide content initially to prevent flicker, will be covered by map anyway
+    visibility: 'visible'
   }), []);
 
   // Map container - properly sized to cover full parent content area when fullscreen
+  // Render this FIRST (lower z-index value but rendered after in DOM = on top)
   const mapContainerStyle = useMemo(() => ({
     position: 'absolute',
     top: isMapFullscreen ? '0' : '0',
@@ -261,7 +264,8 @@ export default function Explore() {
     borderRadius: isMapFullscreen ? '16px' : '16px',
     overflow: 'hidden',
     transition: 'all 0.5s ease-in-out',
-    zIndex: isMapFullscreen ? 30 : 1
+    zIndex: isMapFullscreen ? 30 : 2,
+    backgroundColor: 'transparent'
   }), [isMapFullscreen]);
 
   return (
@@ -323,7 +327,7 @@ export default function Explore() {
           
           {/* Right container with white background underneath map */}
           <div style={rightContainerStyle}>
-            {/* White container - Itinerary View with Budget Tracker */}
+            {/* White container - Itinerary View (rendered first, covered by map) */}
             <div style={whiteUnderContainerStyle}>
               {/* Budget Tracker - Normal child element of itinerary card */}
               <div style={{
@@ -439,7 +443,7 @@ export default function Explore() {
               </div>
             </div>
             
-            {/* Map container - covers itinerary card when shown */}
+            {/* Map container - rendered AFTER itinerary (higher z-index covers it) */}
             <div style={mapContainerStyle}>
               <MapView 
                 isFullscreen={isMapFullscreen}
