@@ -7,6 +7,11 @@ import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedT
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
 
+// Helper function to get image paths for Binurong Point
+const getImagePath = (filename) => {
+  return `/src/assets/images/tourist-spots/${filename}`;
+};
+
 const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -47,13 +52,22 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           );
           
           if (feature) {
+            // Add images for Binurong Point
+            let images = [];
+            if (feature.properties.name === 'Binurong Point') {
+              images = [
+                getImagePath('Binurong_Point1.jpg'),
+                getImagePath('Binurong_Point2.jpg')
+              ];
+            }
+            
             spots.push({
               name: feature.properties.name,
               location: toSentenceCase(feature.properties.municipality),
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
-              image: null
+              images: images
             });
             console.log(`✓ Found: ${feature.properties.name}`);
           } else {
@@ -123,12 +137,118 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   };
 
-  // Create info card HTML content
+  // Create info card HTML content with image carousel
   const createInfoCardHTML = (spot) => {
     const categoryHTML = spot.categories
       .slice(0, 2)
       .map(cat => getCategoryPill(cat))
       .join('');
+
+    // Create carousel HTML if images exist
+    const hasImages = spot.images && spot.images.length > 0;
+    const carouselHTML = hasImages ? `
+      <div id="carousel-container" style="
+        width: 100%;
+        height: 210px;
+        background-color: #e5e7eb;
+        position: relative;
+        overflow: hidden;
+      ">
+        ${spot.images.map((img, idx) => `
+          <img 
+            src="${img}" 
+            alt="${spot.name} ${idx + 1}"
+            class="carousel-image"
+            data-index="${idx}"
+            style="
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              position: absolute;
+              top: 0;
+              left: 0;
+              opacity: ${idx === 0 ? '1' : '0'};
+              transition: opacity 0.3s ease;
+            "
+          />
+        `).join('')}
+        
+        ${spot.images.length > 1 ? `
+          <!-- Previous Button -->
+          <button id="prev-btn" style="
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            z-index: 10;
+          ">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+          
+          <!-- Next Button -->
+          <button id="next-btn" style="
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            z-index: 10;
+          ">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+          
+          <!-- Image Counter -->
+          <div id="image-counter" style="
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            z-index: 10;
+          ">1 / ${spot.images.length}</div>
+        ` : ''}
+      </div>
+    ` : `
+      <div style="
+        width: 100%;
+        height: 210px;
+        background-color: #e5e7eb;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <i class="fa-solid fa-location-dot" style="font-size: 48px; color: #9ca3af;"></i>
+      </div>
+    `;
 
     return `
       <div style="
@@ -189,20 +309,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           </button>
         </div>
 
-        <div style="
-          width: 100%;
-          height: 210px;
-          background-color: #e5e7eb;
-          position: relative;
-          overflow: hidden;
-        ">
-          ${spot.image ? 
-            `<img src="${spot.image}" alt="${spot.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none';" />` :
-            `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 14px;">
-              <i class="fa-solid fa-location-dot" style="font-size: 48px; color: #9ca3af;"></i>
-            </div>`
-          }
-        </div>
+        ${carouselHTML}
 
         <div style="padding: 12px 14px; background-color: white;">
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
@@ -238,6 +345,52 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           margin-left: 6px !important;
         }
       </style>
+
+      <script>
+        (function() {
+          let currentIndex = 0;
+          const images = document.querySelectorAll('.carousel-image');
+          const totalImages = images.length;
+          const counter = document.getElementById('image-counter');
+          const prevBtn = document.getElementById('prev-btn');
+          const nextBtn = document.getElementById('next-btn');
+
+          function showImage(index) {
+            images.forEach((img, i) => {
+              img.style.opacity = i === index ? '1' : '0';
+            });
+            if (counter) {
+              counter.textContent = (index + 1) + ' / ' + totalImages;
+            }
+          }
+
+          if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+              currentIndex = (currentIndex - 1 + totalImages) % totalImages;
+              showImage(currentIndex);
+            });
+            prevBtn.addEventListener('mouseenter', () => {
+              prevBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            });
+            prevBtn.addEventListener('mouseleave', () => {
+              prevBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            });
+          }
+
+          if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+              currentIndex = (currentIndex + 1) % totalImages;
+              showImage(currentIndex);
+            });
+            nextBtn.addEventListener('mouseenter', () => {
+              nextBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            });
+            nextBtn.addEventListener('mouseleave', () => {
+              nextBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            });
+          }
+        })();
+      </script>
     `;
   };
 
