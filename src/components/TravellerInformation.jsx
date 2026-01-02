@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Calendar, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, CloudFog } from 'lucide-react';
 
 export default function TravellerInformation() {
-  const [isExpanded, setIsExpanded] = useState(false); // Start minimized
   const [dateRange, setDateRange] = useState('Nov 30 - Dec 2');
   const [budget, setBudget] = useState(5000);
   const [activities, setActivities] = useState({
@@ -67,11 +66,6 @@ export default function TravellerInformation() {
     }
   };
 
-  // Don't render anything when minimized
-  if (!isExpanded) {
-    return null;
-  }
-
   return (
     <div style={{
       width: '100%',
@@ -92,7 +86,7 @@ export default function TravellerInformation() {
       }}>
         {/* Journey Dates Card */}
         <div style={{
-          backgroundColor: '#000000',
+          backgroundColor: '#000000', // Black background
           borderRadius: '12px',
           padding: '14px',
           display: 'flex',
@@ -140,7 +134,7 @@ export default function TravellerInformation() {
 
         {/* Budget Card */}
         <div style={{
-          backgroundColor: '#000000',
+          backgroundColor: '#000000', // Black background
           borderRadius: '12px',
           padding: '14px',
           display: 'flex',
@@ -187,7 +181,7 @@ export default function TravellerInformation() {
 
         {/* Weather Card */}
         <div style={{
-          backgroundColor: '#000000',
+          backgroundColor: '#000000', // Black background
           borderRadius: '12px',
           padding: '14px',
           display: 'flex',
@@ -263,7 +257,7 @@ export default function TravellerInformation() {
 
         {/* Activities Card */}
         <div style={{
-          backgroundColor: '#000000',
+          backgroundColor: '#000000', // Black background
           borderRadius: '12px',
           padding: '14px',
           display: 'flex',
