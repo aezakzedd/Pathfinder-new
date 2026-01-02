@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, memo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Maximize, Minimize, Map as MapIcon, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -746,6 +747,114 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   }, [onToggleFullscreen]);
 
+  // Modal content component
+  const ModalContent = () => (
+    <div
+      onClick={closeModal}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: modalOpen ? 1 : 0,
+        transition: 'opacity 0.3s ease',
+      }}
+    >
+      {/* Modal card - vertical rectangle placeholder */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '400px',
+          height: '80vh',
+          backgroundColor: '#1f2937',
+          borderRadius: '24px',
+          position: 'relative',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+          transform: modalOpen ? 'scale(1)' : 'scale(0.9)',
+          transition: 'transform 0.3s ease',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Close button */}
+        <button
+          onClick={closeModal}
+          style={{
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s',
+            zIndex: 10
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+          }}
+        >
+          <X color="white" size={24} strokeWidth={2} />
+        </button>
+
+        {/* Placeholder content - TikTok style vertical scrolling will go here */}
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '40px',
+            color: 'white'
+          }}
+        >
+          {modalImage && modalSpot && (
+            <>
+              <img
+                src={modalImage}
+                alt={modalSpot.name}
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  maxHeight: '60%',
+                  objectFit: 'cover',
+                  borderRadius: '12px',
+                  marginBottom: '20px'
+                }}
+              />
+              <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '8px', textAlign: 'center' }}>
+                {modalSpot.name}
+              </h2>
+              <p style={{ fontSize: '14px', color: '#9ca3af', textAlign: 'center' }}>
+                {modalSpot.location}
+              </p>
+              <div style={{ marginTop: '20px', fontSize: '12px', color: '#6b7280', textAlign: 'center' }}>
+                TikTok-style vertical scrolling will be implemented here
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div 
       style={{ 
@@ -754,113 +863,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         position: 'relative'
       }} 
     >
-      {/* Modal overlay with blurred background - z-index 1000 to appear above everything */}
-      {modalOpen && (
-        <div
-          onClick={closeModal}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: modalOpen ? 1 : 0,
-            transition: 'opacity 0.3s ease',
-          }}
-        >
-          {/* Modal card - vertical rectangle placeholder */}
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: '400px',
-              height: '80vh',
-              backgroundColor: '#1f2937',
-              borderRadius: '24px',
-              position: 'relative',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
-              transform: modalOpen ? 'scale(1)' : 'scale(0.9)',
-              transition: 'transform 0.3s ease',
-              overflow: 'hidden'
-            }}
-          >
-            {/* Close button */}
-            <button
-              onClick={closeModal}
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s',
-                zIndex: 10
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-              }}
-            >
-              <X color="white" size={24} strokeWidth={2} />
-            </button>
-
-            {/* Placeholder content - TikTok style vertical scrolling will go here */}
-            <div
-              style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '40px',
-                color: 'white'
-              }}
-            >
-              {modalImage && modalSpot && (
-                <>
-                  <img
-                    src={modalImage}
-                    alt={modalSpot.name}
-                    style={{
-                      width: '100%',
-                      height: 'auto',
-                      maxHeight: '60%',
-                      objectFit: 'cover',
-                      borderRadius: '12px',
-                      marginBottom: '20px'
-                    }}
-                  />
-                  <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '8px', textAlign: 'center' }}>
-                    {modalSpot.name}
-                  </h2>
-                  <p style={{ fontSize: '14px', color: '#9ca3af', textAlign: 'center' }}>
-                    {modalSpot.location}
-                  </p>
-                  <div style={{ marginTop: '20px', fontSize: '12px', color: '#6b7280', textAlign: 'center' }}>
-                    TikTok-style vertical scrolling will be implemented here
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal rendered via Portal to document.body - ensures it appears above everything */}
+      {modalOpen && createPortal(<ModalContent />, document.body)}
 
       {activeView === 'map' && (
         <button
