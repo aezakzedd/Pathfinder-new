@@ -409,7 +409,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               images = [
                 getAssetPath('Baras', 'Binurong Point', 'Binurong_Point1.jpg'),
                 getAssetPath('Baras', 'Binurong Point', 'Binurong_Point2.jpg'),
-                getAssetPath('Baras', 'Binurong Point', 'Binurong_Point3.jpg')
+                getAssetPath('Baras', 'Binurong Point', 'Binurong_Point3.png')
               ];
             }
             
