@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Calendar, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, CloudFog } from 'lucide-react';
+import { Calendar, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, CloudFog, Wallet } from 'lucide-react';
 
 export default function TravellerInformation() {
   const [dateRange, setDateRange] = useState('Nov 30 - Dec 2');
   const [budget, setBudget] = useState(5000);
+  const [spent, setSpent] = useState(0); // Track spent amount
   const [activities, setActivities] = useState({
     swimming: false,
     hiking: false,
@@ -39,6 +40,10 @@ export default function TravellerInformation() {
     }));
   };
 
+  // Calculate remaining budget and percentage
+  const remaining = budget - spent;
+  const percentageUsed = (spent / budget) * 100;
+
   // Get weather icon based on condition
   const getWeatherIcon = (weatherMain) => {
     const iconProps = { size: 48, color: '#84cc16', strokeWidth: 1.5 };
@@ -72,8 +77,113 @@ export default function TravellerInformation() {
       height: '100%',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center'
+      justifyContent: 'center',
+      position: 'relative'
     }}>
+      {/* Budget Tracker - Top Left Corner */}
+      <div style={{
+        position: 'absolute',
+        top: '16px',
+        left: '16px',
+        backgroundColor: '#000000',
+        borderRadius: '12px',
+        padding: '12px 16px',
+        minWidth: '180px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+        zIndex: 10,
+        border: '1px solid #374151'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginBottom: '8px'
+        }}>
+          <Wallet size={16} color="#84cc16" strokeWidth={2} />
+          <span style={{
+            color: 'white',
+            fontSize: '12px',
+            fontWeight: '600'
+          }}>Budget Tracker</span>
+        </div>
+        
+        {/* Progress Bar */}
+        <div style={{
+          width: '100%',
+          height: '6px',
+          backgroundColor: '#1f2937',
+          borderRadius: '3px',
+          overflow: 'hidden',
+          marginBottom: '8px'
+        }}>
+          <div style={{
+            height: '100%',
+            width: `${Math.min(percentageUsed, 100)}%`,
+            backgroundColor: percentageUsed > 90 ? '#ef4444' : percentageUsed > 70 ? '#f59e0b' : '#84cc16',
+            transition: 'width 0.3s ease, background-color 0.3s ease'
+          }} />
+        </div>
+
+        {/* Budget Details */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span style={{
+              color: '#9ca3af',
+              fontSize: '10px'
+            }}>Total Budget</span>
+            <span style={{
+              color: 'white',
+              fontSize: '11px',
+              fontWeight: '600'
+            }}>₱{budget.toLocaleString()}</span>
+          </div>
+          
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span style={{
+              color: '#9ca3af',
+              fontSize: '10px'
+            }}>Spent</span>
+            <span style={{
+              color: percentageUsed > 90 ? '#ef4444' : '#f59e0b',
+              fontSize: '11px',
+              fontWeight: '600'
+            }}>₱{spent.toLocaleString()}</span>
+          </div>
+          
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingTop: '4px',
+            borderTop: '1px solid #374151'
+          }}>
+            <span style={{
+              color: '#84cc16',
+              fontSize: '10px',
+              fontWeight: '600'
+            }}>Remaining</span>
+            <span style={{
+              color: '#84cc16',
+              fontSize: '12px',
+              fontWeight: '700'
+            }}>₱{remaining.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Grid Content */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
@@ -86,7 +196,7 @@ export default function TravellerInformation() {
       }}>
         {/* Journey Dates Card */}
         <div style={{
-          backgroundColor: '#000000', // Black background
+          backgroundColor: '#000000',
           borderRadius: '12px',
           padding: '14px',
           display: 'flex',
@@ -134,7 +244,7 @@ export default function TravellerInformation() {
 
         {/* Budget Card */}
         <div style={{
-          backgroundColor: '#000000', // Black background
+          backgroundColor: '#000000',
           borderRadius: '12px',
           padding: '14px',
           display: 'flex',
@@ -181,7 +291,7 @@ export default function TravellerInformation() {
 
         {/* Weather Card */}
         <div style={{
-          backgroundColor: '#000000', // Black background
+          backgroundColor: '#000000',
           borderRadius: '12px',
           padding: '14px',
           display: 'flex',
@@ -257,7 +367,7 @@ export default function TravellerInformation() {
 
         {/* Activities Card */}
         <div style={{
-          backgroundColor: '#000000', // Black background
+          backgroundColor: '#000000',
           borderRadius: '12px',
           padding: '14px',
           display: 'flex',
