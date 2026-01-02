@@ -249,7 +249,6 @@ export default function Explore() {
   }), []);
 
   // Map container - properly sized to cover full parent content area when fullscreen
-  // z-index is 2 in normal mode so budget tracker (z-index 1) stays behind the map
   const mapContainerStyle = useMemo(() => ({
     position: 'absolute',
     top: isMapFullscreen ? '0' : '0',
@@ -262,7 +261,25 @@ export default function Explore() {
     borderRadius: isMapFullscreen ? '16px' : '16px',
     overflow: 'hidden',
     transition: 'all 0.5s ease-in-out',
-    zIndex: isMapFullscreen ? 30 : 2
+    zIndex: isMapFullscreen ? 30 : 1
+  }), [isMapFullscreen]);
+
+  // Budget tracker overlay - positioned above map when not fullscreen
+  const budgetTrackerStyle = useMemo(() => ({
+    position: 'absolute',
+    top: '16px',
+    left: '16px',
+    backgroundColor: '#000000',
+    borderRadius: '12px',
+    padding: '12px 16px',
+    minWidth: '180px',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+    // Show above map (z-index 2) when map is not fullscreen, hide when fullscreen
+    zIndex: isMapFullscreen ? 0 : 2,
+    opacity: isMapFullscreen ? 0 : 1,
+    transition: 'opacity 0.3s ease',
+    border: '1px solid #374151',
+    pointerEvents: isMapFullscreen ? 'none' : 'auto'
   }), [isMapFullscreen]);
 
   return (
@@ -326,109 +343,6 @@ export default function Explore() {
           <div style={rightContainerStyle}>
             {/* White container - Itinerary View */}
             <div style={whiteUnderContainerStyle}>
-              {/* Budget Tracker - Top Left Corner - z-index 1 (behind map which has z-index 2) */}
-              <div style={{
-                position: 'absolute',
-                top: '16px',
-                left: '16px',
-                backgroundColor: '#000000',
-                borderRadius: '12px',
-                padding: '12px 16px',
-                minWidth: '180px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-                zIndex: 1,
-                border: '1px solid #374151'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  marginBottom: '8px'
-                }}>
-                  <Wallet size={16} color="#84cc16" strokeWidth={2} />
-                  <span style={{
-                    color: 'white',
-                    fontSize: '12px',
-                    fontWeight: '600'
-                  }}>Budget Tracker</span>
-                </div>
-                
-                {/* Progress Bar */}
-                <div style={{
-                  width: '100%',
-                  height: '6px',
-                  backgroundColor: '#1f2937',
-                  borderRadius: '3px',
-                  overflow: 'hidden',
-                  marginBottom: '8px'
-                }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${Math.min(percentageUsed, 100)}%`,
-                    backgroundColor: percentageUsed > 90 ? '#ef4444' : percentageUsed > 70 ? '#f59e0b' : '#84cc16',
-                    transition: 'width 0.3s ease, background-color 0.3s ease'
-                  }} />
-                </div>
-
-                {/* Budget Details */}
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span style={{
-                      color: '#9ca3af',
-                      fontSize: '10px'
-                    }}>Total Budget</span>
-                    <span style={{
-                      color: 'white',
-                      fontSize: '11px',
-                      fontWeight: '600'
-                    }}>₱{budget.toLocaleString()}</span>
-                  </div>
-                  
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span style={{
-                      color: '#9ca3af',
-                      fontSize: '10px'
-                    }}>Spent</span>
-                    <span style={{
-                      color: percentageUsed > 90 ? '#ef4444' : '#f59e0b',
-                      fontSize: '11px',
-                      fontWeight: '600'
-                    }}>₱{spent.toLocaleString()}</span>
-                  </div>
-                  
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    paddingTop: '4px',
-                    borderTop: '1px solid #374151'
-                  }}>
-                    <span style={{
-                      color: '#84cc16',
-                      fontSize: '10px',
-                      fontWeight: '600'
-                    }}>Remaining</span>
-                    <span style={{
-                      color: '#84cc16',
-                      fontSize: '12px',
-                      fontWeight: '700'
-                    }}>₱{remaining.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-
               {/* Itinerary content will go here */}
               <div style={{
                 paddingTop: '80px',
@@ -443,12 +357,104 @@ export default function Explore() {
               </div>
             </div>
             
-            {/* Map container - covers full parent width when fullscreen - z-index 2 (above budget tracker) */}
+            {/* Map container - covers full parent width when fullscreen */}
             <div style={mapContainerStyle}>
               <MapView 
                 isFullscreen={isMapFullscreen}
                 onToggleFullscreen={toggleMapFullscreen}
               />
+            </div>
+
+            {/* Budget Tracker Overlay - Above map when not fullscreen */}
+            <div style={budgetTrackerStyle}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '8px'
+              }}>
+                <Wallet size={16} color="#84cc16" strokeWidth={2} />
+                <span style={{
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: '600'
+                }}>Budget Tracker</span>
+              </div>
+              
+              {/* Progress Bar */}
+              <div style={{
+                width: '100%',
+                height: '6px',
+                backgroundColor: '#1f2937',
+                borderRadius: '3px',
+                overflow: 'hidden',
+                marginBottom: '8px'
+              }}>
+                <div style={{
+                  height: '100%',
+                  width: `${Math.min(percentageUsed, 100)}%`,
+                  backgroundColor: percentageUsed > 90 ? '#ef4444' : percentageUsed > 70 ? '#f59e0b' : '#84cc16',
+                  transition: 'width 0.3s ease, background-color 0.3s ease'
+                }} />
+              </div>
+
+              {/* Budget Details */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span style={{
+                    color: '#9ca3af',
+                    fontSize: '10px'
+                  }}>Total Budget</span>
+                  <span style={{
+                    color: 'white',
+                    fontSize: '11px',
+                    fontWeight: '600'
+                  }}>₱{budget.toLocaleString()}</span>
+                </div>
+                
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span style={{
+                    color: '#9ca3af',
+                    fontSize: '10px'
+                  }}>Spent</span>
+                  <span style={{
+                    color: percentageUsed > 90 ? '#ef4444' : '#f59e0b',
+                    fontSize: '11px',
+                    fontWeight: '600'
+                  }}>₱{spent.toLocaleString()}</span>
+                </div>
+                
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingTop: '4px',
+                  borderTop: '1px solid #374151'
+                }}>
+                  <span style={{
+                    color: '#84cc16',
+                    fontSize: '10px',
+                    fontWeight: '600'
+                  }}>Remaining</span>
+                  <span style={{
+                    color: '#84cc16',
+                    fontSize: '12px',
+                    fontWeight: '700'
+                  }}>₱{remaining.toLocaleString()}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
