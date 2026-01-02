@@ -1209,12 +1209,18 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     );
   };
 
-  // Modal content component - NEW LAYOUT with sidebar beside videos
+  // Modal content component - Videos centered relative to full screen when sidebar is open
   const ModalContent = () => {
     // Calculate available width for video container when sidebar is open
     const videoContainerWidth = sidebarOpen 
       ? `calc(100vw - ${SIDEBAR_WIDTH}px)` 
       : '100vw';
+
+    // Calculate left margin to center videos relative to full viewport
+    // When sidebar is open, shift videos left by half the sidebar width
+    const videoContainerMarginLeft = sidebarOpen 
+      ? `-${SIDEBAR_WIDTH / 2}px`
+      : '0px';
 
     return (
       <div
@@ -1238,7 +1244,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         {/* Performance Monitor */}
         <PerformanceMonitor show={showPerformance} />
 
-        {/* Video container - width adjusts based on sidebar, scrollbar hidden */}
+        {/* Video container - width adjusts and centers relative to full screen */}
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
@@ -1248,7 +1254,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             scrollSnapType: 'y mandatory',
             scrollBehavior: 'smooth',
             WebkitOverflowScrolling: 'touch',
-            transition: 'width 0.3s ease',
+            marginLeft: videoContainerMarginLeft,
+            transition: 'width 0.3s ease, margin-left 0.3s ease',
             // Hide scrollbar
             scrollbarWidth: 'none', // Firefox
             msOverflowStyle: 'none' // IE and Edge
