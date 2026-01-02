@@ -5,6 +5,7 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedTouristSpots';
 import PlaceDetailsSidebar from './PlaceDetailsSidebar';
+import ItineraryView from './ItineraryView';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
@@ -380,6 +381,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     } else {
       console.log('Already in itinerary:', spot.name);
     }
+  };
+
+  // Remove from itinerary handler
+  const removeFromItinerary = (index) => {
+    setItinerary(prev => prev.filter((_, i) => i !== index));
+    console.log('Removed from itinerary at index:', index);
   };
 
   // Handle image click to open modal - opens sidebar automatically
@@ -1435,25 +1442,13 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             height: '100%',
             borderRadius: isFullscreen ? '16px' : '16px',
             backgroundColor: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column',
-            color: '#1f2937',
-            fontSize: '18px',
-            fontWeight: '600',
-            padding: '20px'
+            overflow: 'hidden'
           }}
         >
-          <div>Itinerary View</div>
-          {itinerary.length > 0 && (
-            <div style={{ marginTop: '20px', fontSize: '14px', fontWeight: '400' }}>
-              <div style={{ fontWeight: '600', marginBottom: '10px' }}>Items in itinerary: {itinerary.length}</div>
-              {itinerary.map((item, index) => (
-                <div key={index} style={{ padding: '5px 0' }}>• {item.name}</div>
-              ))}
-            </div>
-          )}
+          <ItineraryView 
+            itinerary={itinerary}
+            onRemoveItem={removeFromItinerary}
+          />
         </div>
       )}
 
