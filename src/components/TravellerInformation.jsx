@@ -1,8 +1,15 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Users, Calendar, Wallet, Heart } from 'lucide-react';
 
 export default function TravellerInformation() {
-  const [step, setStep] = useState(1); // 1: Dates, 2: Budget, 3: Preferences
+  const [step, setStep] = useState(1); // 1: Travelers, 2: Dates, 3: Budget, 4: Preferences
+  const [travelers, setTravelers] = useState({
+    adults: 1,
+    children: 0,
+    seniors: 0,
+    accommodation: 'hotel',
+    transportation: 'rental'
+  });
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [budget, setBudget] = useState(10000);
@@ -19,7 +26,7 @@ export default function TravellerInformation() {
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 0, 1)); // January 2026
 
   const handleNext = () => {
-    if (step < 3) setStep(step + 1);
+    if (step < 4) setStep(step + 1);
   };
 
   const handlePrevious = () => {
@@ -30,6 +37,13 @@ export default function TravellerInformation() {
     setPreferences(prev => ({
       ...prev,
       [key]: !prev[key]
+    }));
+  };
+
+  const updateTravelers = (field, value) => {
+    setTravelers(prev => ({
+      ...prev,
+      [field]: value
     }));
   };
 
@@ -261,6 +275,7 @@ export default function TravellerInformation() {
   };
 
   const days = calculateDays();
+  const totalTravelers = travelers.adults + travelers.children + travelers.seniors;
 
   const previousMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
@@ -288,7 +303,7 @@ export default function TravellerInformation() {
         justifyContent: 'center',
         flexShrink: 0
       }}>
-        {[1, 2, 3].map((s) => (
+        {[1, 2, 3, 4].map((s) => (
           <div
             key={s}
             style={{
@@ -311,8 +326,263 @@ export default function TravellerInformation() {
         justifyContent: 'center',
         minHeight: 0
       }}>
-        {/* Step 1: Journey Dates with Calendar */}
+        {/* Step 1: Traveler Information */}
         {step === 1 && (
+          <div style={{
+            width: '100%',
+            maxWidth: '400px',
+            textAlign: 'center',
+            animation: 'fadeIn 0.3s ease-in'
+          }}>
+            <h2 style={{
+              color: 'white',
+              fontSize: '20px',
+              fontWeight: '700',
+              marginBottom: '6px',
+              margin: '0 0 6px 0'
+            }}>Who's traveling?</h2>
+            <p style={{
+              color: '#9ca3af',
+              fontSize: '12px',
+              marginBottom: '16px',
+              margin: '0 0 16px 0'
+            }}>Tell us about your travel group</p>
+
+            <div style={{
+              backgroundColor: '#1f2937',
+              padding: '24px',
+              borderRadius: '16px',
+              marginBottom: '16px'
+            }}>
+              {/* Adults */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  marginBottom: '8px'
+                }}>
+                  <span>Adults (18+)</span>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => updateTravelers('adults', Math.max(1, travelers.adults - 1))}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        backgroundColor: '#374151',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontSize: '16px',
+                        fontWeight: '700'
+                      }}
+                    >-</button>
+                    <span style={{ minWidth: '24px', textAlign: 'center', color: '#84cc16', fontSize: '16px', fontWeight: '700' }}>
+                      {travelers.adults}
+                    </span>
+                    <button
+                      onClick={() => updateTravelers('adults', travelers.adults + 1)}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        backgroundColor: '#84cc16',
+                        color: '#000000',
+                        cursor: 'pointer',
+                        fontSize: '16px',
+                        fontWeight: '700'
+                      }}
+                    >+</button>
+                  </div>
+                </label>
+              </div>
+
+              {/* Children */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  marginBottom: '8px'
+                }}>
+                  <span>Children (0-17)</span>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => updateTravelers('children', Math.max(0, travelers.children - 1))}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        backgroundColor: '#374151',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontSize: '16px',
+                        fontWeight: '700'
+                      }}
+                    >-</button>
+                    <span style={{ minWidth: '24px', textAlign: 'center', color: '#84cc16', fontSize: '16px', fontWeight: '700' }}>
+                      {travelers.children}
+                    </span>
+                    <button
+                      onClick={() => updateTravelers('children', travelers.children + 1)}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        backgroundColor: '#84cc16',
+                        color: '#000000',
+                        cursor: 'pointer',
+                        fontSize: '16px',
+                        fontWeight: '700'
+                      }}
+                    >+</button>
+                  </div>
+                </label>
+              </div>
+
+              {/* Seniors */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  marginBottom: '8px'
+                }}>
+                  <span>Seniors (60+)</span>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => updateTravelers('seniors', Math.max(0, travelers.seniors - 1))}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        backgroundColor: '#374151',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontSize: '16px',
+                        fontWeight: '700'
+                      }}
+                    >-</button>
+                    <span style={{ minWidth: '24px', textAlign: 'center', color: '#84cc16', fontSize: '16px', fontWeight: '700' }}>
+                      {travelers.seniors}
+                    </span>
+                    <button
+                      onClick={() => updateTravelers('seniors', travelers.seniors + 1)}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        backgroundColor: '#84cc16',
+                        color: '#000000',
+                        cursor: 'pointer',
+                        fontSize: '16px',
+                        fontWeight: '700'
+                      }}
+                    >+</button>
+                  </div>
+                </label>
+              </div>
+
+              {/* Accommodation Type */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  marginBottom: '8px'
+                }}>
+                  Accommodation Preference
+                </label>
+                <select
+                  value={travelers.accommodation}
+                  onChange={(e) => updateTravelers('accommodation', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: '2px solid #374151',
+                    backgroundColor: '#111827',
+                    color: 'white',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="hotel">Hotel</option>
+                  <option value="resort">Resort</option>
+                  <option value="hostel">Hostel</option>
+                  <option value="homestay">Homestay</option>
+                  <option value="camping">Camping</option>
+                </select>
+              </div>
+
+              {/* Transportation */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  marginBottom: '8px'
+                }}>
+                  Transportation
+                </label>
+                <select
+                  value={travelers.transportation}
+                  onChange={(e) => updateTravelers('transportation', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: '2px solid #374151',
+                    backgroundColor: '#111827',
+                    color: 'white',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="rental">Rental Car</option>
+                  <option value="public">Public Transport</option>
+                  <option value="tour">Tour Van</option>
+                  <option value="motorcycle">Motorcycle</option>
+                  <option value="mix">Mixed</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: '#1f2937',
+              padding: '12px',
+              borderRadius: '8px'
+            }}>
+              <p style={{
+                color: '#9ca3af',
+                fontSize: '12px',
+                margin: 0
+              }}>
+                Total travelers: {totalTravelers}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Journey Dates with Calendar */}
+        {step === 2 && (
           <div style={{
             width: '100%',
             maxWidth: '380px',
@@ -345,8 +615,8 @@ export default function TravellerInformation() {
           </div>
         )}
 
-        {/* Step 2: Budget */}
-        {step === 2 && (
+        {/* Step 3: Budget */}
+        {step === 3 && (
           <div style={{
             width: '100%',
             maxWidth: '400px',
@@ -449,15 +719,15 @@ export default function TravellerInformation() {
                   fontSize: '12px',
                   margin: 0
                 }}>
-                  ₱{Math.round(budget / days).toLocaleString()} per day
+                  ₱{Math.round(budget / days).toLocaleString()} per day · ₱{Math.round(budget / totalTravelers).toLocaleString()} per person
                 </p>
               </div>
             )}
           </div>
         )}
 
-        {/* Step 3: Preferences */}
-        {step === 3 && (
+        {/* Step 4: Preferences */}
+        {step === 4 && (
           <div style={{
             width: '100%',
             maxWidth: '500px',
@@ -572,32 +842,32 @@ export default function TravellerInformation() {
           </button>
         )}
         
-        {step < 3 ? (
+        {step < 4 ? (
           <button
             onClick={handleNext}
-            disabled={step === 1 && (!startDate || !endDate)}
+            disabled={step === 2 && (!startDate || !endDate)}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
               padding: '12px 24px',
-              backgroundColor: (step === 1 && (!startDate || !endDate)) ? '#374151' : '#84cc16',
-              color: (step === 1 && (!startDate || !endDate)) ? '#9ca3af' : '#000000',
+              backgroundColor: (step === 2 && (!startDate || !endDate)) ? '#374151' : '#84cc16',
+              color: (step === 2 && (!startDate || !endDate)) ? '#9ca3af' : '#000000',
               border: 'none',
               borderRadius: '12px',
               fontSize: '14px',
               fontWeight: '600',
-              cursor: (step === 1 && (!startDate || !endDate)) ? 'not-allowed' : 'pointer',
+              cursor: (step === 2 && (!startDate || !endDate)) ? 'not-allowed' : 'pointer',
               transition: 'background-color 0.2s',
-              opacity: (step === 1 && (!startDate || !endDate)) ? 0.5 : 1
+              opacity: (step === 2 && (!startDate || !endDate)) ? 0.5 : 1
             }}
             onMouseEnter={(e) => {
-              if (!(step === 1 && (!startDate || !endDate))) {
+              if (!(step === 2 && (!startDate || !endDate))) {
                 e.target.style.backgroundColor = '#a3e635';
               }
             }}
             onMouseLeave={(e) => {
-              if (!(step === 1 && (!startDate || !endDate))) {
+              if (!(step === 2 && (!startDate || !endDate))) {
                 e.target.style.backgroundColor = '#84cc16';
               }
             }}
@@ -607,7 +877,7 @@ export default function TravellerInformation() {
           </button>
         ) : (
           <button
-            onClick={() => console.log('Generate Itinerary', { startDate, endDate, budget, preferences })}
+            onClick={() => console.log('Get Started', { travelers, startDate, endDate, budget, preferences })}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -625,7 +895,7 @@ export default function TravellerInformation() {
             onMouseEnter={(e) => e.target.style.backgroundColor = '#a3e635'}
             onMouseLeave={(e) => e.target.style.backgroundColor = '#84cc16'}
           >
-            Generate Itinerary
+            Get Started
           </button>
         )}
       </div>
