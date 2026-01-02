@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Calendar, ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronRight, ChevronLeft, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 
 export default function TravellerInformation() {
   const [step, setStep] = useState(1); // 1: Dates, 2: Budget, 3: Preferences
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
   const [budget, setBudget] = useState(10000);
   const [preferences, setPreferences] = useState({
     beach: false,
@@ -16,6 +16,7 @@ export default function TravellerInformation() {
     relaxation: false,
     cultural: false
   });
+  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 0, 1)); // January 2026
 
   const handleNext = () => {
     if (step < 3) setStep(step + 1);
@@ -32,12 +33,157 @@ export default function TravellerInformation() {
     }));
   };
 
+  // Calendar functions
+  const getDaysInMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const isSameDay = (date1, date2) => {
+    if (!date1 || !date2) return false;
+    return date1.getDate() === date2.getDate() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getFullYear() === date2.getFullYear();
+  };
+
+  const isInRange = (date, start, end) => {
+    if (!start || !end) return false;
+    return date >= start && date <= end;
+  };
+
+  const handleDateClick = (date) => {
+    if (!startDate || (startDate && endDate)) {
+      // Start new selection
+      setStartDate(date);
+      setEndDate(null);
+    } else {
+      // Set end date
+      if (date < startDate) {
+        // Swap if end date is before start date
+        setEndDate(startDate);
+        setStartDate(date);
+      } else {
+        // Check if range is more than 7 days
+        const diffTime = Math.abs(date - startDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays > 6) {
+          // Range too large, start new selection
+          setStartDate(date);
+          setEndDate(null);
+        } else {
+          setEndDate(date);
+        }
+      }
+    }
+  };
+
+  const renderCalendar = (monthOffset = 0) => {
+    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + monthOffset, 1);
+    const daysInMonth = getDaysInMonth(date);
+    const firstDay = getFirstDayOfMonth(date);
+    const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    const days = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Empty cells for days before month starts
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} style={{ padding: '8px' }} />);
+    }
+
+    // Days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = new Date(date.getFullYear(), date.getMonth(), day);
+      const isStart = isSameDay(currentDate, startDate);
+      const isEnd = isSameDay(currentDate, endDate);
+      const inRange = isInRange(currentDate, startDate, endDate);
+      const isPast = currentDate < today;
+
+      days.push(
+        <div
+          key={day}
+          onClick={() => !isPast && handleDateClick(currentDate)}
+          style={{
+            padding: '8px',
+            textAlign: 'center',
+            cursor: isPast ? 'not-allowed' : 'pointer',
+            borderRadius: (isStart || isEnd) ? '50%' : '0',
+            backgroundColor: 
+              (isStart || isEnd) ? '#16a34a' : 
+              inRange ? '#dcfce7' : 
+              'transparent',
+            color: 
+              (isStart || isEnd) ? 'white' : 
+              isPast ? '#9ca3af' : 
+              '#1f2937',
+            fontWeight: (isStart || isEnd) ? '700' : '400',
+            fontSize: '14px',
+            opacity: isPast ? 0.4 : 1,
+            transition: 'all 0.2s ease',
+            position: 'relative'
+          }}
+          onMouseEnter={(e) => {
+            if (!isPast && !isStart && !isEnd) {
+              e.target.style.backgroundColor = '#f3f4f6';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isPast && !isStart && !isEnd && !inRange) {
+              e.target.style.backgroundColor = 'transparent';
+            } else if (inRange && !isStart && !isEnd) {
+              e.target.style.backgroundColor = '#dcfce7';
+            }
+          }}
+        >
+          {day}
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ flex: 1, minWidth: '280px' }}>
+        <div style={{
+          fontWeight: '600',
+          fontSize: '16px',
+          color: '#1f2937',
+          marginBottom: '16px',
+          textAlign: 'center'
+        }}>
+          {monthName}
+        </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(7, 1fr)',
+          gap: '4px'
+        }}>
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+            <div
+              key={index}
+              style={{
+                padding: '8px',
+                textAlign: 'center',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#6b7280'
+              }}
+            >
+              {day}
+            </div>
+          ))}
+          {days}
+        </div>
+      </div>
+    );
+  };
+
   // Calculate days between dates
   const calculateDays = () => {
     if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const diffTime = Math.abs(end - start);
+      const diffTime = Math.abs(endDate - startDate);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
       return diffDays;
     }
@@ -45,6 +191,14 @@ export default function TravellerInformation() {
   };
 
   const days = calculateDays();
+
+  const previousMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  };
 
   return (
     <div style={{
@@ -88,11 +242,11 @@ export default function TravellerInformation() {
           ))}
         </div>
 
-        {/* Step 1: Journey Dates */}
+        {/* Step 1: Journey Dates with Calendar */}
         {step === 1 && (
           <div style={{
             width: '100%',
-            maxWidth: '400px',
+            maxWidth: '700px',
             textAlign: 'center',
             animation: 'fadeIn 0.3s ease-in'
           }}>
@@ -102,105 +256,66 @@ export default function TravellerInformation() {
               fontWeight: '700',
               marginBottom: '12px',
               margin: '0 0 12px 0'
-            }}>When are you traveling?</h2>
+            }}>When are you going?</h2>
             <p style={{
               color: '#9ca3af',
               fontSize: '14px',
               marginBottom: '32px',
               margin: '0 0 32px 0'
-            }}>Select your journey dates to Catanduanes</p>
+            }}>Choose a date range, up to 7 days.</p>
 
+            {/* Calendar Container */}
             <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              marginBottom: '24px'
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              padding: '24px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
             }}>
-              {/* Start Date */}
+              {/* Calendar Navigation */}
               <div style={{
-                textAlign: 'left'
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '24px'
               }}>
-                <label style={{
-                  color: '#9ca3af',
-                  fontSize: '12px',
-                  marginBottom: '8px',
-                  display: 'block'
-                }}>Start Date</label>
-                <div style={{
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  <Calendar size={18} color="#9ca3af" style={{
-                    position: 'absolute',
-                    left: '12px',
-                    pointerEvents: 'none'
-                  }} />
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 12px 12px 40px',
-                      backgroundColor: '#1f2937',
-                      border: '2px solid #374151',
-                      borderRadius: '12px',
-                      color: 'white',
-                      fontSize: '14px',
-                      outline: 'none',
-                      cursor: 'pointer',
-                      transition: 'border-color 0.2s',
-                      colorScheme: 'dark'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = '#84cc16'}
-                    onBlur={(e) => e.target.style.borderColor = '#374151'}
-                  />
-                </div>
+                <button
+                  onClick={previousMonth}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: '#1f2937'
+                  }}
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                <button
+                  onClick={nextMonth}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: '#1f2937'
+                  }}
+                >
+                  <ChevronRight size={24} />
+                </button>
               </div>
 
-              {/* End Date */}
+              {/* Two Month View */}
               <div style={{
-                textAlign: 'left'
+                display: 'flex',
+                gap: '32px',
+                justifyContent: 'center'
               }}>
-                <label style={{
-                  color: '#9ca3af',
-                  fontSize: '12px',
-                  marginBottom: '8px',
-                  display: 'block'
-                }}>End Date</label>
-                <div style={{
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  <Calendar size={18} color="#9ca3af" style={{
-                    position: 'absolute',
-                    left: '12px',
-                    pointerEvents: 'none'
-                  }} />
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    min={startDate}
-                    style={{
-                      width: '100%',
-                      padding: '12px 12px 12px 40px',
-                      backgroundColor: '#1f2937',
-                      border: '2px solid #374151',
-                      borderRadius: '12px',
-                      color: 'white',
-                      fontSize: '14px',
-                      outline: 'none',
-                      cursor: 'pointer',
-                      transition: 'border-color 0.2s',
-                      colorScheme: 'dark'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = '#84cc16'}
-                    onBlur={(e) => e.target.style.borderColor = '#374151'}
-                  />
-                </div>
+                {renderCalendar(0)}
+                {renderCalendar(1)}
               </div>
             </div>
 
@@ -208,7 +323,8 @@ export default function TravellerInformation() {
               <div style={{
                 backgroundColor: '#1f2937',
                 padding: '12px',
-                borderRadius: '8px'
+                borderRadius: '8px',
+                marginTop: '24px'
               }}>
                 <p style={{
                   color: '#84cc16',
