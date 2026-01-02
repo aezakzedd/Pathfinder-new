@@ -14,7 +14,7 @@ import {
   Beer,
   ChevronDown,
   ChevronUp,
-  MoreVertical
+  X
 } from 'lucide-react';
 
 // Category icon mapping
@@ -169,7 +169,7 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
                     position: 'relative',
                     display: 'flex',
                     gap: '12px',
-                    paddingBottom: isLast ? '0' : '16px'
+                    paddingBottom: isLast ? '0' : '0px'
                   }}
                 >
                   {/* Timeline - Icon with vertical line */}
@@ -179,7 +179,8 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      paddingTop: '12px'
+                      paddingTop: '12px',
+                      paddingBottom: isLast ? '0' : '16px'
                     }}
                   >
                     {/* Icon circle */}
@@ -209,8 +210,7 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
                           width: '2px',
                           flex: 1,
                           backgroundColor: '#e5e7eb',
-                          marginTop: '4px',
-                          minHeight: '40px'
+                          marginTop: '4px'
                         }}
                       />
                     )}
@@ -231,7 +231,8 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
                       overflow: 'hidden',
                       transition: 'box-shadow 0.2s ease',
                       cursor: 'pointer',
-                      marginTop: '8px'
+                      marginTop: '8px',
+                      marginBottom: isLast ? '0' : '16px'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
@@ -312,13 +313,11 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
                         </div>
                       </div>
 
-                      {/* Three-dot menu */}
+                      {/* X button to remove */}
                       <div
                         style={{
                           padding: '8px',
                           cursor: 'pointer',
-                          color: '#9ca3af',
-                          transition: 'color 0.2s ease',
                           display: 'flex',
                           alignItems: 'flex-start'
                         }}
@@ -326,14 +325,29 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
                           e.stopPropagation();
                           if (onRemoveItem) onRemoveItem(index);
                         }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#4b5563';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color = '#9ca3af';
-                        }}
                       >
-                        <MoreVertical size={20} strokeWidth={2} />
+                        <div
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            backgroundColor: '#fee2e2',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#fecaca';
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#fee2e2';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        >
+                          <X size={16} color="#dc2626" strokeWidth={2.5} />
+                        </div>
                       </div>
                     </div>
                   </div>

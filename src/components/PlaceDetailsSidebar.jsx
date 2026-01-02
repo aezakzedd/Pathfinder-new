@@ -1,7 +1,7 @@
 import { X, MapPin, Star, Clock, DollarSign, Phone, Navigation } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
+export default function PlaceDetailsSidebar({ place, isOpen, onClose, onCloseModal }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -21,6 +21,15 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
   }, [isOpen]);
 
   if (!place) return null;
+
+  const handleClose = () => {
+    // Close both sidebar and modal
+    if (onCloseModal) {
+      onCloseModal();
+    } else if (onClose) {
+      onClose();
+    }
+  };
 
   const nextImage = () => {
     if (place.images && place.images.length > 0) {
@@ -81,7 +90,7 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
           }}
         >
           <button
-            onClick={onClose}
+            onClick={handleClose}
             style={{
               width: '36px',
               height: '36px',
