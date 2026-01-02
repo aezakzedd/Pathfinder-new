@@ -55,14 +55,14 @@ export default function TravellerInformation() {
   };
 
   const handleDateClick = (date) => {
-    if (!startDate || (startDate && endDate)) {
-      // Start new selection
+    if (!startDate) {
+      // First click: set start date
       setStartDate(date);
       setEndDate(null);
-    } else {
-      // Set end date
+    } else if (!endDate) {
+      // Second click: set end date
       if (date < startDate) {
-        // Swap if end date is before start date
+        // If clicked date is before start, swap them
         setEndDate(startDate);
         setStartDate(date);
       } else {
@@ -70,13 +70,17 @@ export default function TravellerInformation() {
         const diffTime = Math.abs(date - startDate);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         if (diffDays > 6) {
-          // Range too large, start new selection
+          // Range too large, reset and set as new start date
           setStartDate(date);
           setEndDate(null);
         } else {
           setEndDate(date);
         }
       }
+    } else {
+      // Both dates already set, start new selection
+      setStartDate(date);
+      setEndDate(null);
     }
   };
 
@@ -313,24 +317,6 @@ export default function TravellerInformation() {
             }}>
               {renderCalendar()}
             </div>
-
-            {days > 0 && (
-              <div style={{
-                backgroundColor: '#1f2937',
-                padding: '10px',
-                borderRadius: '8px',
-                marginTop: '16px'
-              }}>
-                <p style={{
-                  color: '#84cc16',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  margin: 0
-                }}>
-                  {days} {days === 1 ? 'day' : 'days'} trip to Catanduanes
-                </p>
-              </div>
-            )}
           </div>
         )}
 
