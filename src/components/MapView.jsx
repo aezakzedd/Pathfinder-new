@@ -21,6 +21,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [touristSpots, setTouristSpots] = useState([]);
   const [itinerary, setItinerary] = useState([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   // Load GeoJSON data and extract selected spots
   useEffect(() => {
@@ -49,7 +50,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             spots.push({
               name: feature.properties.name,
               location: toSentenceCase(feature.properties.municipality),
-              barangay: selection.barangay,
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
@@ -67,6 +67,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       
       console.log(`Loaded ${spots.length}/${selectedSpots.length} tourist spots`);
       setTouristSpots(spots);
+      setDataLoaded(true);
     };
 
     loadTouristSpots();
@@ -204,9 +205,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         </div>
 
         <div style="padding: 12px 14px; background-color: white;">
-          <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
             <i class="fa-solid fa-location-dot fa-bounce" style="font-size: 12px; color: #6b7280;"></i>
-            <span style="color: #6b7280; font-size: 11px; font-weight: 500;">${spot.barangay}, ${spot.location}</span>
+            <span style="color: #6b7280; font-size: 11px; font-weight: 500;">${spot.location}</span>
           </div>
 
           <h3 style="
@@ -240,10 +241,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   };
 
-  // Add tourist spot markers - memoized to prevent recreation
+  // Add tourist spot markers - improved with better state checking
   const addTouristSpotMarkers = useCallback(() => {
+    // Check if we have everything we need
     if (!map.current || !mapLoaded.current || touristSpots.length === 0) {
-      console.log('Cannot add markers yet:', {
+      console.log('⏳ Waiting for prerequisites:', {
         hasMap: !!map.current,
         mapLoaded: mapLoaded.current,
         spotsCount: touristSpots.length
@@ -251,7 +253,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       return;
     }
 
-    console.log(`Adding ${touristSpots.length} markers to map...`);
+    console.log(`🗺️ Adding ${touristSpots.length} markers to map...`);
 
     // Clear existing markers
     markersRef.current.forEach(marker => marker.remove());
@@ -351,10 +353,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       });
 
       markersRef.current.push(marker);
-      console.log(`✓ Added marker ${index + 1}: ${spot.name}`);
+      console.log(`✓ Marker ${index + 1}: ${spot.name}`);
     });
 
-    console.log(`Successfully added ${markersRef.current.length} markers`);
+    console.log(`✅ Successfully added ${markersRef.current.length} markers!`);
   }, [touristSpots]);
 
   // Initialize map
@@ -373,7 +375,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       [125.0, 14.8]
     ];
 
-    console.log('Initializing map...');
+    console.log('🌍 Initializing map...');
 
     fetch(`https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`)
       .then(response => response.json())
@@ -416,7 +418,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         });
 
         map.current.on('load', () => {
-          console.log('Map loaded successfully');
+          console.log('✅ Map loaded successfully');
           mapLoaded.current = true;
           
           const maskGeoJSON = {
@@ -457,12 +459,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             }
           });
 
-          // Add markers now that map is loaded
-          addTouristSpotMarkers();
+          // Try to add markers if data is already loaded
+          if (dataLoaded && touristSpots.length > 0) {
+            console.log('🎯 Data already loaded, adding markers immediately');
+            addTouristSpotMarkers();
+          }
         });
       })
       .catch(error => {
-        console.error('Error loading map style:', error);
+        console.error('❌ Error loading map style:', error);
       });
 
     return () => {
@@ -480,15 +485,20 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         mapLoaded.current = false;
       }
     };
-  }, [updateMarkerSizes]);
+  }, [updateMarkerSizes, dataLoaded, touristSpots, addTouristSpotMarkers]);
 
-  // Add markers when tourist spots are loaded and map is ready
+  // CRITICAL: Add markers when BOTH map is ready AND tourist spots are loaded
   useEffect(() => {
-    if (mapLoaded.current && touristSpots.length > 0) {
-      console.log('Tourist spots loaded, adding markers...');
-      addTouristSpotMarkers();
+    if (mapLoaded.current && dataLoaded && touristSpots.length > 0) {
+      console.log('🎯 Both map and data ready, adding markers...');
+      // Small delay to ensure map is fully rendered
+      const timer = setTimeout(() => {
+        addTouristSpotMarkers();
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
-  }, [touristSpots, addTouristSpotMarkers]);
+  }, [dataLoaded, touristSpots, addTouristSpotMarkers]);
 
   // Debounced resize handler
   const handleResize = useCallback(() => {
