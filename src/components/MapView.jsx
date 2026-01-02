@@ -35,10 +35,10 @@ const PLATFORMS = {
   }
 };
 
-// Helper function to get asset paths
-const getAssetPath = (spotName, filename) => {
-  const folderName = spotName.replace(/ /g, '_');
-  return `/src/assets/${folderName}/${filename}`;
+// Helper function to get asset paths - now uses municipality folder structure
+const getAssetPath = (municipality, spotName, filename) => {
+  const folderName = spotName.replace(/ /g, '_').replace(/'/g, '').replace(/&/g, 'and');
+  return `/src/assets/${municipality}/${folderName}/${filename}`;
 };
 
 // Helper function to fetch route between two coordinates using OSRM
@@ -404,10 +404,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           
           if (feature) {
             let images = [];
+            // Special handling for Binurong Point with new municipality folder structure
             if (feature.properties.name === 'Binurong Point') {
               images = [
-                getAssetPath('Binurong Point', 'Binurong_Point1.jpg'),
-                getAssetPath('Binurong Point', 'Binurong_Point2.jpg')
+                getAssetPath('Baras', 'Binurong Point', 'Binurong_Point1.jpg'),
+                getAssetPath('Baras', 'Binurong Point', 'Binurong_Point2.jpg'),
+                getAssetPath('Baras', 'Binurong Point', 'Binurong_Point3.jpg')
               ];
             }
             
