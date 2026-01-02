@@ -276,15 +276,15 @@ export default function TravellerInformation() {
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      padding: '20px',
+      padding: '16px 20px',
       boxSizing: 'border-box',
       overflow: 'auto'
     }}>
-      {/* Step Indicator - Fixed at top */}
+      {/* Step Indicator - Fixed at top with more spacing */}
       <div style={{
         display: 'flex',
         gap: '8px',
-        marginBottom: '16px',
+        marginBottom: '32px',
         justifyContent: 'center',
         flexShrink: 0
       }}>
