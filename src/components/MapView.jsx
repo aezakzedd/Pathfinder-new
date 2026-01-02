@@ -889,7 +889,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       // Store marker element reference
       markerElementsRef.current.set(spot.name, markerEl);
 
-      const marker = new maplibregl.Marker({ element: markerEl, anchor: 'bottom' })
+      const marker = new maplibregl.Marker({ element: markerEl, anchor: 'center' })
         .setLngLat(spot.coordinates)
         .addTo(map.current);
 
