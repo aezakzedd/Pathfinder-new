@@ -4,6 +4,7 @@ import { Maximize, Minimize, Map as MapIcon, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedTouristSpots';
+import PlaceDetailsSidebar from './PlaceDetailsSidebar';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
@@ -172,6 +173,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [modalOpen, setModalOpen] = useState(false);
   const [modalImage, setModalImage] = useState(null);
   const [modalSpot, setModalSpot] = useState(null);
+
+  // Sidebar state - NEW
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarPlace, setSidebarPlace] = useState(null);
 
   // Video optimization states
   const [loadedVideos, setLoadedVideos] = useState(new Set([0])); // Start with first video
@@ -376,19 +381,23 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   };
 
-  // Handle image click to open modal
+  // Handle image click to open modal - UPDATED to also open sidebar
   const handleImageClick = (image, spot) => {
     setModalImage(image);
     setModalSpot(spot);
     setModalOpen(true);
+    // Open sidebar when modal opens
+    setSidebarPlace(spot);
+    setSidebarOpen(true);
     // Reset to first video when opening modal
     setLoadedVideos(new Set([0]));
     setCurrentVideoIndex(0);
   };
 
-  // Close modal
+  // Close modal - UPDATED to also close sidebar
   const closeModal = () => {
     setModalOpen(false);
+    setSidebarOpen(false);
     // Pause all videos when closing
     iframeRefs.current.forEach((iframe, index) => {
       if (iframe) {
@@ -404,8 +413,17 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     setTimeout(() => {
       setModalImage(null);
       setModalSpot(null);
+      setSidebarPlace(null);
       setLoadedVideos(new Set([0]));
       setCurrentVideoIndex(0);
+    }, 300);
+  };
+
+  // Close sidebar handler - NEW
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+    setTimeout(() => {
+      setSidebarPlace(null);
     }, 300);
   };
 
@@ -1301,6 +1319,16 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     >
       {/* Modal rendered via Portal to document.body - ensures it appears above everything */}
       {modalOpen && createPortal(<ModalContent />, document.body)}
+
+      {/* PlaceDetailsSidebar rendered via Portal - NEW */}
+      {createPortal(
+        <PlaceDetailsSidebar 
+          place={sidebarPlace} 
+          isOpen={sidebarOpen} 
+          onClose={closeSidebar} 
+        />,
+        document.body
+      )}
 
       {activeView === 'map' && (
         <button
