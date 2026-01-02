@@ -169,7 +169,7 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
                     position: 'relative',
                     display: 'flex',
                     gap: '12px',
-                    paddingBottom: isLast ? '0' : '0px'
+                    paddingBottom: '0'
                   }}
                 >
                   {/* Timeline - Icon with vertical line */}
@@ -179,8 +179,7 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      paddingTop: '12px',
-                      paddingBottom: isLast ? '0' : '16px'
+                      paddingTop: '8px'
                     }}
                   >
                     {/* Icon circle */}
@@ -203,14 +202,16 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
                       {getCategoryIcon(place.categories)}
                     </div>
 
-                    {/* Vertical connecting line */}
+                    {/* Vertical connecting line - extends to next icon */}
                     {!isLast && (
                       <div
                         style={{
+                          position: 'absolute',
+                          top: '56px', // Start below the icon (48px icon + 8px padding)
                           width: '2px',
-                          flex: 1,
+                          height: 'calc(100% + 16px)', // Extend beyond container to connect to next icon
                           backgroundColor: '#e5e7eb',
-                          marginTop: '4px'
+                          zIndex: 0
                         }}
                       />
                     )}
