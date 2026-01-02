@@ -559,7 +559,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return itineraryRef.current.some(item => item.name === spotName);
   }, []);
 
-  // Create info card HTML - FIXED: Use text wrapping for long names
+  // Create info card HTML - FIXED: Enforce width constraint properly
   const createInfoCardHTML = useCallback((spot) => {
     const categoryHTML = spot.categories
       .slice(0, 2)
@@ -726,10 +726,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       ">
         ${carouselHTML}
-        <div style="padding: 12px 14px;">
+        <div style="
+          padding: 12px 14px;
+          box-sizing: border-box;
+          width: 100%;
+          max-width: 280px;
+        ">
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
             <i class="fa-solid fa-location-dot" style="font-size: 12px; color: #6b7280; flex-shrink: 0;"></i>
-            <span style="color: #6b7280; font-size: 11px; font-weight: 500;">${spot.location}</span>
+            <span style="color: #6b7280; font-size: 11px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${spot.location}</span>
           </div>
           <h3 style="
             margin: 0 0 8px 0;
@@ -739,7 +744,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             line-height: 1.4;
             word-wrap: break-word;
             overflow-wrap: break-word;
-            max-width: 100%;
+            hyphens: auto;
+            width: 100%;
+            box-sizing: border-box;
           ">${spot.name}</h3>
           <div style="display: flex; flex-wrap: wrap;">
             ${categoryHTML}
