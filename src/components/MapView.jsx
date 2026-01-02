@@ -8,7 +8,7 @@ import PlaceDetailsSidebar from './PlaceDetailsSidebar';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
-const SIDEBAR_WIDTH = 420; // Fixed sidebar width
+const SIDEBAR_WIDTH = 480; // Increased from 420 to eliminate gap
 
 // Platform configuration
 const PLATFORMS = {
@@ -1238,36 +1238,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         {/* Performance Monitor */}
         <PerformanceMonitor show={showPerformance} />
 
-        {/* Close button - fixed position */}
-        <button
-          onClick={closeModal}
-          style={{
-            position: 'fixed',
-            top: '20px',
-            left: '20px',
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s',
-            zIndex: 10001
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-          }}
-        >
-          <X color="white" size={24} strokeWidth={2.5} />
-        </button>
-
-        {/* Video container - width adjusts based on sidebar */}
+        {/* Video container - width adjusts based on sidebar, scrollbar hidden */}
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
@@ -1277,8 +1248,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             scrollSnapType: 'y mandatory',
             scrollBehavior: 'smooth',
             WebkitOverflowScrolling: 'touch',
-            transition: 'width 0.3s ease'
+            transition: 'width 0.3s ease',
+            // Hide scrollbar
+            scrollbarWidth: 'none', // Firefox
+            msOverflowStyle: 'none' // IE and Edge
           }}
+          className="video-scroll-container"
         >
           {/* Render 3 video cards with lazy loading */}
           {[0, 1, 2].map((index) => (
@@ -1499,6 +1474,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             display: flex;
             align-items: center;
             justify-content: center;
+          }
+          /* Hide scrollbar for Chrome, Safari and Opera */
+          .video-scroll-container::-webkit-scrollbar {
+            display: none;
           }
         `}
       </style>
