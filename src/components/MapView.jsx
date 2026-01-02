@@ -7,7 +7,7 @@ import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedT
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
 
-const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen }) {
+const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen, onSpotSelect }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const mapLoaded = useRef(false);
@@ -53,7 +53,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
-              image: null
+              image: null // Removed image display from map popup
             });
             console.log(`✓ Found: ${feature.properties.name}`);
           } else {
@@ -123,7 +123,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   };
 
-  // Create info card HTML content
+  // Create info card HTML content - NO IMAGE, only placeholder
   const createInfoCardHTML = (spot) => {
     const categoryHTML = spot.categories
       .slice(0, 2)
@@ -189,19 +189,18 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           </button>
         </div>
 
+        <!-- Placeholder gray box with location icon only - NO IMAGE -->
         <div style="
           width: 100%;
           height: 210px;
           background-color: #e5e7eb;
           position: relative;
           overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         ">
-          ${spot.image ? 
-            `<img src="${spot.image}" alt="${spot.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none';" />` :
-            `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 14px;">
-              <i class="fa-solid fa-location-dot" style="font-size: 48px; color: #9ca3af;"></i>
-            </div>`
-          }
+          <i class="fa-solid fa-location-dot" style="font-size: 48px; color: #9ca3af;"></i>
         </div>
 
         <div style="padding: 12px 14px; background-color: white;">
@@ -300,6 +299,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         setSelectedSpot(spot);
         
+        // Notify parent component to update floating card if callback provided
+        if (onSpotSelect) {
+          onSpotSelect(spot);
+        }
+        
         if (popupRef.current) {
           popupRef.current.remove();
         }
@@ -357,7 +361,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     });
 
     console.log(`✅ Successfully added ${markersRef.current.length} markers!`);
-  }, [touristSpots]);
+  }, [touristSpots, onSpotSelect]);
 
   // Initialize map
   useEffect(() => {
