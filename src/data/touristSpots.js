@@ -6,15 +6,13 @@ export const touristSpots = [
     coordinates: [124.41410535976011, 13.66633383393473], // [lng, lat]
     rating: 4.9,
     reviewCount: 127,
-    // Multiple images for carousel
+    // Multiple images for carousel - using actual uploaded filenames
     images: [
-      'binurong-point-1.jpg',
-      'binurong-point-2.jpg',
-      'binurong-point-3.jpg',
-      'binurong-point-4.jpg'
+      'Binurong_Point1.jpg',
+      'Binurong_Point2.jpg'
     ],
     // Fallback single image for compatibility
-    image: 'binurong-point-1.jpg',
+    image: 'Binurong_Point1.jpg',
     description: 'Breathtaking coastal cliff with panoramic ocean views. Known for its dramatic rock formations and stunning sunrise/sunset vistas.',
     category: 'Natural Wonder',
     entrance: 'Free',
