@@ -5,7 +5,6 @@ import MapView from '../components/MapView';
 import ChatBot from '../components/ChatBot';
 import TravellerInformation from '../components/TravellerInformation';
 import NetworkStatus from '../components/NetworkStatus';
-import TouristSpotDetails from '../components/TouristSpotDetails';
 
 export default function Explore() {
   const [isMinimized, setIsMinimized] = useState(false);
@@ -13,7 +12,6 @@ export default function Explore() {
   const containerRef = useRef(null);
   const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
   const resizeTimeoutRef = useRef(null);
-  const [selectedSpot, setSelectedSpot] = useState(null); // Changed from touristSpots[0] to null
 
   // Memoized calculate function to prevent recreation
   const calculateTranslateValues = useCallback(() => {
@@ -177,15 +175,14 @@ export default function Explore() {
     position: 'relative'
   }), []);
 
-  // White container underneath the map - now with TouristSpotDetails
+  // White container underneath the map
   const whiteUnderContainerStyle = useMemo(() => ({
     width: '100%',
     height: '100%',
-    backgroundColor: '#1f2937', // Match TouristSpotDetails background
+    backgroundColor: 'white',
     borderRadius: '16px',
-    padding: '0', // No padding, let TouristSpotDetails handle it
-    boxSizing: 'border-box',
-    overflow: 'hidden'
+    padding: '16px',
+    boxSizing: 'border-box'
   }), []);
 
   // Map container - properly sized to cover full parent content area when fullscreen
@@ -247,11 +244,11 @@ export default function Explore() {
             </div>
           </div>
           
-          {/* Right container with TouristSpotDetails underneath map */}
+          {/* Right container with white background underneath map */}
           <div style={rightContainerStyle}>
-            {/* TouristSpotDetails with image carousel - only shows when spot selected */}
+            {/* White container underneath */}
             <div style={whiteUnderContainerStyle}>
-              <TouristSpotDetails spot={selectedSpot} />
+              {/* Your content goes here */}
             </div>
             
             {/* Map container - covers full parent width when fullscreen */}
@@ -259,7 +256,6 @@ export default function Explore() {
               <MapView 
                 isFullscreen={isMapFullscreen}
                 onToggleFullscreen={toggleMapFullscreen}
-                onSpotSelect={setSelectedSpot}
               />
             </div>
           </div>
