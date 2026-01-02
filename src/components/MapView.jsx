@@ -389,6 +389,24 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     console.log('Removed from itinerary at index:', index);
   };
 
+  // Handle card click from itinerary - opens video modal + sidebar
+  const handleCardClick = useCallback((place) => {
+    // Use first image if available, otherwise null
+    const imageUrl = place.images && place.images.length > 0 ? place.images[0] : null;
+    
+    setModalImage(imageUrl);
+    setModalSpot(place);
+    setModalOpen(true);
+    // Open sidebar when modal opens
+    setSidebarPlace(place);
+    setSidebarOpen(true);
+    // Reset to first video when opening modal
+    setLoadedVideos(new Set([0]));
+    setCurrentVideoIndex(0);
+    
+    console.log('Opened modal from itinerary card:', place.name);
+  }, []);
+
   // Handle image click to open modal - opens sidebar automatically
   const handleImageClick = (image, spot) => {
     setModalImage(image);
@@ -1448,6 +1466,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           <ItineraryView 
             itinerary={itinerary}
             onRemoveItem={removeFromItinerary}
+            onCardClick={handleCardClick}
           />
         </div>
       )}
