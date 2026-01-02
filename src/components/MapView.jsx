@@ -7,9 +7,11 @@ import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedT
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
 
-// Helper function to get image paths for Binurong Point
-const getImagePath = (filename) => {
-  return `/src/assets/images/tourist-spots/${filename}`;
+// Helper function to get image paths - NEW STRUCTURE: assets/images/tourist-spots/Binurong_Point/Binurong_Point1.jpg
+const getImagePath = (spotName, filename) => {
+  // Convert spot name to folder name (replace spaces with underscores)
+  const folderName = spotName.replace(/ /g, '_');
+  return `/src/assets/images/tourist-spots/${folderName}/${filename}`;
 };
 
 const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen }) {
@@ -27,6 +29,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [touristSpots, setTouristSpots] = useState([]);
   const [itinerary, setItinerary] = useState([]);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Load GeoJSON data and extract selected spots
   useEffect(() => {
@@ -52,12 +55,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           );
           
           if (feature) {
-            // Add images for Binurong Point
+            // Add images for Binurong Point using new folder structure
             let images = [];
             if (feature.properties.name === 'Binurong Point') {
               images = [
-                getImagePath('Binurong_Point1.jpg'),
-                getImagePath('Binurong_Point2.jpg')
+                getImagePath('Binurong Point', 'Binurong_Point1.jpg'),
+                getImagePath('Binurong Point', 'Binurong_Point2.jpg')
               ];
             }
             
@@ -175,7 +178,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         
         ${spot.images.length > 1 ? `
           <!-- Previous Button -->
-          <button id="prev-btn" style="
+          <button id="carousel-prev-btn" style="
             position: absolute;
             left: 8px;
             top: 50%;
@@ -198,7 +201,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           </button>
           
           <!-- Next Button -->
-          <button id="next-btn" style="
+          <button id="carousel-next-btn" style="
             position: absolute;
             right: 8px;
             top: 50%;
@@ -345,52 +348,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           margin-left: 6px !important;
         }
       </style>
-
-      <script>
-        (function() {
-          let currentIndex = 0;
-          const images = document.querySelectorAll('.carousel-image');
-          const totalImages = images.length;
-          const counter = document.getElementById('image-counter');
-          const prevBtn = document.getElementById('prev-btn');
-          const nextBtn = document.getElementById('next-btn');
-
-          function showImage(index) {
-            images.forEach((img, i) => {
-              img.style.opacity = i === index ? '1' : '0';
-            });
-            if (counter) {
-              counter.textContent = (index + 1) + ' / ' + totalImages;
-            }
-          }
-
-          if (prevBtn) {
-            prevBtn.addEventListener('click', () => {
-              currentIndex = (currentIndex - 1 + totalImages) % totalImages;
-              showImage(currentIndex);
-            });
-            prevBtn.addEventListener('mouseenter', () => {
-              prevBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-            });
-            prevBtn.addEventListener('mouseleave', () => {
-              prevBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-            });
-          }
-
-          if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
-              currentIndex = (currentIndex + 1) % totalImages;
-              showImage(currentIndex);
-            });
-            nextBtn.addEventListener('mouseenter', () => {
-              nextBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-            });
-            nextBtn.addEventListener('mouseleave', () => {
-              nextBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-            });
-          }
-        })();
-      </script>
     `;
   };
 
@@ -470,7 +427,52 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         popupRef.current = popup;
 
+        // Setup carousel and button listeners after popup is added
         setTimeout(() => {
+          let currentIdx = 0;
+          const images = document.querySelectorAll('.carousel-image');
+          const totalImages = images.length;
+          const counter = document.getElementById('image-counter');
+          const prevBtn = document.getElementById('carousel-prev-btn');
+          const nextBtn = document.getElementById('carousel-next-btn');
+
+          function showImage(index) {
+            images.forEach((img, i) => {
+              img.style.opacity = i === index ? '1' : '0';
+            });
+            if (counter) {
+              counter.textContent = `${index + 1} / ${totalImages}`;
+            }
+          }
+
+          if (prevBtn) {
+            prevBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              currentIdx = (currentIdx - 1 + totalImages) % totalImages;
+              showImage(currentIdx);
+            });
+            prevBtn.addEventListener('mouseenter', () => {
+              prevBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            });
+            prevBtn.addEventListener('mouseleave', () => {
+              prevBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            });
+          }
+
+          if (nextBtn) {
+            nextBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              currentIdx = (currentIdx + 1) % totalImages;
+              showImage(currentIdx);
+            });
+            nextBtn.addEventListener('mouseenter', () => {
+              nextBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            });
+            nextBtn.addEventListener('mouseleave', () => {
+              nextBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            });
+          }
+
           const closeBtn = document.getElementById('close-card-btn');
           if (closeBtn) {
             closeBtn.addEventListener('click', () => {
