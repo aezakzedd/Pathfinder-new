@@ -147,34 +147,49 @@ export default function Explore() {
     position: 'absolute',
     bottom: '4px',
     right: '4px',
-    width: '40px',
     height: '40px',
-    borderRadius: '50%',
+    minWidth: '40px',
+    borderRadius: isMinimized ? '20px' : '50%',
     backgroundColor: '#84cc16',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: '8px',
+    padding: isMinimized ? '0 16px 0 12px' : '0',
     cursor: 'pointer',
     transform: isMinimized 
       ? `translate(${translateValues.x}px, ${translateValues.y}px)` 
       : 'translate(0, 0)',
     // Only animate after first mount
     transition: hasMounted 
-      ? 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease'
+      ? 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease, border-radius 0.3s ease, padding 0.3s ease'
       : 'none',
     zIndex: 20,
     pointerEvents: 'auto',
     boxShadow: isMinimized 
       ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
       : '0 2px 8px rgba(0, 0, 0, 0.15)',
-    willChange: 'transform, box-shadow'
+    willChange: 'transform, box-shadow',
+    whiteSpace: 'nowrap'
   }), [isMinimized, translateValues.x, translateValues.y, hasMounted]);
 
   const chevronStyle = useMemo(() => ({
     transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
     // Only animate after first mount
     transition: hasMounted ? 'transform 0.6s ease' : 'none',
-    willChange: 'transform'
+    willChange: 'transform',
+    flexShrink: 0
+  }), [isMinimized, hasMounted]);
+
+  const textStyle = useMemo(() => ({
+    color: 'black',
+    fontSize: '14px',
+    fontWeight: '600',
+    opacity: isMinimized ? 1 : 0,
+    maxWidth: isMinimized ? '200px' : '0',
+    overflow: 'hidden',
+    transition: hasMounted ? 'opacity 0.3s ease, max-width 0.3s ease' : 'none',
+    willChange: 'opacity, max-width'
   }), [isMinimized, hasMounted]);
 
   // Right container that holds both the white container and map overlay
@@ -241,7 +256,7 @@ export default function Explore() {
                 </div>
               </div>
 
-              {/* Green chevron button - moves diagonally, constant size */}
+              {/* Green button with chevron and text */}
               <div onClick={toggleMinimize} style={buttonStyle}>
                 <ChevronDown 
                   color="black" 
@@ -249,6 +264,7 @@ export default function Explore() {
                   strokeWidth={3} 
                   style={chevronStyle}
                 />
+                <span style={textStyle}>Create Itinerary</span>
               </div>
             </div>
           </div>
