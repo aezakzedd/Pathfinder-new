@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Maximize, Minimize, Map, List, X } from 'lucide-react';
+import { Maximize, Minimize, Map as MapIcon, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedTouristSpots';
@@ -1129,7 +1129,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
       <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10, display: 'flex', backgroundColor: 'white', borderRadius: '16px', padding: '3px', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', gap: '3px' }}>
         <button onClick={() => setActiveView('map')} style={{ padding: '6px 10px', border: 'none', borderRadius: '13px', backgroundColor: activeView === 'map' ? '#1f2937' : 'transparent', color: activeView === 'map' ? 'white' : '#6b7280', cursor: 'pointer' }}>
-          <Map size={16} />
+          <MapIcon size={16} />
         </button>
         <button onClick={() => setActiveView('itinerary')} style={{ padding: '6px 10px', border: 'none', borderRadius: '13px', backgroundColor: activeView === 'itinerary' ? '#1f2937' : 'transparent', color: activeView === 'itinerary' ? 'white' : '#6b7280', cursor: 'pointer' }}>
           <List size={16} />
