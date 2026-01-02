@@ -50,39 +50,22 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
 
   return (
     <>
-      {/* Backdrop overlay */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          opacity: isOpen ? 1 : 0,
-          visibility: isAnimating || isOpen ? 'visible' : 'hidden',
-          transition: 'opacity 0.3s ease, visibility 0.3s ease',
-          zIndex: 9998,
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)'
-        }}
-      />
-
-      {/* Sidebar */}
+      {/* NO BACKDROP - sidebar is beside videos, not overlaying */}
+      
+      {/* Sidebar - positioned beside the video container */}
       <div
         style={{
           position: 'fixed',
           top: 0,
           right: 0,
-          width: '420px',
-          maxWidth: '90vw',
+          width: '380px',
+          maxWidth: '380px',
           height: '100vh',
           backgroundColor: 'white',
           boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.15)',
           transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          zIndex: 9999,
+          zIndex: 10000, // Higher than modal to ensure it's on top
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'
@@ -104,16 +87,16 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
               height: '36px',
               borderRadius: '50%',
               backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              border: 'none',
+              border: '1px solid #e5e7eb',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
               e.currentTarget.style.transform = 'scale(1.05)';
             }}
             onMouseLeave={(e) => {
@@ -138,7 +121,7 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
           <div
             style={{
               width: '100%',
-              height: '320px',
+              height: '280px',
               backgroundColor: '#e5e7eb',
               position: 'relative',
               overflow: 'hidden'
@@ -169,8 +152,8 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
                         left: '12px',
                         top: '50%',
                         transform: 'translateY(-50%)',
-                        width: '40px',
-                        height: '40px',
+                        width: '36px',
+                        height: '36px',
                         borderRadius: '50%',
                         backgroundColor: 'rgba(255, 255, 255, 0.9)',
                         border: 'none',
@@ -190,7 +173,7 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
                         e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
                       }}
                     >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="15 18 9 12 15 6"></polyline>
                       </svg>
                     </button>
@@ -202,8 +185,8 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
                         right: '12px',
                         top: '50%',
                         transform: 'translateY(-50%)',
-                        width: '40px',
-                        height: '40px',
+                        width: '36px',
+                        height: '36px',
                         borderRadius: '50%',
                         backgroundColor: 'rgba(255, 255, 255, 0.9)',
                         border: 'none',
@@ -223,7 +206,7 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
                         e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
                       }}
                     >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="9 18 15 12 9 6"></polyline>
                       </svg>
                     </button>
@@ -232,7 +215,7 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
                     <div
                       style={{
                         position: 'absolute',
-                        bottom: '16px',
+                        bottom: '12px',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         padding: '6px 12px',
@@ -267,21 +250,21 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
           </div>
 
           {/* Content section */}
-          <div style={{ padding: '24px' }}>
+          <div style={{ padding: '20px' }}>
             {/* Location */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                marginBottom: '12px'
+                marginBottom: '10px'
               }}
             >
-              <MapPin size={16} color="#6b7280" />
+              <MapPin size={15} color="#6b7280" />
               <span
                 style={{
                   color: '#6b7280',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: '500'
                 }}
               >
@@ -292,8 +275,8 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
             {/* Place name */}
             <h2
               style={{
-                margin: '0 0 12px 0',
-                fontSize: '28px',
+                margin: '0 0 10px 0',
+                fontSize: '24px',
                 fontWeight: '700',
                 color: '#111827',
                 lineHeight: '1.2'
@@ -307,15 +290,15 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                marginBottom: '24px'
+                gap: '6px',
+                marginBottom: '20px'
               }}
             >
-              <div style={{ display: 'flex', gap: '4px' }}>
+              <div style={{ display: 'flex', gap: '3px' }}>
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
-                    size={18}
+                    size={16}
                     fill={i < Math.floor(placeData.rating) ? '#fbbf24' : 'none'}
                     color="#fbbf24"
                     strokeWidth={2}
@@ -324,7 +307,7 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
               </div>
               <span
                 style={{
-                  fontSize: '16px',
+                  fontSize: '15px',
                   fontWeight: '600',
                   color: '#111827'
                 }}
@@ -333,7 +316,7 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
               </span>
               <span
                 style={{
-                  fontSize: '14px',
+                  fontSize: '13px',
                   color: '#6b7280'
                 }}
               >
@@ -347,16 +330,16 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
                 width: '100%',
                 height: '1px',
                 backgroundColor: '#e5e7eb',
-                margin: '24px 0'
+                margin: '20px 0'
               }}
             />
 
             {/* Description */}
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: '20px' }}>
               <h3
                 style={{
-                  margin: '0 0 12px 0',
-                  fontSize: '16px',
+                  margin: '0 0 10px 0',
+                  fontSize: '15px',
                   fontWeight: '600',
                   color: '#111827'
                 }}
@@ -381,12 +364,12 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
                 width: '100%',
                 height: '1px',
                 backgroundColor: '#e5e7eb',
-                margin: '24px 0'
+                margin: '20px 0'
               }}
             />
 
             {/* Information cards */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {/* Entrance Fee */}
               <div
                 style={{
@@ -397,8 +380,8 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
               >
                 <div
                   style={{
-                    width: '40px',
-                    height: '40px',
+                    width: '38px',
+                    height: '38px',
                     borderRadius: '8px',
                     backgroundColor: '#f3f4f6',
                     display: 'flex',
@@ -407,7 +390,7 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
                     flexShrink: 0
                   }}
                 >
-                  <DollarSign size={20} color="#111827" strokeWidth={2} />
+                  <DollarSign size={19} color="#111827" strokeWidth={2} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <h4
@@ -444,8 +427,8 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
               >
                 <div
                   style={{
-                    width: '40px',
-                    height: '40px',
+                    width: '38px',
+                    height: '38px',
                     borderRadius: '8px',
                     backgroundColor: '#f3f4f6',
                     display: 'flex',
@@ -454,7 +437,7 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
                     flexShrink: 0
                   }}
                 >
-                  <Clock size={20} color="#111827" strokeWidth={2} />
+                  <Clock size={19} color="#111827" strokeWidth={2} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <h4
@@ -489,8 +472,8 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
               >
                 <div
                   style={{
-                    width: '40px',
-                    height: '40px',
+                    width: '38px',
+                    height: '38px',
                     borderRadius: '8px',
                     backgroundColor: '#f3f4f6',
                     display: 'flex',
@@ -499,7 +482,7 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
                     flexShrink: 0
                   }}
                 >
-                  <Phone size={20} color="#111827" strokeWidth={2} />
+                  <Phone size={19} color="#111827" strokeWidth={2} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <h4
@@ -529,16 +512,16 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
             <div
               style={{
                 display: 'flex',
-                gap: '12px',
-                marginTop: '32px',
-                paddingBottom: '24px'
+                gap: '10px',
+                marginTop: '24px',
+                paddingBottom: '20px'
               }}
             >
               <button
                 style={{
                   flex: 1,
-                  padding: '14px 24px',
-                  borderRadius: '12px',
+                  padding: '12px 20px',
+                  borderRadius: '10px',
                   backgroundColor: '#84cc16',
                   border: 'none',
                   color: 'white',
@@ -562,7 +545,7 @@ export default function PlaceDetailsSidebar({ place, isOpen, onClose }) {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                <Navigation size={18} />
+                <Navigation size={17} />
                 Get Directions
               </button>
             </div>
