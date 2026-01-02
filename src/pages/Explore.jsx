@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { Map, ChevronDown } from 'lucide-react';
 import FloatingCard from '../components/FloatingCard';
 import MapView from '../components/MapView';
@@ -8,7 +8,7 @@ import NetworkStatus from '../components/NetworkStatus';
 
 export default function Explore() {
   const [isMinimized, setIsMinimized] = useState(true); // Minimized by default
-  const [hasMounted, setHasMounted] = useState(true); // Track first mount
+  const [hasMounted, setHasMounted] = useState(false); // Track first mount
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const containerRef = useRef(null);
   const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
@@ -27,16 +27,16 @@ export default function Explore() {
       const translateY = -(height - 40 - 8);
       
       setTranslateValues({ x: translateX, y: translateY });
-      
-      // Enable animations after first calculation
-      if (!hasMounted) {
-        // Use requestAnimationFrame to ensure DOM has painted with correct position first
-        requestAnimationFrame(() => {
-          setHasMounted(true);
-        });
-      }
     }
-  }, [hasMounted]);
+  }, []);
+
+  // Use useLayoutEffect to calculate position before first paint
+  useLayoutEffect(() => {
+    // Calculate on mount before paint
+    calculateTranslateValues();
+    // Enable animations after position is set
+    setHasMounted(true);
+  }, [calculateTranslateValues]);
 
   // Debounced resize handler for better performance
   const handleResize = useCallback(() => {
@@ -52,9 +52,6 @@ export default function Explore() {
   }, [calculateTranslateValues]);
 
   useEffect(() => {
-    // Calculate on mount
-    calculateTranslateValues();
-
     // Add debounced resize listener
     window.addEventListener('resize', handleResize);
 
@@ -65,7 +62,7 @@ export default function Explore() {
         clearTimeout(resizeTimeoutRef.current);
       }
     };
-  }, [calculateTranslateValues, handleResize]);
+  }, [handleResize]);
 
   // Memoized toggle handlers to prevent recreation
   const toggleMinimize = useCallback(() => {
@@ -177,7 +174,9 @@ export default function Explore() {
       ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
       : '0 2px 8px rgba(0, 0, 0, 0.15)',
     willChange: 'transform, box-shadow',
-    whiteSpace: 'nowrap'
+    whiteSpace: 'nowrap',
+    // Hide button until position is calculated
+    opacity: translateValues.x === 0 && translateValues.y === 0 ? 0 : 1
   }), [isMinimized, translateValues.x, translateValues.y, hasMounted]);
 
   const chevronStyle = useMemo(() => ({
