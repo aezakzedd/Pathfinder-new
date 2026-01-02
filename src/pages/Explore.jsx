@@ -7,7 +7,7 @@ import TravellerInformation from '../components/TravellerInformation';
 import NetworkStatus from '../components/NetworkStatus';
 
 export default function Explore() {
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true); // Changed to true - minimized by default
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const containerRef = useRef(null);
   const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
