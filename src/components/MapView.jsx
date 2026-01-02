@@ -754,7 +754,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         position: 'relative'
       }} 
     >
-      {/* Modal overlay with blurred background */}
+      {/* Modal overlay with blurred background - z-index 1000 to appear above everything */}
       {modalOpen && (
         <div
           onClick={closeModal}
@@ -767,7 +767,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
-            zIndex: 100,
+            zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
