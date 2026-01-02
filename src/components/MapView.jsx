@@ -530,8 +530,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     markersRef.current.forEach(marker => {
       const element = marker.getElement();
       const icon = element?.querySelector('i');
+      const imageIcon = element?.querySelector('.image-marker-icon');
+      
       if (icon) {
         icon.style.fontSize = `${42 * scale}px`;
+      }
+      if (imageIcon) {
+        const size = 60 * scale;
+        imageIcon.style.width = `${size}px`;
+        imageIcon.style.height = `${size}px`;
       }
       // Label font size remains constant - no scaling
     });
@@ -780,47 +787,112 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       markerEl.style.display = 'flex';
       markerEl.style.flexDirection = 'column';
       markerEl.style.alignItems = 'center';
-      markerEl.innerHTML = `
-        <i class="fa-solid fa-location-dot" style="
-          font-size: ${42 * scale}px;
-          color: #1e40af;
-          filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
-          cursor: pointer;
-          transition: transform 0.2s ease;
-        "></i>
-        <div class="marker-label" style="
-          font-size: 12px;
-          font-weight: 600;
-          color: #000000;
-          text-shadow: 
-            -1px -1px 0 #fff,
-            1px -1px 0 #fff,
-            -1px 1px 0 #fff,
-            1px 1px 0 #fff,
-            -1.5px 0 0 #fff,
-            1.5px 0 0 #fff,
-            0 -1.5px 0 #fff,
-            0 1.5px 0 #fff;
-          margin-top: 2px;
-          white-space: nowrap;
-          pointer-events: none;
-          text-align: center;
-          line-height: 1.2;
-          opacity: 1;
-          transition: opacity 0.3s ease;
-        ">${spot.name}</div>
-      `;
+      
+      // Check if this is Binurong Point
+      const isBinurong = spot.name === 'Binurong Point';
+      const hasImage = isBinurong && spot.images && spot.images.length > 0;
+      
+      if (hasImage) {
+        // Custom image marker for Binurong Point
+        const size = 60 * scale;
+        markerEl.innerHTML = `
+          <div class="image-marker-icon" style="
+            width: ${size}px;
+            height: ${size}px;
+            border-radius: 16px;
+            overflow: hidden;
+            background-color: white;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+          ">
+            <img 
+              src="${spot.images[0]}" 
+              alt="${spot.name}"
+              style="
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+              "
+            />
+          </div>
+          <div class="marker-label" style="
+            font-size: 12px;
+            font-weight: 600;
+            color: #000000;
+            text-shadow: 
+              -1px -1px 0 #fff,
+              1px -1px 0 #fff,
+              -1px 1px 0 #fff,
+              1px 1px 0 #fff,
+              -1.5px 0 0 #fff,
+              1.5px 0 0 #fff,
+              0 -1.5px 0 #fff,
+              0 1.5px 0 #fff;
+            margin-top: 6px;
+            white-space: nowrap;
+            pointer-events: none;
+            text-align: center;
+            line-height: 1.2;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+          ">${spot.name}</div>
+        `;
+        
+        const imageIcon = markerEl.querySelector('.image-marker-icon');
+        markerEl.addEventListener('mouseenter', () => {
+          imageIcon.style.transform = 'scale(1.1)';
+          imageIcon.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)';
+        });
+        markerEl.addEventListener('mouseleave', () => {
+          imageIcon.style.transform = 'scale(1)';
+          imageIcon.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+        });
+      } else {
+        // Standard pin marker for other locations
+        markerEl.innerHTML = `
+          <i class="fa-solid fa-location-dot" style="
+            font-size: ${42 * scale}px;
+            color: #1e40af;
+            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+            cursor: pointer;
+            transition: transform 0.2s ease;
+          "></i>
+          <div class="marker-label" style="
+            font-size: 12px;
+            font-weight: 600;
+            color: #000000;
+            text-shadow: 
+              -1px -1px 0 #fff,
+              1px -1px 0 #fff,
+              -1px 1px 0 #fff,
+              1px 1px 0 #fff,
+              -1.5px 0 0 #fff,
+              1.5px 0 0 #fff,
+              0 -1.5px 0 #fff,
+              0 1.5px 0 #fff;
+            margin-top: 2px;
+            white-space: nowrap;
+            pointer-events: none;
+            text-align: center;
+            line-height: 1.2;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+          ">${spot.name}</div>
+        `;
+        
+        const iconElement = markerEl.querySelector('i');
+        markerEl.addEventListener('mouseenter', () => {
+          iconElement.style.transform = 'scale(1.15)';
+        });
+        markerEl.addEventListener('mouseleave', () => {
+          iconElement.style.transform = 'scale(1)';
+        });
+      }
       
       // Store marker element reference
       markerElementsRef.current.set(spot.name, markerEl);
-      
-      const iconElement = markerEl.querySelector('i');
-      markerEl.addEventListener('mouseenter', () => {
-        iconElement.style.transform = 'scale(1.15)';
-      });
-      markerEl.addEventListener('mouseleave', () => {
-        iconElement.style.transform = 'scale(1)';
-      });
 
       const marker = new maplibregl.Marker({ element: markerEl, anchor: 'bottom' })
         .setLngLat(spot.coordinates)
