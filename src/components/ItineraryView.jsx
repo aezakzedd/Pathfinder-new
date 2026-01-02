@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   MapPin, 
   Church, 
@@ -10,10 +10,11 @@ import {
   Coffee, 
   Building2, 
   Landmark,
-  Sun,
   Palmtree,
-  Compass,
-  Beer
+  Beer,
+  ChevronDown,
+  ChevronUp,
+  MoreVertical
 } from 'lucide-react';
 
 // Category icon mapping
@@ -71,28 +72,9 @@ const categoryColors = {
   default: { bg: '#f3f4f6', text: '#1f2937' }
 };
 
-const getCategoryPill = (category) => {
-  const colors = categoryColors[category] || categoryColors.default;
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        padding: '4px 10px',
-        borderRadius: '12px',
-        backgroundColor: colors.bg,
-        color: colors.text,
-        fontSize: '11px',
-        fontWeight: '600',
-        textTransform: 'capitalize',
-        marginRight: '6px'
-      }}
-    >
-      {category.toLowerCase().replace('_', ' ')}
-    </span>
-  );
-};
-
 const ItineraryView = ({ itinerary, onRemoveItem }) => {
+  const [expandedDates, setExpandedDates] = useState({ 'Feb 01, Sun': true });
+
   if (itinerary.length === 0) {
     return (
       <div
@@ -104,7 +86,8 @@ const ItineraryView = ({ itinerary, onRemoveItem }) => {
           justifyContent: 'center',
           flexDirection: 'column',
           padding: '40px 20px',
-          color: '#9ca3af'
+          color: '#9ca3af',
+          backgroundColor: 'white'
         }}
       >
         <MapPin size={48} strokeWidth={1.5} style={{ marginBottom: '16px', opacity: 0.5 }} />
@@ -116,219 +99,244 @@ const ItineraryView = ({ itinerary, onRemoveItem }) => {
     );
   }
 
+  const toggleDate = (date) => {
+    setExpandedDates(prev => ({
+      ...prev,
+      [date]: !prev[date]
+    }));
+  };
+
+  // Group itinerary by date (for now, all go to same date)
+  const dateGroup = 'Feb 01, Sun';
+  const isExpanded = expandedDates[dateGroup];
+
   return (
     <div
       style={{
         width: '100%',
         height: '100%',
         overflowY: 'auto',
-        backgroundColor: '#f9fafb',
-        padding: '20px'
+        backgroundColor: 'white'
       }}
     >
-      {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-          <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: '#111827' }}>
-            My Itinerary
-          </h2>
-        </div>
-        <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
-          {itinerary.length} {itinerary.length === 1 ? 'place' : 'places'} added
-        </p>
-      </div>
+      {/* Date Section */}
+      <div style={{ borderBottom: '1px solid #e5e7eb' }}>
+        {/* Date Header - Collapsible */}
+        <button
+          onClick={() => toggleDate(dateGroup)}
+          style={{
+            width: '100%',
+            padding: '16px 20px',
+            backgroundColor: 'white',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#f9fafb';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'white';
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {isExpanded ? (
+              <ChevronDown size={20} color="#111827" strokeWidth={2} />
+            ) : (
+              <ChevronUp size={20} color="#111827" strokeWidth={2} />
+            )}
+            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
+              {dateGroup}
+            </h2>
+          </div>
+        </button>
 
-      {/* Timeline */}
-      <div style={{ position: 'relative' }}>
-        {itinerary.map((place, index) => {
-          const isLast = index === itinerary.length - 1;
-          const primaryCategory = place.categories?.[0] || 'default';
-          const colors = categoryColors[primaryCategory] || categoryColors.default;
+        {/* Places List with Timeline */}
+        {isExpanded && (
+          <div style={{ padding: '0 20px 20px 20px' }}>
+            {itinerary.map((place, index) => {
+              const isLast = index === itinerary.length - 1;
+              const primaryCategory = place.categories?.[0] || 'default';
+              const colors = categoryColors[primaryCategory] || categoryColors.default;
 
-          return (
-            <div
-              key={`${place.name}-${index}`}
-              style={{
-                position: 'relative',
-                paddingLeft: '60px',
-                paddingBottom: isLast ? '0' : '24px'
-              }}
-            >
-              {/* Vertical line */}
-              {!isLast && (
+              return (
                 <div
+                  key={`${place.name}-${index}`}
                   style={{
-                    position: 'absolute',
-                    left: '23px',
-                    top: '48px',
-                    bottom: '0',
-                    width: '2px',
-                    backgroundColor: '#e5e7eb'
+                    position: 'relative',
+                    display: 'flex',
+                    gap: '12px',
+                    paddingBottom: isLast ? '0' : '16px'
                   }}
-                />
-              )}
-
-              {/* Icon circle */}
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '0',
-                  top: '16px',
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  backgroundColor: colors.bg,
-                  color: colors.text,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: `3px solid white`,
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                  zIndex: 1
-                }}
-              >
-                {getCategoryIcon(place.categories)}
-              </div>
-
-              {/* Card */}
-              <div
-                style={{
-                  backgroundColor: 'white',
-                  borderRadius: '12px',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                  overflow: 'hidden',
-                  transition: 'box-shadow 0.2s ease',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-                }}
-              >
-                <div style={{ display: 'flex' }}>
-                  {/* Image */}
-                  {place.images && place.images.length > 0 ? (
-                    <img
-                      src={place.images[0]}
-                      alt={place.name}
-                      style={{
-                        width: '140px',
-                        height: '140px',
-                        objectFit: 'cover',
-                        flexShrink: 0
-                      }}
-                    />
-                  ) : (
+                >
+                  {/* Timeline - Icon with vertical line */}
+                  <div
+                    style={{
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      paddingTop: '12px'
+                    }}
+                  >
+                    {/* Icon circle */}
                     <div
                       style={{
-                        width: '140px',
-                        height: '140px',
-                        backgroundColor: '#f3f4f6',
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        backgroundColor: colors.bg,
+                        color: colors.text,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        flexShrink: 0
+                        border: '3px solid white',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                        flexShrink: 0,
+                        zIndex: 1
                       }}
                     >
-                      <MapPin size={32} color="#9ca3af" strokeWidth={1.5} />
-                    </div>
-                  )}
-
-                  {/* Content */}
-                  <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column' }}>
-                    {/* Title */}
-                    <h3
-                      style={{
-                        margin: 0,
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        color: '#111827',
-                        marginBottom: '8px'
-                      }}
-                    >
-                      {place.name}
-                    </h3>
-
-                    {/* Location */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-                      <MapPin size={14} color="#6b7280" strokeWidth={2} />
-                      <span style={{ fontSize: '13px', color: '#6b7280' }}>{place.location}</span>
+                      {getCategoryIcon(place.categories)}
                     </div>
 
-                    {/* Categories */}
-                    {place.categories && place.categories.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '12px' }}>
-                        {place.categories.slice(0, 2).map((cat, idx) => (
-                          <React.Fragment key={idx}>{getCategoryPill(cat)}</React.Fragment>
-                        ))}
-                      </div>
+                    {/* Vertical connecting line */}
+                    {!isLast && (
+                      <div
+                        style={{
+                          width: '2px',
+                          flex: 1,
+                          backgroundColor: '#e5e7eb',
+                          marginTop: '4px',
+                          minHeight: '40px'
+                        }}
+                      />
                     )}
-
-                    {/* Remove button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onRemoveItem) onRemoveItem(index);
-                      }}
-                      style={{
-                        marginTop: 'auto',
-                        alignSelf: 'flex-start',
-                        padding: '6px 12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        color: '#ef4444',
-                        backgroundColor: 'transparent',
-                        border: '1px solid #fecaca',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#fef2f2';
-                        e.currentTarget.style.borderColor = '#ef4444';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.borderColor = '#fecaca';
-                      }}
-                    >
-                      Remove
-                    </button>
                   </div>
 
-                  {/* Three-dot menu */}
+                  {/* Place Card */}
                   <div
                     style={{
-                      padding: '12px',
+                      flex: 1,
+                      backgroundColor: 'white',
+                      borderRadius: '12px',
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                      overflow: 'hidden',
+                      transition: 'box-shadow 0.2s ease',
                       cursor: 'pointer',
-                      color: '#9ca3af',
-                      transition: 'color 0.2s ease'
+                      marginTop: '8px'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.color = '#4b5563';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.color = '#9ca3af';
+                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
                     }}
                   >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <circle cx="12" cy="5" r="2" />
-                      <circle cx="12" cy="12" r="2" />
-                      <circle cx="12" cy="19" r="2" />
-                    </svg>
+                    <div style={{ display: 'flex', height: '140px' }}>
+                      {/* Image */}
+                      {place.images && place.images.length > 0 ? (
+                        <img
+                          src={place.images[0]}
+                          alt={place.name}
+                          style={{
+                            width: '140px',
+                            height: '140px',
+                            objectFit: 'cover',
+                            flexShrink: 0
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: '140px',
+                            height: '140px',
+                            backgroundColor: '#f3f4f6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}
+                        >
+                          <MapPin size={32} color="#9ca3af" strokeWidth={1.5} />
+                        </div>
+                      )}
+
+                      {/* Content */}
+                      <div style={{ flex: 1, padding: '12px 12px 12px 16px', display: 'flex', flexDirection: 'column' }}>
+                        {/* Title and Rating */}
+                        <h3
+                          style={{
+                            margin: 0,
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            color: '#111827',
+                            marginBottom: '4px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {place.name}
+                        </h3>
+
+                        {/* Rating placeholder - you can add real rating data */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>4.1</span>
+                          <div style={{ display: 'flex', gap: '2px' }}>
+                            {[1, 2, 3, 4].map(i => (
+                              <span key={i} style={{ color: '#22c55e', fontSize: '12px' }}>●</span>
+                            ))}
+                            <span style={{ color: '#d1d5db', fontSize: '12px' }}>●</span>
+                          </div>
+                          <span style={{ fontSize: '12px', color: '#6b7280' }}>(205)</span>
+                        </div>
+
+                        {/* Category tags */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: 'auto' }}>
+                          {place.categories && place.categories.length > 0 && (
+                            <>
+                              {getCategoryIcon([place.categories[0]])}
+                              <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                                {place.categories[0].toLowerCase().replace('_', ' ')}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Three-dot menu */}
+                      <div
+                        style={{
+                          padding: '8px',
+                          cursor: 'pointer',
+                          color: '#9ca3af',
+                          transition: 'color 0.2s ease',
+                          display: 'flex',
+                          alignItems: 'flex-start'
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onRemoveItem) onRemoveItem(index);
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#4b5563';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = '#9ca3af';
+                        }}
+                      >
+                        <MoreVertical size={20} strokeWidth={2} />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
