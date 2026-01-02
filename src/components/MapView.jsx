@@ -529,8 +529,13 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     markersRef.current.forEach(marker => {
       const element = marker.getElement();
       const icon = element?.querySelector('i');
+      const label = element?.querySelector('.marker-label');
       if (icon) {
         icon.style.fontSize = `${42 * scale}px`;
+      }
+      if (label) {
+        label.style.fontSize = `${11 * scale}px`;
+        label.style.marginTop = `${2 * scale}px`;
       }
     });
   }, []);
@@ -774,6 +779,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
     touristSpots.forEach((spot) => {
       const markerEl = document.createElement('div');
+      markerEl.style.display = 'flex';
+      markerEl.style.flexDirection = 'column';
+      markerEl.style.alignItems = 'center';
       markerEl.innerHTML = `
         <i class="fa-solid fa-location-dot" style="
           font-size: ${42 * scale}px;
@@ -782,6 +790,25 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           cursor: pointer;
           transition: transform 0.2s ease;
         "></i>
+        <div class="marker-label" style="
+          font-size: ${11 * scale}px;
+          font-weight: 600;
+          color: #000000;
+          text-shadow: 
+            -1px -1px 0 #fff,
+            1px -1px 0 #fff,
+            -1px 1px 0 #fff,
+            1px 1px 0 #fff,
+            -1.5px 0 0 #fff,
+            1.5px 0 0 #fff,
+            0 -1.5px 0 #fff,
+            0 1.5px 0 #fff;
+          margin-top: ${2 * scale}px;
+          white-space: nowrap;
+          pointer-events: none;
+          text-align: center;
+          line-height: 1.2;
+        ">${spot.name}</div>
       `;
       
       const iconElement = markerEl.querySelector('i');
