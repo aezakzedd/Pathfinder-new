@@ -4,6 +4,7 @@ import { Maximize, Minimize, Map as MapIcon, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedTouristSpots';
+import { getSpotMedia } from '../hooks/useSpotMedia'; // Import the new helper
 import PlaceDetailsSidebar from './PlaceDetailsSidebar';
 import ItineraryView from './ItineraryView';
 
@@ -33,12 +34,6 @@ const PLATFORMS = {
     color: '#E4405F',
     textColor: '#FFFFFF'
   }
-};
-
-// Helper function to get asset paths - now uses municipality folder structure
-const getAssetPath = (municipality, spotName, filename) => {
-  const folderName = spotName.replace(/ /g, '_').replace(/'/g, '').replace(/&/g, 'and');
-  return `/src/assets/${municipality}/${folderName}/${filename}`;
 };
 
 // Helper function to fetch route between two coordinates using OSRM
@@ -382,7 +377,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     };
   }, [modalOpen, updateVideoQueue]);
 
-  // Load GeoJSON data and extract selected spots
+  // Load GeoJSON data and extract selected spots with images from manifest
   useEffect(() => {
     const loadTouristSpots = async () => {
       console.log('Starting to load tourist spots...');
@@ -403,15 +398,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           );
           
           if (feature) {
-            let images = [];
-            // Special handling for Binurong Point with new municipality folder structure
-            if (feature.properties.name === 'Binurong Point') {
-              images = [
-                getAssetPath('Baras', 'Binurong Point', 'Binurong_Point1.jpg'),
-                getAssetPath('Baras', 'Binurong Point', 'Binurong_Point2.jpg'),
-                getAssetPath('Baras', 'Binurong Point', 'Binurong_Point3.png')
-              ];
-            }
+            // Load images from new manifest system
+            const mediaData = await getSpotMedia(
+              feature.properties.municipality, 
+              feature.properties.name
+            );
             
             spots.push({
               name: feature.properties.name,
@@ -419,7 +410,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
-              images: images
+              images: mediaData.images // Use images from manifest
             });
           }
         } catch (error) {
@@ -789,12 +780,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       markerEl.style.flexDirection = 'column';
       markerEl.style.alignItems = 'center';
       
-      // Check if this is Binurong Point
-      const isBinurong = spot.name === 'Binurong Point';
-      const hasImage = isBinurong && spot.images && spot.images.length > 0;
+      // Check if this spot has images
+      const hasImage = spot.images && spot.images.length > 0;
       
       if (hasImage) {
-        // Custom image marker for Binurong Point - FIXED SIZE, no scaling
+        // Custom image marker - FIXED SIZE, no scaling
         markerEl.innerHTML = `
           <div class="image-marker-icon" style="
             width: 60px;
