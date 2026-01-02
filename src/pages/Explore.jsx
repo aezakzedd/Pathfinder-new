@@ -5,6 +5,8 @@ import MapView from '../components/MapView';
 import ChatBot from '../components/ChatBot';
 import TravellerInformation from '../components/TravellerInformation';
 import NetworkStatus from '../components/NetworkStatus';
+import TouristSpotDetails from '../components/TouristSpotDetails';
+import { touristSpots } from '../data/touristSpots';
 
 export default function Explore() {
   const [isMinimized, setIsMinimized] = useState(false);
@@ -12,6 +14,7 @@ export default function Explore() {
   const containerRef = useRef(null);
   const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
   const resizeTimeoutRef = useRef(null);
+  const [selectedSpot, setSelectedSpot] = useState(touristSpots[0]); // Default to first spot (Binurong Point)
 
   // Memoized calculate function to prevent recreation
   const calculateTranslateValues = useCallback(() => {
@@ -175,14 +178,15 @@ export default function Explore() {
     position: 'relative'
   }), []);
 
-  // White container underneath the map
+  // White container underneath the map - now with TouristSpotDetails
   const whiteUnderContainerStyle = useMemo(() => ({
     width: '100%',
     height: '100%',
-    backgroundColor: 'white',
+    backgroundColor: '#1f2937', // Match TouristSpotDetails background
     borderRadius: '16px',
-    padding: '16px',
-    boxSizing: 'border-box'
+    padding: '0', // No padding, let TouristSpotDetails handle it
+    boxSizing: 'border-box',
+    overflow: 'hidden'
   }), []);
 
   // Map container - properly sized to cover full parent content area when fullscreen
@@ -244,11 +248,11 @@ export default function Explore() {
             </div>
           </div>
           
-          {/* Right container with white background underneath map */}
+          {/* Right container with TouristSpotDetails underneath map */}
           <div style={rightContainerStyle}>
-            {/* White container underneath */}
+            {/* TouristSpotDetails with image carousel */}
             <div style={whiteUnderContainerStyle}>
-              {/* Your content goes here */}
+              <TouristSpotDetails spot={selectedSpot} />
             </div>
             
             {/* Map container - covers full parent width when fullscreen */}
@@ -256,6 +260,7 @@ export default function Explore() {
               <MapView 
                 isFullscreen={isMapFullscreen}
                 onToggleFullscreen={toggleMapFullscreen}
+                onSpotSelect={setSelectedSpot}
               />
             </div>
           </div>
