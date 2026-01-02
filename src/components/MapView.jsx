@@ -757,7 +757,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   }, [getCategoryPill, isSpotInItinerary]);
 
-  // Add tourist spot markers with improved label visibility
+  // Add tourist spot markers
   const addTouristSpotMarkers = useCallback(() => {
     if (!map.current || !mapLoaded.current || touristSpots.length === 0) {
       console.log('⏳ Waiting: map=%s, loaded=%s, spots=%d', !!map.current, mapLoaded.current, touristSpots.length);
@@ -776,8 +776,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       markerEl.style.display = 'flex';
       markerEl.style.flexDirection = 'column';
       markerEl.style.alignItems = 'center';
-      markerEl.style.position = 'relative';
-      markerEl.style.zIndex = '1';
       
       // Check if this spot has images
       const hasImage = spot.images && spot.images.length > 0;
@@ -796,8 +794,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
-            position: relative;
-            z-index: 1;
           ">
             <img 
               src="${spot.images[0]}" 
@@ -813,10 +809,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             font-size: 12px;
             font-weight: 600;
             color: #000000;
-            background-color: rgba(255, 255, 255, 0.95);
-            padding: 4px 8px;
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            text-shadow: 
+              -1px -1px 0 #fff,
+              1px -1px 0 #fff,
+              -1px 1px 0 #fff,
+              1px 1px 0 #fff,
+              -1.5px 0 0 #fff,
+              1.5px 0 0 #fff,
+              0 -1.5px 0 #fff,
+              0 1.5px 0 #fff;
             margin-top: 6px;
             white-space: nowrap;
             pointer-events: none;
@@ -824,8 +825,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             line-height: 1.2;
             opacity: 1;
             transition: opacity 0.3s ease;
-            position: relative;
-            z-index: 10;
           ">${spot.name}</div>
         `;
       } else {
@@ -844,8 +843,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
-            z-index: 1;
           ">
             <i class="fa-solid fa-location-dot" style="font-size: 32px; color: white;"></i>
           </div>
@@ -853,10 +850,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             font-size: 12px;
             font-weight: 600;
             color: #000000;
-            background-color: rgba(255, 255, 255, 0.95);
-            padding: 4px 8px;
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            text-shadow: 
+              -1px -1px 0 #fff,
+              1px -1px 0 #fff,
+              -1px 1px 0 #fff,
+              1px 1px 0 #fff,
+              -1.5px 0 0 #fff,
+              1.5px 0 0 #fff,
+              0 -1.5px 0 #fff,
+              0 1.5px 0 #fff;
             margin-top: 6px;
             white-space: nowrap;
             pointer-events: none;
@@ -864,32 +866,25 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             line-height: 1.2;
             opacity: 1;
             transition: opacity 0.3s ease;
-            position: relative;
-            z-index: 10;
           ">${spot.name}</div>
         `;
       }
       
       // Add hover effects
       const imageIcon = markerEl.querySelector('.image-marker-icon');
-      const label = markerEl.querySelector('.marker-label');
-      
       markerEl.addEventListener('mouseenter', () => {
         imageIcon.style.transform = 'scale(1.1)';
         imageIcon.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)';
-        // Bring entire marker to front on hover
-        markerEl.style.zIndex = '1000';
       });
       markerEl.addEventListener('mouseleave', () => {
         imageIcon.style.transform = 'scale(1)';
         imageIcon.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-        markerEl.style.zIndex = '1';
       });
       
       // Store marker element reference
       markerElementsRef.current.set(spot.name, markerEl);
 
-      const marker = new maplibregl.Marker({ element: markerEl, anchor: 'center' })
+      const marker = new maplibregl.Marker({ element: markerEl, anchor: 'bottom' })
         .setLngLat(spot.coordinates)
         .addTo(map.current);
 
@@ -897,6 +892,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         setSelectedSpot(spot);
         
         // Hide label of clicked marker
+        const label = markerEl.querySelector('.marker-label');
         if (label) {
           label.style.opacity = '0';
         }
@@ -996,7 +992,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       markersRef.current.push(marker);
     });
 
-    console.log('✅ Successfully added', markersRef.current.length, 'markers with improved label visibility!');
+    console.log('✅ Successfully added', markersRef.current.length, 'markers with iOS-style design!');
   }, [touristSpots, addToItinerary, handleImageClick, createInfoCardHTML, isSpotInItinerary]);
 
   // Initialize map ONCE
