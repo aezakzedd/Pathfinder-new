@@ -747,7 +747,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   }, [onToggleFullscreen]);
 
-  // Modal content component - VIDEO ROTATED TO LANDSCAPE
+  // Modal content component - VIDEO ROTATED TO 180 DEGREES
   const ModalContent = () => (
     <div
       onClick={closeModal}
@@ -813,7 +813,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           <X color="white" size={24} strokeWidth={2.5} />
         </button>
 
-        {/* Facebook Video Embed - Rotated 90deg clockwise for landscape */}
+        {/* Facebook Video Embed - Rotated 180deg (upside down) */}
         <div
           style={{
             width: '100%',
@@ -828,16 +828,16 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               position: 'absolute',
               top: '50%',
               left: '50%',
-              width: '177.78%', // Height/Width ratio adjustment for rotation
-              height: '177.78%',
-              transform: 'translate(-50%, -50%) rotate(90deg)',
+              width: '100%',
+              height: '100%',
+              transform: 'translate(-50%, -50%) rotate(180deg)',
               transformOrigin: 'center center'
             }}
           >
             <iframe 
               src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0" 
-              width="476"
-              height="267"
+              width="267"
+              height="476"
               style={{
                 position: 'absolute',
                 top: '50%',
