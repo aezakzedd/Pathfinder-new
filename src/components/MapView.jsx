@@ -184,7 +184,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [touristSpots, setTouristSpots] = useState([]);
   const [itinerary, setItinerary] = useState([]);
-  const itineraryRef = useRef([]); // Ref to avoid effect re-runs
+  const itineraryRef = useRef([]);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
@@ -225,7 +225,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-  // Draw routing lines IMPERATIVELY using ref - NO DEPS TO PREVENT RE-RENDERS
+  // Draw routing lines IMPERATIVELY using ref
   const drawRoutes = useCallback(async () => {
     if (!map.current || !mapLoaded.current) return;
 
@@ -308,12 +308,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     });
 
     console.log('🎉 Routes drawn successfully!');
-  }, []); // NO dependencies - uses refs only
+  }, []);
 
   // Call drawRoutes when itinerary changes
   useEffect(() => {
     drawRoutes();
-  }, [itinerary.length, drawRoutes]); // Only trigger when LENGTH changes
+  }, [itinerary.length, drawRoutes]);
 
   // Video queue system
   const updateVideoQueue = useCallback((centerIndex) => {
@@ -432,7 +432,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     loadTouristSpots();
   }, []);
 
-  // Add to itinerary handler - calls drawRoutes
+  // Add to itinerary handler
   const addToItinerary = useCallback((spot, buttonElement) => {
     const isAlreadyAdded = itineraryRef.current.some(item => item.name === spot.name);
     
@@ -559,7 +559,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return itineraryRef.current.some(item => item.name === spotName);
   }, []);
 
-  // Create info card HTML - FIXED button positioning
+  // Create info card HTML
   const createInfoCardHTML = useCallback((spot) => {
     const categoryHTML = spot.categories
       .slice(0, 2)
@@ -567,10 +567,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       .join('');
 
     const isInItinerary = isSpotInItinerary(spot.name);
-
     const hasImages = spot.images && spot.images.length > 0;
     
-    // Buttons HTML (same for both cases)
     const buttonsHTML = `
       <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 20;">
         <button id="add-to-itinerary-btn" style="
@@ -748,7 +746,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   // Add tourist spot markers
   const addTouristSpotMarkers = useCallback(() => {
     if (!map.current || !mapLoaded.current || touristSpots.length === 0) {
-      console.log('⏳ Waiting for prerequisites');
+      console.log('⏳ Waiting: map=%s, loaded=%s, spots=%d', !!map.current, mapLoaded.current, touristSpots.length);
       return;
     }
 
@@ -769,7 +767,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           color: #84cc16;
           filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
           cursor: pointer;
-          transition: font-size 0.3s ease, transform 0.2s ease;
+          transition: transform 0.2s ease;
         "></i>
       `;
       
@@ -866,10 +864,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       markersRef.current.push(marker);
     });
 
-    console.log('✅ Added', markersRef.current.length, 'markers');
+    console.log('✅ Successfully added', markersRef.current.length, 'markers!');
   }, [touristSpots, addToItinerary, handleImageClick, createInfoCardHTML, isSpotInItinerary]);
 
-  // Initialize map
+  // Initialize map ONCE
   useEffect(() => {
     if (map.current) return;
 
@@ -902,42 +900,62 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           console.log('✅ Map loaded');
           mapLoaded.current = true;
           
-          // Add mask
-          map.current.addSource('mask', {
-            type: 'geojson',
-            data: {
-              type: 'Feature',
-              geometry: {
-                type: 'Polygon',
-                coordinates: [
-                  [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]],
-                  [[124.011, 13.35], [124.011, 14.15], [124.45, 14.15], [124.45, 13.35], [124.011, 13.35]]
-                ]
+          // Add mask ONLY ONCE - check if it exists first
+          if (!map.current.getSource('mask')) {
+            map.current.addSource('mask', {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                geometry: {
+                  type: 'Polygon',
+                  coordinates: [
+                    [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]],
+                    [[124.011, 13.35], [124.011, 14.15], [124.45, 14.15], [124.45, 13.35], [124.011, 13.35]]
+                  ]
+                }
               }
-            }
-          });
+            });
 
-          map.current.addLayer({
-            id: 'mask-layer',
-            type: 'fill',
-            source: 'mask',
-            paint: { 'fill-color': '#000000', 'fill-opacity': 1 }
-          });
+            map.current.addLayer({
+              id: 'mask-layer',
+              type: 'fill',
+              source: 'mask',
+              paint: { 'fill-color': '#000000', 'fill-opacity': 1 }
+            });
+            
+            console.log('✅ Mask added');
+          }
+
+          // Trigger marker addition if data is ready
+          if (dataLoaded && touristSpots.length > 0) {
+            console.log('🎯 Data already loaded, adding markers');
+            setTimeout(() => addTouristSpotMarkers(), 200);
+          }
         });
+      })
+      .catch(error => {
+        console.error('❌ Map init error:', error);
       });
 
     return () => {
       if (popupRef.current) popupRef.current.remove();
       markersRef.current.forEach(marker => marker.remove());
-      if (map.current) map.current.remove();
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+        mapLoaded.current = false;
+      }
     };
-  }, [updateMarkerSizes]);
+  }, [updateMarkerSizes, dataLoaded, touristSpots, addTouristSpotMarkers]);
 
-  // Add markers when data loads OR when itinerary changes (to update button states)
+  // Add markers when data loads
   useEffect(() => {
     if (mapLoaded.current && dataLoaded && touristSpots.length > 0) {
-      console.log('🎯 Triggering marker add');
-      setTimeout(addTouristSpotMarkers, 100);
+      console.log('🎯 Both ready, adding markers');
+      const timer = setTimeout(() => {
+        addTouristSpotMarkers();
+      }, 200);
+      return () => clearTimeout(timer);
     }
   }, [dataLoaded, touristSpots, addTouristSpotMarkers]);
 
@@ -966,7 +984,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     if (onToggleFullscreen) onToggleFullscreen();
   }, [onToggleFullscreen]);
 
-  // Get platform for video based on index
+  // Get platform for video
   const getVideoPlatform = (index) => {
     if (index === 1) return 'youtube';
     return 'facebook';
