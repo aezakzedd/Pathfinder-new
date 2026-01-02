@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Maximize, Minimize, Map as MapIcon, List, X } from 'lucide-react';
+import { Maximize, Minimize, LayoutPanelLeft, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedTouristSpots';
@@ -92,7 +92,7 @@ const VideoSkeleton = () => (
         width: '48px',
         height: '48px',
         border: '4px solid rgba(255,255,255,0.1)',
-        borderTopColor: '#84cc16',
+        borderTopColor: '#1e40af',
         borderRadius: '50%',
         animation: 'spin 1s linear infinite'
       }}
@@ -153,18 +153,18 @@ const PerformanceMonitor = ({ show }) => {
         top: '80px',
         right: '20px',
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        color: '#84cc16',
+        color: '#1e40af',
         padding: '12px 16px',
         borderRadius: '8px',
         fontFamily: 'monospace',
         fontSize: '14px',
         zIndex: 10002,
         minWidth: '150px',
-        border: '1px solid rgba(132, 204, 22, 0.3)'
+        border: '1px solid rgba(30, 64, 175, 0.3)'
       }}
     >
       <div style={{ marginBottom: '4px', fontWeight: 'bold', color: 'white' }}>Performance</div>
-      <div>FPS: <span style={{ color: fps < 30 ? '#ef4444' : fps < 50 ? '#f59e0b' : '#84cc16' }}>{fps}</span></div>
+      <div>FPS: <span style={{ color: fps < 30 ? '#ef4444' : fps < 50 ? '#f59e0b' : '#1e40af' }}>{fps}</span></div>
       {memory > 0 && <div>Memory: {memory} MB</div>}
     </div>
   );
@@ -302,7 +302,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         'line-cap': 'round'
       },
       paint: {
-        'line-color': '#84cc16',
+        'line-color': '#1e40af',
         'line-width': 4,
         'line-opacity': 0.9
       }
@@ -524,20 +524,16 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return scale;
   };
 
-  // Update marker sizes based on zoom
+  // Update marker sizes based on zoom (but NOT label text)
   const updateMarkerSizes = useCallback((zoom) => {
     const scale = getMarkerScale(zoom);
     markersRef.current.forEach(marker => {
       const element = marker.getElement();
       const icon = element?.querySelector('i');
-      const label = element?.querySelector('.marker-label');
       if (icon) {
         icon.style.fontSize = `${42 * scale}px`;
       }
-      if (label) {
-        label.style.fontSize = `${11 * scale}px`;
-        label.style.marginTop = `${2 * scale}px`;
-      }
+      // Label font size remains constant - no scaling
     });
   }, []);
 
@@ -583,7 +579,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           min-width: 28px;
           flex-shrink: 0;
           border-radius: 14px;
-          background-color: ${isInItinerary ? '#22c55e' : 'rgba(132, 204, 22, 0.95)'};
+          background-color: ${isInItinerary ? '#22c55e' : 'rgba(30, 64, 175, 0.95)'};
           border: none;
           display: flex;
           align-items: center;
@@ -787,13 +783,13 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       markerEl.innerHTML = `
         <i class="fa-solid fa-location-dot" style="
           font-size: ${42 * scale}px;
-          color: #84cc16;
+          color: #1e40af;
           filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
           cursor: pointer;
           transition: transform 0.2s ease;
         "></i>
         <div class="marker-label" style="
-          font-size: ${11 * scale}px;
+          font-size: 12px;
           font-weight: 600;
           color: #000000;
           text-shadow: 
@@ -805,7 +801,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             1.5px 0 0 #fff,
             0 -1.5px 0 #fff,
             0 1.5px 0 #fff;
-          margin-top: ${2 * scale}px;
+          margin-top: 2px;
           white-space: nowrap;
           pointer-events: none;
           text-align: center;
@@ -1133,7 +1129,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
       <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10, display: 'flex', backgroundColor: 'white', borderRadius: '16px', padding: '3px', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', gap: '3px' }}>
         <button onClick={() => setActiveView('map')} style={{ padding: '6px 10px', border: 'none', borderRadius: '13px', backgroundColor: activeView === 'map' ? '#1f2937' : 'transparent', color: activeView === 'map' ? 'white' : '#6b7280', cursor: 'pointer' }}>
-          <MapIcon size={16} />
+          <LayoutPanelLeft size={16} />
         </button>
         <button onClick={() => setActiveView('itinerary')} style={{ padding: '6px 10px', border: 'none', borderRadius: '13px', backgroundColor: activeView === 'itinerary' ? '#1f2937' : 'transparent', color: activeView === 'itinerary' ? 'white' : '#6b7280', cursor: 'pointer' }}>
           <List size={16} />
