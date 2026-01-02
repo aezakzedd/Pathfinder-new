@@ -8,7 +8,7 @@ const calculateTravelTime = (place1, place2) => {
   return times[Math.floor(Math.random() * times.length)];
 };
 
-const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
+const ItineraryView = ({ itinerary, onRemoveItem, onCardClick, onGetStarted }) => {
   const [expandedDates, setExpandedDates] = useState({ 'Feb 01, Sun': true });
 
   if (itinerary.length === 0) {
@@ -140,8 +140,9 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
             </p>
           </div>
 
-          {/* Create Itinerary Button */}
+          {/* Get Started Button */}
           <div
+            onClick={onGetStarted}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -173,7 +174,7 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
                 letterSpacing: '-0.01em'
               }}
             >
-              Create Itinerary
+              Get Started
             </span>
           </div>
 
