@@ -21,8 +21,9 @@ export default function Explore() {
       const width = container.offsetWidth;
       const height = container.offsetHeight;
       
-      // Calculate distance from bottom-right (4px, 4px) to top-left (4px, 4px)
-      const translateX = -(width - 40 - 8);
+      // Calculate distance from bottom-right to top-left
+      // Adjusted to account for button width when minimized (~160px for text + chevron)
+      const translateX = -(width - 160 - 8); // Changed from 40 to 160 to accommodate text
       const translateY = -(height - 40 - 8);
       
       setTranslateValues({ x: translateX, y: translateY });
