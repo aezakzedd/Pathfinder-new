@@ -384,7 +384,7 @@ export default function TravellerInformation() {
 
               <input
                 type="range"
-                min="1000"
+                min="5000"
                 max="50000"
                 step="500"
                 value={budget}
@@ -422,7 +422,7 @@ export default function TravellerInformation() {
                   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
                 }
                 input[type='range']::-webkit-slider-runnable-track {
-                  background: linear-gradient(to right, #84cc16 0%, #84cc16 ${((budget - 1000) / (50000 - 1000)) * 100}%, #374151 ${((budget - 1000) / (50000 - 1000)) * 100}%, #374151 100%);
+                  background: linear-gradient(to right, #84cc16 0%, #84cc16 ${((budget - 5000) / (50000 - 5000)) * 100}%, #374151 ${((budget - 5000) / (50000 - 5000)) * 100}%, #374151 100%);
                   height: 8px;
                   border-radius: 4px;
                 }
@@ -433,7 +433,7 @@ export default function TravellerInformation() {
                 justifyContent: 'space-between',
                 marginTop: '12px'
               }}>
-                <span style={{ color: '#9ca3af', fontSize: '12px' }}>₱1,000</span>
+                <span style={{ color: '#9ca3af', fontSize: '12px' }}>₱5,000</span>
                 <span style={{ color: '#9ca3af', fontSize: '12px' }}>₱50,000</span>
               </div>
             </div>
