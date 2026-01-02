@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, memo, useState, useMemo } from 'react';
+import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Maximize, Minimize, Map as MapIcon, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
@@ -45,18 +45,18 @@ const getAssetPath = (spotName, filename) => {
 const fetchRoute = async (start, end) => {
   try {
     const url = `https://router.project-osrm.org/route/v1/driving/${start[0]},${start[1]};${end[0]},${end[1]}?overview=full&geometries=geojson`;
-    console.log('🔄 Fetching route from', start, 'to', end);
+    console.log('🔄 Fetching route:', start, '->', end);
     const response = await fetch(url);
     const data = await response.json();
     
     if (data.routes && data.routes.length > 0) {
-      console.log('✅ Route fetched successfully');
+      console.log('✅ Route fetched');
       return data.routes[0].geometry;
     }
     console.log('❌ No routes found');
     return null;
   } catch (error) {
-    console.error('❌ Error fetching route:', error);
+    console.error('❌ Route fetch error:', error);
     return null;
   }
 };
@@ -175,6 +175,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const map = useRef(null);
   const mapLoaded = useRef(false);
   const markersRef = useRef([]);
+  const markersAdded = useRef(false); // Track if markers have been added
   const popupRef = useRef(null);
   const savedState = useRef({ center: [124.2, 13.8], zoom: DEFAULT_ZOOM });
   const resizeTimeout = useRef(null);
@@ -184,6 +185,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [touristSpots, setTouristSpots] = useState([]);
   const [itinerary, setItinerary] = useState([]);
+  const itineraryRef = useRef([]); // Ref to avoid effect re-runs
   const [dataLoaded, setDataLoaded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
@@ -206,9 +208,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   // Performance monitoring
   const [showPerformance, setShowPerformance] = useState(false);
 
-  // Create a memoized set of itinerary place names for quick lookup
-  const itineraryNames = useMemo(() => {
-    return new Set(itinerary.map(item => item.name));
+  // Keep itinerary ref in sync
+  useEffect(() => {
+    itineraryRef.current = itinerary;
   }, [itinerary]);
 
   // Toggle performance monitor with Ctrl+Shift+P
@@ -224,14 +226,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-  // Draw routing lines when itinerary changes - COMPLETELY SEPARATE FROM MARKERS
-  useEffect(() => {
-    if (!map.current || !mapLoaded.current) {
-      console.log('⏳ Map not ready for routing');
-      return;
-    }
+  // Draw routing lines IMPERATIVELY using ref - NO DEPS TO PREVENT RE-RENDERS
+  const drawRoutes = useCallback(async () => {
+    if (!map.current || !mapLoaded.current) return;
 
-    // Remove existing route first
+    const currentItinerary = itineraryRef.current;
+    console.log('🎨 Drawing routes for', currentItinerary.length, 'places');
+
+    // Remove existing route
     if (map.current.getSource('route')) {
       if (map.current.getLayer('route-line')) map.current.removeLayer('route-line');
       if (map.current.getLayer('route-outline')) map.current.removeLayer('route-outline');
@@ -239,86 +241,80 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       console.log('🗑️ Removed old routes');
     }
 
-    // Only draw if we have 2+ places
-    if (itinerary.length < 2) {
-      console.log('⏭️ Not enough places for routing');
+    // Need at least 2 places
+    if (currentItinerary.length < 2) {
+      console.log('⏭️ Not enough places');
       return;
     }
 
-    const drawRoutes = async () => {
-      console.log('🎨 Drawing routes for', itinerary.length, 'places');
-      
-      // Fetch all route segments
-      const routeSegments = [];
-      for (let i = 0; i < itinerary.length - 1; i++) {
-        const start = itinerary[i].coordinates;
-        const end = itinerary[i + 1].coordinates;
-        console.log(`🔗 Segment ${i + 1}: ${itinerary[i].name} → ${itinerary[i + 1].name}`);
-        const route = await fetchRoute(start, end);
-        if (route) {
-          routeSegments.push(route);
-        }
-      }
+    // Fetch all route segments
+    const routeSegments = [];
+    for (let i = 0; i < currentItinerary.length - 1; i++) {
+      const start = currentItinerary[i].coordinates;
+      const end = currentItinerary[i + 1].coordinates;
+      const route = await fetchRoute(start, end);
+      if (route) routeSegments.push(route);
+    }
 
-      if (routeSegments.length === 0) {
-        console.log('❌ No route segments fetched');
-        return;
-      }
+    if (routeSegments.length === 0) {
+      console.log('❌ No route segments');
+      return;
+    }
 
-      console.log(`✅ Fetched ${routeSegments.length} route segments`);
+    console.log('✅ Got', routeSegments.length, 'segments');
 
-      // Combine all segments into one FeatureCollection
-      const combinedGeometry = {
-        type: 'FeatureCollection',
-        features: routeSegments.map(geometry => ({
-          type: 'Feature',
-          geometry: geometry
-        }))
-      };
-
-      // Add new route source
-      map.current.addSource('route', {
-        type: 'geojson',
-        data: combinedGeometry
-      });
-
-      // Add outline layer (white border)
-      map.current.addLayer({
-        id: 'route-outline',
-        type: 'line',
-        source: 'route',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        paint: {
-          'line-color': '#ffffff',
-          'line-width': 6,
-          'line-opacity': 0.8
-        }
-      });
-
-      // Add main line layer (green)
-      map.current.addLayer({
-        id: 'route-line',
-        type: 'line',
-        source: 'route',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        paint: {
-          'line-color': '#84cc16',
-          'line-width': 4,
-          'line-opacity': 0.9
-        }
-      });
-
-      console.log('🎉 Routes drawn successfully on map!');
+    // Combine into FeatureCollection
+    const combinedGeometry = {
+      type: 'FeatureCollection',
+      features: routeSegments.map(geometry => ({
+        type: 'Feature',
+        geometry: geometry
+      }))
     };
 
+    // Add source and layers
+    map.current.addSource('route', {
+      type: 'geojson',
+      data: combinedGeometry
+    });
+
+    map.current.addLayer({
+      id: 'route-outline',
+      type: 'line',
+      source: 'route',
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': '#ffffff',
+        'line-width': 6,
+        'line-opacity': 0.8
+      }
+    });
+
+    map.current.addLayer({
+      id: 'route-line',
+      type: 'line',
+      source: 'route',
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': '#84cc16',
+        'line-width': 4,
+        'line-opacity': 0.9
+      }
+    });
+
+    console.log('🎉 Routes drawn successfully!');
+  }, []); // NO dependencies - uses refs only
+
+  // Call drawRoutes when itinerary changes
+  useEffect(() => {
     drawRoutes();
-  }, [itinerary]); // ONLY depends on itinerary, NOT on touristSpots or other state
+  }, [itinerary.length]); // Only trigger when LENGTH changes
 
   // Video queue system
   const updateVideoQueue = useCallback((centerIndex) => {
@@ -331,11 +327,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
     setLoadedVideos(newQueue);
     setCurrentVideoIndex(centerIndex);
-
-    console.log('📹 Video Queue Update:', {
-      current: centerIndex,
-      loaded: Array.from(newQueue)
-    });
   }, []);
 
   // Intersection Observer for lazy loading AND autoplay/pause
@@ -391,23 +382,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     };
   }, [modalOpen, updateVideoQueue]);
 
-  // Log performance metrics
-  useEffect(() => {
-    if (!modalOpen) return;
-
-    const logPerformance = setInterval(() => {
-      if (performance.memory) {
-        console.log('💾 Memory:', {
-          used: `${Math.round(performance.memory.usedJSHeapSize / 1048576)} MB`,
-          total: `${Math.round(performance.memory.totalJSHeapSize / 1048576)} MB`,
-          limit: `${Math.round(performance.memory.jsHeapSizeLimit / 1048576)} MB`
-        });
-      }
-    }, 5000);
-
-    return () => clearInterval(logPerformance);
-  }, [modalOpen]);
-
   // Load GeoJSON data and extract selected spots
   useEffect(() => {
     const loadTouristSpots = async () => {
@@ -416,11 +390,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       
       for (const selection of selectedSpots) {
         try {
-          console.log(`Loading ${selection.geojsonFile}...`);
           const response = await fetch(`/data/${selection.geojsonFile}`);
           
           if (!response.ok) {
-            console.error(`Failed to fetch ${selection.geojsonFile}: ${response.status}`);
+            console.error(`Failed to fetch ${selection.geojsonFile}`);
             continue;
           }
           
@@ -446,16 +419,13 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               categories: feature.properties.categories || [],
               images: images
             });
-            console.log(`✓ Found: ${feature.properties.name}`);
-          } else {
-            console.error(`✗ Spot "${selection.spotName}" not found in ${selection.geojsonFile}`);
           }
         } catch (error) {
           console.error(`Error loading ${selection.geojsonFile}:`, error);
         }
       }
       
-      console.log(`Loaded ${spots.length}/${selectedSpots.length} tourist spots`);
+      console.log(`Loaded ${spots.length} spots`);
       setTouristSpots(spots);
       setDataLoaded(true);
     };
@@ -463,38 +433,32 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     loadTouristSpots();
   }, []);
 
-  // Add to itinerary handler - NO map operations
+  // Add to itinerary handler - calls drawRoutes
   const addToItinerary = useCallback((spot, buttonElement) => {
-    setItinerary(prev => {
-      const isAlreadyAdded = prev.some(item => item.name === spot.name);
+    const isAlreadyAdded = itineraryRef.current.some(item => item.name === spot.name);
+    
+    if (!isAlreadyAdded) {
+      console.log('✅ Adding:', spot.name);
       
-      if (!isAlreadyAdded) {
-        console.log('✅ Added to itinerary:', spot.name);
-        
-        // Update button to show check icon
-        if (buttonElement) {
-          buttonElement.innerHTML = `
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          `;
-          buttonElement.style.backgroundColor = '#22c55e';
-          buttonElement.style.pointerEvents = 'none';
-          buttonElement.style.minWidth = '28px';
-        }
-        
-        return [...prev, spot];
+      if (buttonElement) {
+        buttonElement.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        `;
+        buttonElement.style.backgroundColor = '#22c55e';
+        buttonElement.style.pointerEvents = 'none';
+        buttonElement.style.minWidth = '28px';
       }
       
-      console.log('ℹ️ Already in itinerary:', spot.name);
-      return prev;
-    });
+      setItinerary(prev => [...prev, spot]);
+    }
   }, []);
 
   // Remove from itinerary handler
   const removeFromItinerary = useCallback((index) => {
     setItinerary(prev => prev.filter((_, i) => i !== index));
-    console.log('Removed from itinerary at index:', index);
+    console.log('Removed index:', index);
   }, []);
 
   // Handle card click from itinerary
@@ -508,8 +472,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     setSidebarOpen(true);
     setLoadedVideos(new Set([0]));
     setCurrentVideoIndex(0);
-    
-    console.log('Opened modal from itinerary card:', place.name);
   }, []);
 
   // Handle image click to open modal
@@ -593,16 +555,70 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   }, []);
 
-  // Create info card HTML - PROPERLY FIXED button positioning
+  // Check if spot is in itinerary using ref
+  const isSpotInItinerary = useCallback((spotName) => {
+    return itineraryRef.current.some(item => item.name === spotName);
+  }, []);
+
+  // Create info card HTML - FIXED button positioning
   const createInfoCardHTML = useCallback((spot) => {
     const categoryHTML = spot.categories
       .slice(0, 2)
       .map(cat => getCategoryPill(cat))
       .join('');
 
-    const isInItinerary = itineraryNames.has(spot.name);
+    const isInItinerary = isSpotInItinerary(spot.name);
 
     const hasImages = spot.images && spot.images.length > 0;
+    
+    // Buttons HTML (same for both cases)
+    const buttonsHTML = `
+      <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 20;">
+        <button id="add-to-itinerary-btn" style="
+          width: 28px;
+          height: 28px;
+          min-width: 28px;
+          border-radius: 14px;
+          background-color: ${isInItinerary ? '#22c55e' : 'rgba(132, 204, 22, 0.95)'};
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: ${isInItinerary ? 'default' : 'pointer'};
+          pointer-events: ${isInItinerary ? 'none' : 'auto'};
+          padding: 0;
+        ">
+          ${isInItinerary ? `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          ` : `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          `}
+        </button>
+
+        <button id="close-card-btn" style="
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background-color: rgba(0, 0, 0, 0.6);
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        ">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    `;
+    
     const carouselHTML = hasImages ? `
       <div id="carousel-container" style="
         width: 100%;
@@ -611,59 +627,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         position: relative;
         overflow: hidden;
       ">
-        <!-- Buttons container - absolute positioning within image area -->
-        <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 15;">
-          <button id="add-to-itinerary-btn" class="add-itinerary-btn" style="
-            height: 28px;
-            min-width: 28px;
-            border-radius: 14px;
-            background-color: ${isInItinerary ? '#22c55e' : 'rgba(132, 204, 22, 0.9)'};
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: ${isInItinerary ? 'default' : 'pointer'};
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden;
-            white-space: nowrap;
-            padding: 0 10px;
-            pointer-events: ${isInItinerary ? 'none' : 'auto'};
-          ">
-            ${isInItinerary ? `
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            ` : `
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-            `}
-          </button>
-
-          <button id="close-card-btn" style="
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background-color: rgba(0, 0, 0, 0.5);
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background-color 0.2s;
-          ">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-
+        ${buttonsHTML}
         ${spot.images.map((img, idx) => `
           <img 
             src="${img}" 
-            alt="${spot.name} ${idx + 1}"
+            alt="${spot.name}"
             class="carousel-image"
             data-index="${idx}"
             data-image-url="${img}"
@@ -692,14 +660,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             border-radius: 50%;
             background-color: rgba(0, 0, 0, 0.5);
             border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             cursor: pointer;
-            transition: background-color 0.2s;
             z-index: 10;
           ">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
               <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
           </button>
@@ -714,14 +678,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             border-radius: 50%;
             background-color: rgba(0, 0, 0, 0.5);
             border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             cursor: pointer;
-            transition: background-color 0.2s;
             z-index: 10;
           ">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
               <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
           </button>
@@ -751,49 +711,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         align-items: center;
         justify-content: center;
       ">
-        <!-- Buttons for no-image case -->
-        <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 15;">
-          <button id="add-to-itinerary-btn" class="add-itinerary-btn" style="
-            height: 28px;
-            min-width: 28px;
-            border-radius: 14px;
-            background-color: ${isInItinerary ? '#22c55e' : 'rgba(132, 204, 22, 0.9)'};
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: ${isInItinerary ? 'default' : 'pointer'};
-            pointer-events: ${isInItinerary ? 'none' : 'auto'};
-          ">
-            ${isInItinerary ? `
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            ` : `
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-            `}
-          </button>
-
-          <button id="close-card-btn" style="
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background-color: rgba(0, 0, 0, 0.5);
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-          ">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
+        ${buttonsHTML}
         <i class="fa-solid fa-location-dot" style="font-size: 48px; color: #9ca3af;"></i>
       </div>
     `;
@@ -805,62 +723,43 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         border-radius: 12px;
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
         overflow: hidden;
-        position: relative;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       ">
         ${carouselHTML}
-
-        <div style="padding: 12px 14px; background-color: white;">
+        <div style="padding: 12px 14px;">
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-            <i class="fa-solid fa-location-dot fa-bounce" style="font-size: 12px; color: #6b7280;"></i>
+            <i class="fa-solid fa-location-dot" style="font-size: 12px; color: #6b7280;"></i>
             <span style="color: #6b7280; font-size: 11px; font-weight: 500;">${spot.location}</span>
           </div>
-
           <h3 style="
-            margin: 0;
+            margin: 0 0 8px 0;
             font-size: 15px;
             font-weight: 600;
             color: #111827;
-            margin-bottom: 8px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
             line-height: 1.4;
-            max-height: 2.8em;
           ">${spot.name}</h3>
-
-          <div style="display: flex; flex-wrap: wrap; gap: 0;">
+          <div style="display: flex; flex-wrap: wrap;">
             ${categoryHTML}
           </div>
         </div>
       </div>
     `;
-  }, [getCategoryPill, itineraryNames]);
+  }, [getCategoryPill, isSpotInItinerary]);
 
-  // Add tourist spot markers - ONLY DEPENDS ON touristSpots (not itinerary)
+  // Add tourist spot markers - ONLY RUNS ONCE
   const addTouristSpotMarkers = useCallback(() => {
-    if (!map.current || !mapLoaded.current || touristSpots.length === 0) {
-      console.log('⏳ Waiting for prerequisites:', {
-        hasMap: !!map.current,
-        mapLoaded: mapLoaded.current,
-        spotsCount: touristSpots.length
-      });
+    if (!map.current || !mapLoaded.current || touristSpots.length === 0 || markersAdded.current) {
       return;
     }
 
-    console.log(`🗺️ Adding ${touristSpots.length} markers to map...`);
-
-    markersRef.current.forEach(marker => marker.remove());
-    markersRef.current = [];
+    console.log('🗺️ Adding', touristSpots.length, 'markers');
+    markersAdded.current = true;
 
     const currentZoom = map.current.getZoom();
     const scale = getMarkerScale(currentZoom);
 
-    touristSpots.forEach((spot, index) => {
+    touristSpots.forEach((spot) => {
       const markerEl = document.createElement('div');
-      markerEl.className = 'custom-marker';
       markerEl.innerHTML = `
         <i class="fa-solid fa-location-dot" style="
           font-size: ${42 * scale}px;
@@ -872,38 +771,26 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       `;
       
       const iconElement = markerEl.querySelector('i');
-      
       markerEl.addEventListener('mouseenter', () => {
-        iconElement.classList.add('fa-bounce');
         iconElement.style.transform = 'scale(1.15)';
       });
       markerEl.addEventListener('mouseleave', () => {
-        iconElement.classList.remove('fa-bounce');
         iconElement.style.transform = 'scale(1)';
       });
 
-      const marker = new maplibregl.Marker({
-        element: markerEl,
-        anchor: 'bottom'
-      })
+      const marker = new maplibregl.Marker({ element: markerEl, anchor: 'bottom' })
         .setLngLat(spot.coordinates)
         .addTo(map.current);
 
       markerEl.addEventListener('click', () => {
-        iconElement.classList.add('fa-bounce');
-        setTimeout(() => iconElement.classList.remove('fa-bounce'), 1000);
-
         setSelectedSpot(spot);
         
-        if (popupRef.current) {
-          popupRef.current.remove();
-        }
+        if (popupRef.current) popupRef.current.remove();
 
         const popup = new maplibregl.Popup({
           offset: [0, -342],
           closeButton: false,
           closeOnClick: false,
-          className: 'tourist-spot-popup',
           maxWidth: 'none'
         })
           .setLngLat(spot.coordinates)
@@ -915,7 +802,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         setTimeout(() => {
           let currentIdx = 0;
           const images = document.querySelectorAll('.carousel-image');
-          const totalImages = images.length;
           const counter = document.getElementById('image-counter');
           const prevBtn = document.getElementById('carousel-prev-btn');
           const nextBtn = document.getElementById('carousel-next-btn');
@@ -924,43 +810,28 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             images.forEach((img, i) => {
               img.style.opacity = i === index ? '1' : '0';
             });
-            if (counter) {
-              counter.textContent = `${index + 1} / ${totalImages}`;
-            }
+            if (counter) counter.textContent = `${index + 1} / ${images.length}`;
           }
 
           images.forEach((img) => {
             img.addEventListener('click', (e) => {
-              const imageUrl = e.target.getAttribute('data-image-url');
-              handleImageClick(imageUrl, spot);
+              handleImageClick(e.target.getAttribute('data-image-url'), spot);
             });
           });
 
           if (prevBtn) {
             prevBtn.addEventListener('click', (e) => {
               e.stopPropagation();
-              currentIdx = (currentIdx - 1 + totalImages) % totalImages;
+              currentIdx = (currentIdx - 1 + images.length) % images.length;
               showImage(currentIdx);
-            });
-            prevBtn.addEventListener('mouseenter', () => {
-              prevBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-            });
-            prevBtn.addEventListener('mouseleave', () => {
-              prevBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
             });
           }
 
           if (nextBtn) {
             nextBtn.addEventListener('click', (e) => {
               e.stopPropagation();
-              currentIdx = (currentIdx + 1) % totalImages;
+              currentIdx = (currentIdx + 1) % images.length;
               showImage(currentIdx);
-            });
-            nextBtn.addEventListener('mouseenter', () => {
-              nextBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-            });
-            nextBtn.addEventListener('mouseleave', () => {
-              nextBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
             });
           }
 
@@ -973,26 +844,17 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               }
               setSelectedSpot(null);
             });
-            
-            closeBtn.addEventListener('mouseenter', () => {
-              closeBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-            });
-            closeBtn.addEventListener('mouseleave', () => {
-              closeBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-            });
           }
 
           const addBtn = document.getElementById('add-to-itinerary-btn');
-          if (addBtn && !itineraryNames.has(spot.name)) {
+          if (addBtn && !isSpotInItinerary(spot.name)) {
             addBtn.addEventListener('click', () => addToItinerary(spot, addBtn));
           }
         }, 0);
         
-        const targetZoom = Math.max(map.current.getZoom(), 12);
-        
         map.current.flyTo({
           center: spot.coordinates,
-          zoom: targetZoom,
+          zoom: Math.max(map.current.getZoom(), 12),
           padding: { top: 300, bottom: 50, left: 0, right: 0 },
           duration: 800
         });
@@ -1001,8 +863,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       markersRef.current.push(marker);
     });
 
-    console.log(`✅ Successfully added ${markersRef.current.length} markers!`);
-  }, [touristSpots, addToItinerary, handleImageClick, createInfoCardHTML, itineraryNames]);
+    console.log('✅ Added', markersRef.current.length, 'markers');
+  }, [touristSpots, addToItinerary, handleImageClick, createInfoCardHTML, isSpotInItinerary]);
 
   // Initialize map - ONLY ONCE
   useEffect(() => {
@@ -1011,35 +873,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     const fontAwesomeLink = document.createElement('link');
     fontAwesomeLink.rel = 'stylesheet';
     fontAwesomeLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css';
-    fontAwesomeLink.integrity = 'sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==';
-    fontAwesomeLink.crossOrigin = 'anonymous';
     document.head.appendChild(fontAwesomeLink);
 
-    const bounds = [
-      [123.5, 12.8],
-      [125.0, 14.8]
-    ];
+    const bounds = [[123.5, 12.8], [125.0, 14.8]];
 
-    console.log('🌍 Initializing map...');
+    console.log('🌍 Initializing map');
 
     fetch(`https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`)
       .then(response => response.json())
       .then(style => {
-        style.layers = style.layers.map(layer => {
-          if (layer.id && (
-            layer.id.includes('place') || 
-            layer.id.includes('town') || 
-            layer.id.includes('city') ||
-            layer.id.includes('village')
-          ) && layer.type === 'symbol') {
-            return {
-              ...layer,
-              minzoom: Math.min(layer.minzoom || 14, 9)
-            };
-          }
-          return layer;
-        });
-
         map.current = new maplibregl.Map({
           container: mapContainer.current,
           style: style,
@@ -1048,189 +890,82 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           attributionControl: false,
           maxBounds: bounds,
           antialias: false,
-          preserveDrawingBuffer: false,
-          fadeDuration: 0,
-          maxParallelImageRequests: 4,
-          refreshExpiredTiles: false,
-          trackResize: true,
-          maxZoom: 18,
-          maxPitch: 60,
+          fadeDuration: 0
         });
 
-        map.current.on('zoom', () => {
-          const currentZoom = map.current.getZoom();
-          updateMarkerSizes(currentZoom);
-        });
+        map.current.on('zoom', () => updateMarkerSizes(map.current.getZoom()));
 
         map.current.on('load', () => {
-          console.log('✅ Map loaded successfully');
+          console.log('✅ Map loaded');
           mapLoaded.current = true;
           
-          const maskGeoJSON = {
-            type: 'Feature',
-            geometry: {
-              type: 'Polygon',
-              coordinates: [
-                [
-                  [-180, -90],
-                  [180, -90],
-                  [180, 90],
-                  [-180, 90],
-                  [-180, -90]
-                ],
-                [
-                  [124.011, 13.35],
-                  [124.011, 14.15],
-                  [124.45, 14.15],
-                  [124.45, 13.35],
-                  [124.011, 13.35]
+          // Add mask
+          map.current.addSource('mask', {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              geometry: {
+                type: 'Polygon',
+                coordinates: [
+                  [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]],
+                  [[124.011, 13.35], [124.011, 14.15], [124.45, 14.15], [124.45, 13.35], [124.011, 13.35]]
                 ]
-              ]
-            }
-          };
-
-          if (!map.current.getSource('mask')) {
-            map.current.addSource('mask', {
-              type: 'geojson',
-              data: maskGeoJSON
-            });
-
-            map.current.addLayer({
-              id: 'mask-layer',
-              type: 'fill',
-              source: 'mask',
-              paint: {
-                'fill-color': '#000000',
-                'fill-opacity': 1
               }
-            });
-          }
+            }
+          });
 
+          map.current.addLayer({
+            id: 'mask-layer',
+            type: 'fill',
+            source: 'mask',
+            paint: { 'fill-color': '#000000', 'fill-opacity': 1 }
+          });
+
+          // Add markers if data ready
           if (dataLoaded && touristSpots.length > 0) {
-            console.log('🎯 Data already loaded, adding markers immediately');
             addTouristSpotMarkers();
           }
         });
-      })
-      .catch(error => {
-        console.error('❌ Error loading map style:', error);
       });
 
     return () => {
-      if (popupRef.current) {
-        popupRef.current.remove();
-        popupRef.current = null;
-      }
-      
+      if (popupRef.current) popupRef.current.remove();
       markersRef.current.forEach(marker => marker.remove());
-      markersRef.current = [];
-      
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-        mapLoaded.current = false;
-      }
+      if (map.current) map.current.remove();
     };
-  }, [updateMarkerSizes, dataLoaded, touristSpots, addTouristSpotMarkers]);
+  }, [dataLoaded, touristSpots, addTouristSpotMarkers, updateMarkerSizes]);
 
-  // Add markers when both map and data ready - ONLY ONCE
+  // Add markers when data loads - ONLY ONCE
   useEffect(() => {
-    if (mapLoaded.current && dataLoaded && touristSpots.length > 0) {
-      console.log('🎯 Both map and data ready, adding markers...');
-      const timer = setTimeout(() => {
-        addTouristSpotMarkers();
-      }, 100);
-      
-      return () => clearTimeout(timer);
+    if (mapLoaded.current && dataLoaded && touristSpots.length > 0 && !markersAdded.current) {
+      console.log('🎯 Data ready, adding markers');
+      setTimeout(addTouristSpotMarkers, 100);
     }
   }, [dataLoaded, touristSpots, addTouristSpotMarkers]);
-
-  // ONLY update popup HTML when itinerary changes (don't recreate markers)
-  useEffect(() => {
-    if (selectedSpot && popupRef.current) {
-      const newHTML = createInfoCardHTML(selectedSpot);
-      popupRef.current.setHTML(newHTML);
-      
-      // Re-attach event listeners
-      setTimeout(() => {
-        const addBtn = document.getElementById('add-to-itinerary-btn');
-        const closeBtn = document.getElementById('close-card-btn');
-        
-        if (addBtn && !itineraryNames.has(selectedSpot.name)) {
-          addBtn.addEventListener('click', () => addToItinerary(selectedSpot, addBtn));
-        }
-        
-        if (closeBtn) {
-          closeBtn.addEventListener('click', () => {
-            if (popupRef.current) {
-              popupRef.current.remove();
-              popupRef.current = null;
-            }
-            setSelectedSpot(null);
-          });
-        }
-      }, 0);
-    }
-  }, [itineraryNames, selectedSpot, createInfoCardHTML, addToItinerary]);
 
   // Debounced resize handler
   const handleResize = useCallback(() => {
     if (!map.current) return;
     
-    const currentZoom = map.current.getZoom();
-    const currentCenter = map.current.getCenter();
-    
-    savedState.current = {
-      center: currentCenter,
-      zoom: currentZoom
-    };
-
-    if (resizeTimeout.current) {
-      clearTimeout(resizeTimeout.current);
-    }
+    if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
 
     resizeTimeout.current = setTimeout(() => {
       if (map.current) {
         map.current.resize();
-        
-        let targetZoom = savedState.current.zoom;
-        
-        if (Math.abs(previousZoom.current - DEFAULT_ZOOM) < 0.01) {
-          targetZoom = DEFAULT_ZOOM;
-        }
-        
-        map.current.jumpTo({
-          center: savedState.current.center,
-          zoom: targetZoom
-        });
+        map.current.jumpTo({ center: savedState.current.center, zoom: savedState.current.zoom });
       }
     }, 100);
   }, []);
 
   useEffect(() => {
-    if (map.current) {
-      previousZoom.current = map.current.getZoom();
-    }
-
-    if (animationTimeout.current) {
-      clearTimeout(animationTimeout.current);
-    }
-
-    animationTimeout.current = setTimeout(() => {
-      handleResize();
-    }, 750);
-
-    return () => {
-      if (animationTimeout.current) {
-        clearTimeout(animationTimeout.current);
-      }
-    };
+    if (map.current) previousZoom.current = map.current.getZoom();
+    if (animationTimeout.current) clearTimeout(animationTimeout.current);
+    animationTimeout.current = setTimeout(handleResize, 750);
+    return () => clearTimeout(animationTimeout.current);
   }, [isFullscreen, handleResize]);
 
   const handleToggleFullscreen = useCallback(() => {
-    if (onToggleFullscreen) {
-      onToggleFullscreen();
-    }
+    if (onToggleFullscreen) onToggleFullscreen();
   }, [onToggleFullscreen]);
 
   // Get platform for video based on index
@@ -1239,7 +974,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return 'facebook';
   };
 
-  // Video card component with lazy loading
+  // Video card component
   const VideoCard = ({ index, isLoaded }) => {
     const platform = getVideoPlatform(index);
     const platformConfig = PLATFORMS[platform];
@@ -1255,384 +990,90 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          scrollSnapAlign: 'start',
-          scrollSnapStop: 'always'
+          scrollSnapAlign: 'start'
         }}
       >
-        <div
-          style={{
-            width: isLandscape ? '500px' : '300px',
-            height: '85vh',
-            maxHeight: isLandscape ? '400px' : '600px',
-            backgroundColor: '#000000',
-            borderRadius: '16px',
-            position: 'relative',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column'
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#000000'
-            }}
-          >
-            {!isLoaded ? (
-              <VideoSkeleton />
-            ) : platform === 'youtube' ? (
-              <iframe 
-                ref={(el) => (iframeRefs.current[index] = el)}
-                width="100%" 
-                height="100%" 
-                src="https://www.youtube.com/embed/j6IsY1PR5XE?si=9HeiBBjuU3Y_O63y&enablejsapi=1&autoplay=1&mute=1" 
-                title="YouTube video player" 
-                frameBorder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                referrerPolicy="strict-origin-when-cross-origin" 
-                allowFullScreen
-                style={{
-                  border: 'none',
-                  borderRadius: '16px',
-                  opacity: 0,
-                  animation: 'fadeIn 0.5s ease-in forwards'
-                }}
-              />
-            ) : (
-              <iframe 
-                ref={(el) => (iframeRefs.current[index] = el)}
-                src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0&autoplay=true" 
-                width="267" 
-                height="476" 
-                style={{
-                  border: 'none',
-                  overflow: 'hidden',
-                  borderRadius: '8px',
-                  opacity: 0,
-                  animation: 'fadeIn 0.5s ease-in forwards'
-                }}
-                scrolling="no" 
-                frameBorder="0" 
-                allowFullScreen={true}
-                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-              />
-            )}
-          </div>
-          
+        <div style={{ width: isLandscape ? '500px' : '300px', height: '85vh', maxHeight: isLandscape ? '400px' : '600px', backgroundColor: '#000', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.8)', overflow: 'hidden' }}>
+          {!isLoaded ? (
+            <VideoSkeleton />
+          ) : platform === 'youtube' ? (
+            <iframe 
+              ref={(el) => (iframeRefs.current[index] = el)}
+              width="100%" height="100%" 
+              src="https://www.youtube.com/embed/j6IsY1PR5XE?enablejsapi=1&autoplay=1&mute=1" 
+              frameBorder="0" allowFullScreen
+              style={{ border: 'none', borderRadius: '16px' }}
+            />
+          ) : (
+            <iframe 
+              ref={(el) => (iframeRefs.current[index] = el)}
+              src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&autoplay=true" 
+              width="267" height="476" 
+              frameBorder="0" allowFullScreen
+              style={{ border: 'none', borderRadius: '8px' }}
+            />
+          )}
           {modalSpot && isLoaded && (
-            <div
-              style={{
-                position: 'absolute',
-                bottom: '16px',
-                left: '16px',
-                right: '16px',
-                display: 'flex',
-                alignItems: 'flex-end',
-                justifyContent: 'space-between',
-                gap: '12px',
-                zIndex: 10
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{
-                  margin: 0,
-                  fontSize: '13px',
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  textShadow: '0 2px 8px rgba(0,0,0,0.8)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
-                }}>
-                  {modalSpot.location}
-                </p>
-              </div>
-
-              <div
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '20px',
-                  backgroundColor: platformConfig.color,
-                  color: platformConfig.textColor,
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  textShadow: 'none',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-                  flexShrink: 0,
-                  letterSpacing: '0.3px'
-                }}
-              >
+            <div style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px', display: 'flex', justifyContent: 'space-between', zIndex: 10 }}>
+              <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.8)', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>
+                {modalSpot.location}
+              </p>
+              <div style={{ padding: '6px 14px', borderRadius: '20px', backgroundColor: platformConfig.color, color: platformConfig.textColor, fontSize: '12px', fontWeight: '600' }}>
                 {platformConfig.name}
               </div>
             </div>
           )}
         </div>
-        <style>
-          {`
-            @keyframes fadeIn {
-              from { opacity: 0; }
-              to { opacity: 1; }
-            }
-          `}
-        </style>
       </div>
     );
   };
 
-  // Modal content component
-  const ModalContent = () => {
-    const videoContainerWidth = sidebarOpen 
-      ? `calc(100vw - ${SIDEBAR_WIDTH}px)` 
-      : '100vw';
-
-    return (
-      <div
-        onClick={closeModal}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          backgroundColor: 'rgba(0, 0, 0, 0.85)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          zIndex: 9998,
-          display: 'flex',
-          flexDirection: 'row',
-          opacity: modalOpen ? 1 : 0,
-          transition: 'opacity 0.3s ease',
-        }}
-      >
-        <PerformanceMonitor show={showPerformance} />
-
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            width: videoContainerWidth,
-            height: '100vh',
-            overflowY: 'scroll',
-            scrollSnapType: 'y mandatory',
-            scrollBehavior: 'smooth',
-            WebkitOverflowScrolling: 'touch',
-            transition: 'width 0.3s ease',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
-          }}
-          className="video-scroll-container"
-        >
-          {[0, 1, 2].map((index) => (
-            <VideoCard 
-              key={index} 
-              index={index} 
-              isLoaded={loadedVideos.has(index)}
-            />
-          ))}
-        </div>
-
-        {sidebarOpen && (
-          <div
-            style={{
-              width: `${SIDEBAR_WIDTH}px`,
-              height: '100vh',
-              flexShrink: 0,
-              pointerEvents: 'none'
-            }}
-          />
-        )}
-
-        {showPerformance && (
-          <div
-            style={{
-              position: 'fixed',
-              bottom: '20px',
-              right: '20px',
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              color: 'white',
-              padding: '12px 16px',
-              borderRadius: '8px',
-              fontFamily: 'monospace',
-              fontSize: '12px',
-              zIndex: 10002,
-              border: '1px solid rgba(132, 204, 22, 0.3)'
-            }}
-          >
-            <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#84cc16' }}>Video Queue</div>
-            <div>Current: {currentVideoIndex}</div>
-            <div>Loaded: [{Array.from(loadedVideos).join(', ')}]</div>
-            <div style={{ marginTop: '8px', fontSize: '11px', color: '#9ca3af' }}>Press Ctrl+Shift+P to toggle</div>
-          </div>
-        )}
+  // Modal content
+  const ModalContent = () => (
+    <div onClick={closeModal} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 9998, display: 'flex' }}>
+      <PerformanceMonitor show={showPerformance} />
+      <div onClick={(e) => e.stopPropagation()} style={{ width: sidebarOpen ? `calc(100vw - ${SIDEBAR_WIDTH}px)` : '100vw', height: '100vh', overflowY: 'scroll', scrollSnapType: 'y mandatory', scrollbarWidth: 'none' }} className="video-scroll-container">
+        {[0, 1, 2].map((index) => (
+          <VideoCard key={index} index={index} isLoaded={loadedVideos.has(index)} />
+        ))}
       </div>
-    );
-  };
+      {sidebarOpen && <div style={{ width: `${SIDEBAR_WIDTH}px`, height: '100vh' }} />}
+    </div>
+  );
 
   return (
-    <div 
-      style={{ 
-        width: '100%', 
-        height: '100%',
-        position: 'relative'
-      }} 
-    >
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       {modalOpen && createPortal(<ModalContent />, document.body)}
-
-      {createPortal(
-        <PlaceDetailsSidebar 
-          place={sidebarPlace} 
-          isOpen={sidebarOpen} 
-          onClose={closeSidebar}
-          onCloseModal={closeModal}
-        />,
-        document.body
-      )}
+      {createPortal(<PlaceDetailsSidebar place={sidebarPlace} isOpen={sidebarOpen} onClose={closeSidebar} onCloseModal={closeModal} />, document.body)}
 
       {activeView === 'map' && (
-        <button
-          onClick={handleToggleFullscreen}
-          style={{
-            position: 'absolute',
-            top: isFullscreen ? '12px' : '12px',
-            left: '12px',
-            width: '36px',
-            height: '36px',
-            borderRadius: '4px',
-            backgroundColor: 'white',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            zIndex: 10,
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            transition: 'all 0.5s ease-in-out',
-            willChange: 'top, left, background-color'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f3f4f6';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'white';
-          }}
-        >
-          {isFullscreen ? (
-            <Minimize color="black" size={18} strokeWidth={2} />
-          ) : (
-            <Maximize color="black" size={18} strokeWidth={2} />
-          )}
+        <button onClick={handleToggleFullscreen} style={{ position: 'absolute', top: '12px', left: '12px', width: '36px', height: '36px', borderRadius: '4px', backgroundColor: 'white', border: 'none', cursor: 'pointer', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+          {isFullscreen ? <Minimize color="black" size={18} /> : <Maximize color="black" size={18} />}
         </button>
       )}
 
-      <div
-        style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          zIndex: 10,
-          display: 'flex',
-          backgroundColor: 'white',
-          borderRadius: '16px',
-          padding: '3px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-          gap: '3px'
-        }}
-      >
-        <button
-          onClick={() => setActiveView('map')}
-          style={{
-            position: 'relative',
-            padding: '6px 10px',
-            border: 'none',
-            borderRadius: '13px',
-            backgroundColor: activeView === 'map' ? '#1f2937' : 'transparent',
-            color: activeView === 'map' ? 'white' : '#6b7280',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <MapIcon size={16} strokeWidth={2} />
+      <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10, display: 'flex', backgroundColor: 'white', borderRadius: '16px', padding: '3px', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', gap: '3px' }}>
+        <button onClick={() => setActiveView('map')} style={{ padding: '6px 10px', border: 'none', borderRadius: '13px', backgroundColor: activeView === 'map' ? '#1f2937' : 'transparent', color: activeView === 'map' ? 'white' : '#6b7280', cursor: 'pointer' }}>
+          <MapIcon size={16} />
         </button>
-
-        <button
-          onClick={() => setActiveView('itinerary')}
-          style={{
-            position: 'relative',
-            padding: '6px 10px',
-            border: 'none',
-            borderRadius: '13px',
-            backgroundColor: activeView === 'itinerary' ? '#1f2937' : 'transparent',
-            color: activeView === 'itinerary' ? 'white' : '#6b7280',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <List size={16} strokeWidth={2} />
+        <button onClick={() => setActiveView('itinerary')} style={{ padding: '6px 10px', border: 'none', borderRadius: '13px', backgroundColor: activeView === 'itinerary' ? '#1f2937' : 'transparent', color: activeView === 'itinerary' ? 'white' : '#6b7280', cursor: 'pointer' }}>
+          <List size={16} />
         </button>
       </div>
 
-      <div 
-        ref={mapContainer} 
-        style={{ 
-          width: '100%', 
-          height: '100%',
-          borderRadius: '16px',
-          overflow: 'hidden',
-          display: activeView === 'map' ? 'block' : 'none'
-        }} 
-      />
+      <div ref={mapContainer} style={{ width: '100%', height: '100%', borderRadius: '16px', overflow: 'hidden', display: activeView === 'map' ? 'block' : 'none' }} />
 
       {activeView === 'itinerary' && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            borderRadius: isFullscreen ? '16px' : '16px',
-            backgroundColor: 'white',
-            overflow: 'hidden'
-          }}
-        >
-          <ItineraryView 
-            itinerary={itinerary}
-            onRemoveItem={removeFromItinerary}
-            onCardClick={handleCardClick}
-          />
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '16px', backgroundColor: 'white', overflow: 'hidden' }}>
+          <ItineraryView itinerary={itinerary} onRemoveItem={removeFromItinerary} onCardClick={handleCardClick} />
         </div>
       )}
 
       <style>
         {`
-          .maplibregl-popup-content {
-            padding: 0 !important;
-            background: transparent !important;
-            box-shadow: none !important;
-          }
-          .maplibregl-popup-tip {
-            display: none !important;
-          }
-          .tourist-spot-popup .maplibregl-popup-content {
-            border-radius: 12px;
-          }
-          .custom-marker {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          .video-scroll-container::-webkit-scrollbar {
-            display: none;
-          }
+          .maplibregl-popup-content { padding: 0 !important; background: transparent !important; box-shadow: none !important; }
+          .maplibregl-popup-tip { display: none !important; }
+          .video-scroll-container::-webkit-scrollbar { display: none; }
         `}
       </style>
     </div>
