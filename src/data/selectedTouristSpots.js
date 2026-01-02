@@ -1,10 +1,10 @@
-// Selected tourist spots - 7 featured spots at default zoom
+// Selected tourist spots - 8 featured spots at default zoom
 // ONLY using spots that actually exist in the GeoJSON files
 export const selectedSpots = [
   {
-    municipality: 'VIRAC',
-    spotName: 'Mamangal Beach',
-    geojsonFile: 'VIRAC.geojson'
+    municipality: 'SAN_ANDRES',
+    spotName: 'Mamangal Beach Resort',
+    geojsonFile: 'san_andres.geojson'
   },
   {
     municipality: 'CARAMORAN',
@@ -35,6 +35,11 @@ export const selectedSpots = [
     municipality: 'BARAS',
     spotName: 'Binurong Point',
     geojsonFile: 'baras.geojson'
+  },
+  {
+    municipality: 'SAN_ANDRES',
+    spotName: 'Codon Lighthouse',
+    geojsonFile: 'san_andres.geojson'
   }
 ];
 
