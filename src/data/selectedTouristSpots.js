@@ -12,9 +12,9 @@ export const selectedSpots = [
     geojsonFile: 'caramoran.geojson'
   },
   {
-    municipality: 'PANDAN',
-    spotName: 'Paraiso ni Honesto',
-    geojsonFile: 'pandan.geojson'
+    municipality: 'BAGAMANOC',
+    spotName: 'Paday Falls',
+    geojsonFile: 'bagamanoc.geojson'
   },
   {
     municipality: 'GIGMOTO',
