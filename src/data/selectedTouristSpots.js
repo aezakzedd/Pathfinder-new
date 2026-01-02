@@ -1,10 +1,25 @@
-// Selected tourist spots - one per municipality
+// Selected tourist spots - 7 featured spots at default zoom
 // ONLY using spots that actually exist in the GeoJSON files
 export const selectedSpots = [
   {
     municipality: 'VIRAC',
-    spotName: 'Marilima Beach',
+    spotName: 'Mamangal Beach',
     geojsonFile: 'VIRAC.geojson'
+  },
+  {
+    municipality: 'CARAMORAN',
+    spotName: 'Palumbanes Island',
+    geojsonFile: 'caramoran.geojson'
+  },
+  {
+    municipality: 'PANDAN',
+    spotName: 'Paraiso ni Honesto',
+    geojsonFile: 'pandan.geojson'
+  },
+  {
+    municipality: 'GIGMOTO',
+    spotName: 'Nupa Green Lagoon',
+    geojsonFile: 'gigmoto.geojson'
   },
   {
     municipality: 'BATO',
@@ -12,49 +27,14 @@ export const selectedSpots = [
     geojsonFile: 'BATO.geojson'
   },
   {
-    municipality: 'BARAS',
-    spotName: 'Binurong Point',
-    geojsonFile: 'baras.geojson'
-  },
-  {
     municipality: 'SAN_MIGUEL',
-    spotName: 'San Miguel Church',
+    spotName: 'San Miguel River Park',
     geojsonFile: 'san_miguel.geojson'
   },
   {
-    municipality: 'BAGAMANOC',
-    spotName: 'Paday Falls',
-    geojsonFile: 'bagamanoc.geojson'
-  },
-  {
-    municipality: 'VIGA',
-    spotName: 'Cogon Hills',
-    geojsonFile: 'viga.geojson'
-  },
-  {
-    municipality: 'PANGANIBAN',
-    spotName: 'Tuwad-Tuwadan Lagoon',
-    geojsonFile: 'panganiban.geojson'
-  },
-  {
-    municipality: 'PANDAN',
-    spotName: 'Immaculate Conception Parish Church',
-    geojsonFile: 'pandan.geojson'
-  },
-  {
-    municipality: 'CARAMORAN',
-    spotName: 'Mamangal Beach',
-    geojsonFile: 'caramoran.geojson'
-  },
-  {
-    municipality: 'GIGMOTO',
-    spotName: 'Gigmoto Lighthouse',
-    geojsonFile: 'gigmoto.geojson'
-  },
-  {
-    municipality: 'SAN_ANDRES',
-    spotName: 'San Andres Beach',
-    geojsonFile: 'san_andres.geojson'
+    municipality: 'BARAS',
+    spotName: 'Binurong Point',
+    geojsonFile: 'baras.geojson'
   }
 ];
 
@@ -88,5 +68,7 @@ export const categoryColors = {
   ISLAND: { bg: '#99f6e4', text: '#134e4a' },
   BAR: { bg: '#fca5a5', text: '#7f1d1d' },
   PARK: { bg: '#bef264', text: '#3f6212' },
+  LAGOON: { bg: '#a5f3fc', text: '#155e75' },
+  RIVER: { bg: '#bae6fd', text: '#0c4a6e' },
   default: { bg: '#f3f4f6', text: '#1f2937' }
 };
