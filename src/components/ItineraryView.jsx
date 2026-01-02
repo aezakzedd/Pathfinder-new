@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, X } from 'lucide-react';
+import { MapPin, X, Calendar } from 'lucide-react';
 
 // Helper to calculate estimated travel time (mock for now)
 const calculateTravelTime = (place1, place2) => {
@@ -26,11 +26,40 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
           backgroundColor: 'white'
         }}
       >
-        <MapPin size={48} strokeWidth={1.5} style={{ marginBottom: '16px', opacity: 0.5 }} />
-        <p style={{ fontSize: '16px', fontWeight: '600', margin: 0, marginBottom: '8px' }}>No places added yet</p>
-        <p style={{ fontSize: '14px', margin: 0, textAlign: 'center', maxWidth: '300px' }}>
-          Click "Add to Itinerary" on any tourist spot to start building your trip
-        </p>
+        {/* Create Itinerary Button */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            padding: '12px 24px',
+            backgroundColor: '#84cc16',
+            borderRadius: '24px',
+            cursor: 'pointer',
+            boxShadow: '0 4px 20px rgba(132, 204, 22, 0.6)',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.05)';
+            e.currentTarget.style.boxShadow = '0 6px 24px rgba(132, 204, 22, 0.7)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = '0 4px 20px rgba(132, 204, 22, 0.6)';
+          }}
+        >
+          <Calendar color="black" size={20} strokeWidth={3} />
+          <span
+            style={{
+              color: 'black',
+              fontSize: '14px',
+              fontWeight: '600'
+            }}
+          >
+            Create Itinerary
+          </span>
+        </div>
       </div>
     );
   }
