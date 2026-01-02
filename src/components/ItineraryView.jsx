@@ -1,75 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  MapPin, 
-  Church, 
-  Waves, 
-  Mountain, 
-  Trees, 
-  Bed, 
-  UtensilsCrossed, 
-  Coffee, 
-  Building2, 
-  Landmark,
-  Palmtree,
-  Beer,
-  ChevronDown,
-  ChevronUp,
-  X
-} from 'lucide-react';
+import { MapPin, X } from 'lucide-react';
 
-// Category icon mapping
-const getCategoryIcon = (categories) => {
-  if (!categories || categories.length === 0) {
-    return <MapPin size={20} strokeWidth={2.5} />;
-  }
-
-  const category = categories[0]?.toUpperCase();
-  
-  const iconMap = {
-    RELIGIOUS_SITE: <Church size={20} strokeWidth={2.5} />,
-    BEACH: <Waves size={20} strokeWidth={2.5} />,
-    WATERFALL: <Waves size={20} strokeWidth={2.5} />,
-    VIEWPOINT: <Mountain size={20} strokeWidth={2.5} />,
-    NATURE: <Trees size={20} strokeWidth={2.5} />,
-    ECO_PARK: <Trees size={20} strokeWidth={2.5} />,
-    PARK: <Trees size={20} strokeWidth={2.5} />,
-    ACCOMMODATION: <Bed size={20} strokeWidth={2.5} />,
-    RESORT: <Palmtree size={20} strokeWidth={2.5} />,
-    RESTAURANT: <UtensilsCrossed size={20} strokeWidth={2.5} />,
-    CAFE: <Coffee size={20} strokeWidth={2.5} />,
-    MUSEUM: <Building2 size={20} strokeWidth={2.5} />,
-    HERITAGE: <Landmark size={20} strokeWidth={2.5} />,
-    LANDMARK: <Landmark size={20} strokeWidth={2.5} />,
-    SURFING: <Waves size={20} strokeWidth={2.5} />,
-    HIKING: <Mountain size={20} strokeWidth={2.5} />,
-    ISLAND: <Palmtree size={20} strokeWidth={2.5} />,
-    BAR: <Beer size={20} strokeWidth={2.5} />
-  };
-
-  return iconMap[category] || <MapPin size={20} strokeWidth={2.5} />;
-};
-
-// Category colors
-const categoryColors = {
-  BEACH: { bg: '#dbeafe', text: '#1e40af' },
-  WATERFALL: { bg: '#d1fae5', text: '#065f46' },
-  VIEWPOINT: { bg: '#fce7f3', text: '#9f1239' },
-  NATURE: { bg: '#dcfce7', text: '#14532d' },
-  ACCOMMODATION: { bg: '#fef3c7', text: '#92400e' },
-  RESORT: { bg: '#fed7aa', text: '#9a3412' },
-  CAFE: { bg: '#e0e7ff', text: '#3730a3' },
-  RESTAURANT: { bg: '#fecaca', text: '#991b1b' },
-  MUSEUM: { bg: '#e9d5ff', text: '#6b21a8' },
-  HERITAGE: { bg: '#f3e8ff', text: '#581c87' },
-  RELIGIOUS_SITE: { bg: '#ddd6fe', text: '#4c1d95' },
-  SURFING: { bg: '#bfdbfe', text: '#1e3a8a' },
-  LANDMARK: { bg: '#fbbf24', text: '#78350f' },
-  ECO_PARK: { bg: '#86efac', text: '#14532d' },
-  HIKING: { bg: '#fdba74', text: '#7c2d12' },
-  ISLAND: { bg: '#99f6e4', text: '#134e4a' },
-  BAR: { bg: '#fca5a5', text: '#7f1d1d' },
-  PARK: { bg: '#bef264', text: '#3f6212' },
-  default: { bg: '#f3f4f6', text: '#1f2937' }
+// Helper to calculate estimated travel time (mock for now)
+const calculateTravelTime = (place1, place2) => {
+  // For now, return mock time - you can integrate with OSRM API later
+  const times = ['15m', '20m', '12m', '25m', '18m', '30m'];
+  return times[Math.floor(Math.random() * times.length)];
 };
 
 const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
@@ -99,13 +35,6 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
     );
   }
 
-  const toggleDate = (date) => {
-    setExpandedDates(prev => ({
-      ...prev,
-      [date]: !prev[date]
-    }));
-  };
-
   // Group itinerary by date (for now, all go to same date)
   const dateGroup = 'Feb 01, Sun';
   const isExpanded = expandedDates[dateGroup];
@@ -121,238 +50,270 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
     >
       {/* Date Section */}
       <div style={{ borderBottom: '1px solid #e5e7eb' }}>
-        {/* Date Header - Collapsible */}
-        <button
-          onClick={() => toggleDate(dateGroup)}
-          style={{
-            width: '100%',
-            padding: '16px 20px',
-            backgroundColor: 'white',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f9fafb';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'white';
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {isExpanded ? (
-              <ChevronDown size={20} color="#111827" strokeWidth={2} />
-            ) : (
-              <ChevronUp size={20} color="#111827" strokeWidth={2} />
-            )}
-            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
-              {dateGroup}
-            </h2>
-          </div>
-        </button>
+        {/* Date Header */}
+        <div style={{ padding: '16px 20px', backgroundColor: 'white' }}>
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
+            {dateGroup}
+          </h2>
+        </div>
 
         {/* Places List with Timeline */}
         {isExpanded && (
           <div style={{ padding: '0 20px 20px 20px' }}>
             {itinerary.map((place, index) => {
               const isLast = index === itinerary.length - 1;
-              const primaryCategory = place.categories?.[0] || 'default';
-              const colors = categoryColors[primaryCategory] || categoryColors.default;
+              const travelTime = !isLast ? calculateTravelTime(place, itinerary[index + 1]) : null;
 
               return (
-                <div
-                  key={`${place.name}-${index}`}
-                  style={{
-                    position: 'relative',
-                    display: 'flex',
-                    gap: '12px',
-                    paddingBottom: '0'
-                  }}
-                >
-                  {/* Timeline - Icon with vertical line */}
+                <React.Fragment key={`${place.name}-${index}`}>
+                  {/* Place Card Container */}
                   <div
                     style={{
                       position: 'relative',
                       display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      paddingTop: '8px'
+                      gap: '12px'
                     }}
                   >
-                    {/* Icon circle */}
+                    {/* Timeline Circle */}
                     <div
                       style={{
-                        width: '48px',
-                        height: '48px',
-                        borderRadius: '50%',
-                        backgroundColor: colors.bg,
-                        color: colors.text,
+                        position: 'relative',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '3px solid white',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                        flexShrink: 0,
-                        zIndex: 1
+                        paddingTop: '8px'
                       }}
                     >
-                      {getCategoryIcon(place.categories)}
-                    </div>
-
-                    {/* Vertical connecting line - extends to next icon */}
-                    {!isLast && (
+                      {/* Circle */}
                       <div
                         style={{
-                          position: 'absolute',
-                          top: '56px', // Start below the icon (48px icon + 8px padding)
-                          width: '2px',
-                          height: 'calc(100% + 16px)', // Extend beyond container to connect to next icon
-                          backgroundColor: '#e5e7eb',
-                          zIndex: 0
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          backgroundColor: 'white',
+                          border: '3px solid #111827',
+                          flexShrink: 0,
+                          zIndex: 1
                         }}
                       />
-                    )}
-                  </div>
 
-                  {/* Place Card */}
-                  <div
-                    onClick={() => {
-                      if (onCardClick) {
-                        onCardClick(place);
-                      }
-                    }}
-                    style={{
-                      flex: 1,
-                      backgroundColor: 'white',
-                      borderRadius: '12px',
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                      overflow: 'hidden',
-                      transition: 'box-shadow 0.2s ease',
-                      cursor: 'pointer',
-                      marginTop: '8px',
-                      marginBottom: isLast ? '0' : '16px'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-                    }}
-                  >
-                    <div style={{ display: 'flex', height: '140px' }}>
-                      {/* Image */}
-                      {place.images && place.images.length > 0 ? (
-                        <img
-                          src={place.images[0]}
-                          alt={place.name}
-                          style={{
-                            width: '140px',
-                            height: '140px',
-                            objectFit: 'cover',
-                            flexShrink: 0
-                          }}
-                        />
-                      ) : (
+                      {/* Vertical line to transport indicator */}
+                      {!isLast && (
                         <div
                           style={{
-                            width: '140px',
-                            height: '140px',
-                            backgroundColor: '#f3f4f6',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0
+                            position: 'absolute',
+                            top: '28px',
+                            width: '2px',
+                            height: 'calc(100% - 8px)',
+                            backgroundColor: '#d1d5db',
+                            zIndex: 0
                           }}
-                        >
-                          <MapPin size={32} color="#9ca3af" strokeWidth={1.5} />
-                        </div>
+                        />
                       )}
+                    </div>
 
-                      {/* Content */}
-                      <div style={{ flex: 1, padding: '12px 12px 12px 16px', display: 'flex', flexDirection: 'column' }}>
-                        {/* Title and Rating */}
-                        <h3
-                          style={{
-                            margin: 0,
-                            fontSize: '16px',
-                            fontWeight: '600',
-                            color: '#111827',
-                            marginBottom: '4px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          {place.name}
-                        </h3>
-
-                        {/* Rating placeholder - you can add real rating data */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>4.1</span>
-                          <div style={{ display: 'flex', gap: '2px' }}>
-                            {[1, 2, 3, 4].map(i => (
-                              <span key={i} style={{ color: '#22c55e', fontSize: '12px' }}>●</span>
-                            ))}
-                            <span style={{ color: '#d1d5db', fontSize: '12px' }}>●</span>
+                    {/* Place Card */}
+                    <div
+                      onClick={() => {
+                        if (onCardClick) onCardClick(place);
+                      }}
+                      style={{
+                        flex: 1,
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                        overflow: 'hidden',
+                        transition: 'box-shadow 0.2s ease',
+                        cursor: 'pointer',
+                        marginTop: '8px',
+                        marginBottom: '8px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                      }}
+                    >
+                      <div style={{ display: 'flex', height: '120px' }}>
+                        {/* Image */}
+                        {place.images && place.images.length > 0 ? (
+                          <img
+                            src={place.images[0]}
+                            alt={place.name}
+                            style={{
+                              width: '120px',
+                              height: '120px',
+                              objectFit: 'cover',
+                              flexShrink: 0
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '120px',
+                              height: '120px',
+                              backgroundColor: '#f3f4f6',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}
+                          >
+                            <MapPin size={28} color="#9ca3af" strokeWidth={1.5} />
                           </div>
-                          <span style={{ fontSize: '12px', color: '#6b7280' }}>(205)</span>
+                        )}
+
+                        {/* Content */}
+                        <div style={{ flex: 1, padding: '12px 12px 12px 14px', display: 'flex', flexDirection: 'column' }}>
+                          {/* Title */}
+                          <h3
+                            style={{
+                              margin: 0,
+                              fontSize: '15px',
+                              fontWeight: '600',
+                              color: '#111827',
+                              marginBottom: '4px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              lineHeight: '1.4'
+                            }}
+                          >
+                            {place.name}
+                          </h3>
+
+                          {/* Location */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: 'auto' }}>
+                            <MapPin size={12} color="#6b7280" strokeWidth={2} />
+                            <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                              {place.location}
+                            </span>
+                          </div>
                         </div>
 
-                        {/* Category tags */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: 'auto' }}>
-                          {place.categories && place.categories.length > 0 && (
-                            <>
-                              {getCategoryIcon([place.categories[0]])}
-                              <span style={{ fontSize: '13px', color: '#6b7280' }}>
-                                {place.categories[0].toLowerCase().replace('_', ' ')}
-                              </span>
-                            </>
-                          )}
+                        {/* X button to remove */}
+                        <div
+                          style={{
+                            padding: '8px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'flex-start'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onRemoveItem) onRemoveItem(index);
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              backgroundColor: '#f3f4f6',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#fee2e2';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#f3f4f6';
+                            }}
+                          >
+                            <X size={14} color="#6b7280" strokeWidth={2.5} />
+                          </div>
                         </div>
                       </div>
+                    </div>
+                  </div>
 
-                      {/* X button to remove */}
+                  {/* Transport Time Indicator - Between places */}
+                  {!isLast && travelTime && (
+                    <div
+                      style={{
+                        position: 'relative',
+                        display: 'flex',
+                        gap: '12px',
+                        marginTop: '0px',
+                        marginBottom: '0px'
+                      }}
+                    >
+                      {/* Vertical line continues */}
                       <div
                         style={{
-                          padding: '8px',
-                          cursor: 'pointer',
+                          position: 'relative',
                           display: 'flex',
-                          alignItems: 'flex-start'
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onRemoveItem) onRemoveItem(index);
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          width: '20px'
                         }}
                       >
                         <div
                           style={{
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '50%',
-                            backgroundColor: '#fee2e2',
+                            width: '2px',
+                            height: '100%',
+                            backgroundColor: '#d1d5db'
+                          }}
+                        />
+                      </div>
+
+                      {/* Transport Button */}
+                      <div
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '12px 0'
+                        }}
+                      >
+                        <div
+                          style={{
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#fecaca';
-                            e.currentTarget.style.transform = 'scale(1.1)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#fee2e2';
-                            e.currentTarget.style.transform = 'scale(1)';
+                            gap: '8px',
+                            padding: '8px 16px',
+                            backgroundColor: '#fef3c7',
+                            borderRadius: '24px',
+                            border: '1px solid #fbbf24'
                           }}
                         >
-                          <X size={16} color="#dc2626" strokeWidth={2.5} />
+                          {/* Car icon - minimalistic */}
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#000000"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M5 17h-2v-6l2-5h9l4 5v6h-2"></path>
+                            <circle cx="7" cy="17" r="2"></circle>
+                            <circle cx="17" cy="17" r="2"></circle>
+                          </svg>
+
+                          {/* Time text */}
+                          <span
+                            style={{
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              color: '#000000'
+                            }}
+                          >
+                            {travelTime}
+                          </span>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  )}
+                </React.Fragment>
               );
             })}
           </div>
