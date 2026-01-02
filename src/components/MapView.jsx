@@ -15,14 +15,14 @@ const PLATFORMS = {
     color: '#1877F2',
     textColor: '#FFFFFF'
   },
-  tiktok: {
-    name: 'TikTok',
-    color: '#000000',
-    textColor: '#FFFFFF'
-  },
   youtube: {
     name: 'YouTube',
     color: '#FF0000',
+    textColor: '#FFFFFF'
+  },
+  tiktok: {
+    name: 'TikTok',
+    color: '#000000',
     textColor: '#FFFFFF'
   },
   instagram: {
@@ -177,35 +177,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [loadedVideos, setLoadedVideos] = useState(new Set([0])); // Start with first video
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const videoRefs = useRef([]);
+  const iframeRefs = useRef([]);
   const observerRef = useRef(null);
-  const tiktokScriptLoaded = useRef(false);
-  const [tiktokReady, setTiktokReady] = useState(false);
 
   // Performance monitoring
   const [showPerformance, setShowPerformance] = useState(false);
-
-  // Load TikTok embed script
-  useEffect(() => {
-    if (tiktokScriptLoaded.current) return;
-
-    console.log('🎵 Loading TikTok embed script...');
-    const script = document.createElement('script');
-    script.src = 'https://www.tiktok.com/embed.js';
-    script.async = true;
-    script.onload = () => {
-      console.log('✅ TikTok script loaded');
-      setTiktokReady(true);
-    };
-    script.onerror = () => {
-      console.error('❌ Failed to load TikTok script');
-    };
-    document.body.appendChild(script);
-    tiktokScriptLoaded.current = true;
-
-    return () => {
-      // Don't remove script on cleanup as it might be needed again
-    };
-  }, []);
 
   // Toggle performance monitor with Ctrl+Shift+P
   useEffect(() => {
@@ -248,17 +224,48 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     });
   }, []);
 
-  // Intersection Observer for lazy loading
+  // Intersection Observer for lazy loading AND autoplay/pause
   useEffect(() => {
     if (!modalOpen) return;
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
+          const index = parseInt(entry.target.dataset.videoIndex);
+          const iframe = iframeRefs.current[index];
+          
           if (entry.isIntersecting) {
-            const index = parseInt(entry.target.dataset.videoIndex);
-            console.log(`👁️ Video ${index} is now visible`);
+            console.log(`👁️ Video ${index} is now visible - Playing`);
             updateVideoQueue(index);
+            
+            // Autoplay when video comes into view
+            if (iframe) {
+              const platform = getVideoPlatform(index);
+              if (platform === 'youtube') {
+                // Send play command to YouTube iframe
+                iframe.contentWindow?.postMessage(
+                  JSON.stringify({ event: 'command', func: 'playVideo', args: '' }),
+                  '*'
+                );
+              } else if (platform === 'facebook') {
+                // Facebook autoplay is handled by URL parameter
+                console.log('📘 Facebook video autoplaying');
+              }
+            }
+          } else {
+            console.log(`👁️ Video ${index} left view - Pausing`);
+            
+            // Pause when video leaves view
+            if (iframe) {
+              const platform = getVideoPlatform(index);
+              if (platform === 'youtube') {
+                // Send pause command to YouTube iframe
+                iframe.contentWindow?.postMessage(
+                  JSON.stringify({ event: 'command', func: 'pauseVideo', args: '' }),
+                  '*'
+                );
+              }
+            }
           }
         });
       },
@@ -382,6 +389,18 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   // Close modal
   const closeModal = () => {
     setModalOpen(false);
+    // Pause all videos when closing
+    iframeRefs.current.forEach((iframe, index) => {
+      if (iframe) {
+        const platform = getVideoPlatform(index);
+        if (platform === 'youtube') {
+          iframe.contentWindow?.postMessage(
+            JSON.stringify({ event: 'command', func: 'pauseVideo', args: '' }),
+            '*'
+          );
+        }
+      }
+    });
     setTimeout(() => {
       setModalImage(null);
       setModalSpot(null);
@@ -1015,37 +1034,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
   // Get platform for video based on index
   const getVideoPlatform = (index) => {
-    if (index === 1) return 'tiktok';
+    if (index === 1) return 'youtube';
     return 'facebook';
   };
 
   // Video card component with lazy loading
   const VideoCard = ({ index, isLoaded }) => {
-    const tiktokRef = useRef(null);
     const platform = getVideoPlatform(index);
     const platformConfig = PLATFORMS[platform];
-    const [embedRendered, setEmbedRendered] = useState(false);
-
-    // Process TikTok embed when it becomes loaded
-    useEffect(() => {
-      if (index === 1 && isLoaded && !embedRendered && tiktokRef.current) {
-        console.log('🎵 Processing TikTok embed for video', index);
-        
-        // Multiple attempts to ensure TikTok embed loads
-        const attempts = [100, 300, 500, 1000];
-        attempts.forEach((delay) => {
-          setTimeout(() => {
-            if (window.tiktok?.process) {
-              window.tiktok.process();
-              console.log(`✅ TikTok processed (attempt at ${delay}ms)`);
-              setEmbedRendered(true);
-            } else {
-              console.log(`⏳ TikTok not ready yet (${delay}ms)`);
-            }
-          }, delay);
-        });
-      }
-    }, [index, isLoaded, embedRendered]);
+    const isLandscape = platform === 'youtube';
 
     return (
       <div
@@ -1063,9 +1060,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       >
         <div
           style={{
-            width: '300px',
+            width: isLandscape ? '500px' : '300px',
             height: '85vh',
-            maxHeight: '600px',
+            maxHeight: isLandscape ? '400px' : '600px',
             backgroundColor: '#000000',
             borderRadius: '16px',
             position: 'relative',
@@ -1087,47 +1084,30 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           >
             {!isLoaded ? (
               <VideoSkeleton />
-            ) : index === 1 ? (
-              // TikTok embed for video 2 (index 1)
-              <div 
-                ref={tiktokRef}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: 0,
-                  animation: 'fadeIn 0.5s ease-in 0.3s forwards'
-                }}
-              >
-                <blockquote 
-                  className="tiktok-embed" 
-                  cite="https://www.tiktok.com/@joansfootprints/video/7353150074429476101" 
-                  data-video-id="7353150074429476101" 
-                  style={{ 
-                    maxWidth: '605px',
-                    minWidth: '325px',
-                    margin: 0
-                  }}
-                > 
-                  <section> 
-                    <a 
-                      target="_blank" 
-                      title="@joansfootprints" 
-                      href="https://www.tiktok.com/@joansfootprints?refer=embed"
-                      rel="noopener noreferrer"
-                    >
-                      @joansfootprints
-                    </a> 
-                    {' '}This is Binurong Point, Catanduanes✨ Best time to go here is sunrise and sunset!❤️
-                  </section> 
-                </blockquote>
-              </div>
-            ) : (
-              // Facebook video for other indices
+            ) : platform === 'youtube' ? (
+              // YouTube embed (landscape)
               <iframe 
-                src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0" 
+                ref={(el) => (iframeRefs.current[index] = el)}
+                width="100%" 
+                height="100%" 
+                src="https://www.youtube.com/embed/j6IsY1PR5XE?si=9HeiBBjuU3Y_O63y&enablejsapi=1&autoplay=1&mute=1" 
+                title="YouTube video player" 
+                frameBorder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                referrerPolicy="strict-origin-when-cross-origin" 
+                allowFullScreen
+                style={{
+                  border: 'none',
+                  borderRadius: '16px',
+                  opacity: 0,
+                  animation: 'fadeIn 0.5s ease-in forwards'
+                }}
+              />
+            ) : (
+              // Facebook video (portrait)
+              <iframe 
+                ref={(el) => (iframeRefs.current[index] = el)}
+                src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0&autoplay=true" 
                 width="267" 
                 height="476" 
                 style={{
@@ -1302,7 +1282,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#84cc16' }}>Video Queue</div>
           <div>Current: {currentVideoIndex}</div>
           <div>Loaded: [{Array.from(loadedVideos).join(', ')}]</div>
-          <div>TikTok Ready: {tiktokReady ? '✅' : '⏳'}</div>
           <div style={{ marginTop: '8px', fontSize: '11px', color: '#9ca3af' }}>Press Ctrl+Shift+P to toggle</div>
         </div>
       )}
