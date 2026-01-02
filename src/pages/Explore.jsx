@@ -12,6 +12,7 @@ export default function Explore() {
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const containerRef = useRef(null);
   const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
+  const [isPositionCalculated, setIsPositionCalculated] = useState(false);
   const resizeTimeoutRef = useRef(null);
 
   // Memoized calculate function to prevent recreation
@@ -23,19 +24,22 @@ export default function Explore() {
       
       // Calculate distance from bottom-right to top-left
       // Adjusted to account for button width when minimized (~160px for text + chevron)
-      const translateX = -(width - 160 - 8); // Changed from 40 to 160 to accommodate text
+      const translateX = -(width - 160 - 8);
       const translateY = -(height - 40 - 8);
       
       setTranslateValues({ x: translateX, y: translateY });
+      setIsPositionCalculated(true);
     }
   }, []);
 
   // Use useLayoutEffect to calculate position before first paint
   useLayoutEffect(() => {
-    // Calculate on mount before paint
     calculateTranslateValues();
-    // Enable animations after position is set
-    setHasMounted(true);
+    // Small delay to ensure position is rendered before enabling animations
+    const timer = setTimeout(() => {
+      setHasMounted(true);
+    }, 50);
+    return () => clearTimeout(timer);
   }, [calculateTranslateValues]);
 
   // Debounced resize handler for better performance
@@ -155,7 +159,7 @@ export default function Explore() {
     minWidth: '40px',
     borderRadius: isMinimized ? '20px' : '50%',
     backgroundColor: '#84cc16',
-    display: 'flex',
+    display: isPositionCalculated ? 'flex' : 'none', // Hide completely until calculated
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
@@ -174,10 +178,8 @@ export default function Explore() {
       ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
       : '0 2px 8px rgba(0, 0, 0, 0.15)',
     willChange: 'transform, box-shadow',
-    whiteSpace: 'nowrap',
-    // Hide button until position is calculated
-    opacity: translateValues.x === 0 && translateValues.y === 0 ? 0 : 1
-  }), [isMinimized, translateValues.x, translateValues.y, hasMounted]);
+    whiteSpace: 'nowrap'
+  }), [isMinimized, translateValues.x, translateValues.y, hasMounted, isPositionCalculated]);
 
   const chevronStyle = useMemo(() => ({
     transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
