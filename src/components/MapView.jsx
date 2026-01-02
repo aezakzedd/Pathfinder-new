@@ -154,9 +154,25 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const videoRefs = useRef([]);
   const observerRef = useRef(null);
+  const tiktokScriptLoaded = useRef(false);
 
   // Performance monitoring
   const [showPerformance, setShowPerformance] = useState(false);
+
+  // Load TikTok embed script
+  useEffect(() => {
+    if (tiktokScriptLoaded.current) return;
+
+    const script = document.createElement('script');
+    script.src = 'https://www.tiktok.com/embed.js';
+    script.async = true;
+    document.body.appendChild(script);
+    tiktokScriptLoaded.current = true;
+
+    return () => {
+      // Don't remove script on cleanup as it might be needed again
+    };
+  }, []);
 
   // Toggle performance monitor with Ctrl+Shift+P
   useEffect(() => {
@@ -197,6 +213,16 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       loaded: Array.from(newQueue),
       unloaded: Array.from({ length: videoCount }, (_, i) => i).filter(i => !newQueue.has(i))
     });
+
+    // Trigger TikTok script to process embeds when video 1 (TikTok) is loaded
+    if (newQueue.has(1) && window.tiktok) {
+      setTimeout(() => {
+        if (window.tiktok && window.tiktok.process) {
+          window.tiktok.process();
+          console.log('🎵 TikTok embed processed');
+        }
+      }, 100);
+    }
   }, []);
 
   // Intersection Observer for lazy loading
@@ -965,118 +991,173 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   }, [onToggleFullscreen]);
 
   // Video card component with lazy loading
-  const VideoCard = ({ index, isLoaded }) => (
-    <div
-      ref={(el) => (videoRefs.current[index] = el)}
-      data-video-index={index}
-      style={{
-        width: '100%',
-        height: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        scrollSnapAlign: 'start',
-        scrollSnapStop: 'always'
-      }}
-    >
+  const VideoCard = ({ index, isLoaded }) => {
+    const tiktokRef = useRef(null);
+
+    // Process TikTok embed when it becomes loaded
+    useEffect(() => {
+      if (index === 1 && isLoaded && tiktokRef.current && window.tiktok) {
+        setTimeout(() => {
+          if (window.tiktok && window.tiktok.process) {
+            window.tiktok.process();
+            console.log('🎵 TikTok embed initialized for video', index);
+          }
+        }, 200);
+      }
+    }, [index, isLoaded]);
+
+    return (
       <div
+        ref={(el) => (videoRefs.current[index] = el)}
+        data-video-index={index}
         style={{
-          width: '300px',
-          height: '85vh',
-          maxHeight: '600px',
-          backgroundColor: '#000000',
-          borderRadius: '16px',
-          position: 'relative',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
-          overflow: 'hidden',
+          width: '100%',
+          height: '100vh',
           display: 'flex',
-          flexDirection: 'column'
+          alignItems: 'center',
+          justifyContent: 'center',
+          scrollSnapAlign: 'start',
+          scrollSnapStop: 'always'
         }}
       >
         <div
           style={{
-            width: '100%',
-            height: '100%',
+            width: '300px',
+            height: '85vh',
+            maxHeight: '600px',
+            backgroundColor: '#000000',
+            borderRadius: '16px',
+            position: 'relative',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+            overflow: 'hidden',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: '#000000'
+            flexDirection: 'column'
           }}
         >
-          {isLoaded ? (
-            <iframe 
-              src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0" 
-              width="267" 
-              height="476" 
-              style={{
-                border: 'none',
-                overflow: 'hidden',
-                borderRadius: '8px',
-                opacity: 0,
-                animation: 'fadeIn 0.5s ease-in forwards'
-              }}
-              scrolling="no" 
-              frameBorder="0" 
-              allowFullScreen={true}
-              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-            />
-          ) : (
-            <VideoSkeleton />
-          )}
-        </div>
-        {modalSpot && (
           <div
             style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              padding: '16px',
-              background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 70%, transparent 100%)',
-              color: 'white',
-              zIndex: 10
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#000000'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <h3 style={{
+            {!isLoaded ? (
+              <VideoSkeleton />
+            ) : index === 1 ? (
+              // TikTok embed for video 2 (index 1)
+              <div 
+                ref={tiktokRef}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0,
+                  animation: 'fadeIn 0.5s ease-in forwards'
+                }}
+              >
+                <blockquote 
+                  className="tiktok-embed" 
+                  cite="https://www.tiktok.com/@joansfootprints/video/7353150074429476101" 
+                  data-video-id="7353150074429476101" 
+                  style={{ 
+                    maxWidth: '325px', 
+                    minWidth: '267px',
+                    margin: 0,
+                    borderRadius: '8px',
+                    overflow: 'hidden'
+                  }}
+                > 
+                  <section> 
+                    <a 
+                      target="_blank" 
+                      title="@joansfootprints" 
+                      href="https://www.tiktok.com/@joansfootprints?refer=embed"
+                    >
+                      @joansfootprints
+                    </a> 
+                    This is Binurong Point, Catanduanes✨ Best time to go here is sunrise and sunset!❤️
+                  </section> 
+                </blockquote>
+              </div>
+            ) : (
+              // Facebook video for other indices
+              <iframe 
+                src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0" 
+                width="267" 
+                height="476" 
+                style={{
+                  border: 'none',
+                  overflow: 'hidden',
+                  borderRadius: '8px',
+                  opacity: 0,
+                  animation: 'fadeIn 0.5s ease-in forwards'
+                }}
+                scrolling="no" 
+                frameBorder="0" 
+                allowFullScreen={true}
+                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+              />
+            )}
+          </div>
+          {modalSpot && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                padding: '16px',
+                background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 70%, transparent 100%)',
+                color: 'white',
+                zIndex: 10
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                }}>
+                  {modalSpot.name}
+                </h3>
+                <span style={{
+                  fontSize: '12px',
+                  padding: '2px 8px',
+                  backgroundColor: isLoaded ? (index === 1 ? 'rgba(255, 0, 80, 0.8)' : 'rgba(132, 204, 22, 0.8)') : 'rgba(255, 255, 255, 0.2)',
+                  borderRadius: '12px',
+                  fontWeight: '600'
+                }}>
+                  {isLoaded ? (index === 1 ? '🎵 TikTok' : `${index + 1}/3`) : 'Loading...'}
+                </span>
+              </div>
+              <p style={{
                 margin: 0,
-                fontSize: '16px',
-                fontWeight: '600',
+                fontSize: '13px',
+                color: '#d1d5db',
                 textShadow: '0 2px 4px rgba(0,0,0,0.5)'
               }}>
-                {modalSpot.name}
-              </h3>
-              <span style={{
-                fontSize: '12px',
-                padding: '2px 8px',
-                backgroundColor: isLoaded ? 'rgba(132, 204, 22, 0.8)' : 'rgba(255, 255, 255, 0.2)',
-                borderRadius: '12px',
-                fontWeight: '600'
-              }}>
-                {isLoaded ? `${index + 1}/3` : 'Loading...'}
-              </span>
+                {modalSpot.location}
+              </p>
             </div>
-            <p style={{
-              margin: 0,
-              fontSize: '13px',
-              color: '#d1d5db',
-              textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-            }}>
-              {modalSpot.location}
-            </p>
-          </div>
-        )}
+          )}
+        </div>
+        <style>
+          {`
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+          `}
+        </style>
       </div>
-      <style>
-        {`
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-        `}
-      </style>
-    </div>
-  );
+    );
+  };
 
   // Modal content component - OPTIMIZED WITH LAZY LOADING
   const ModalContent = () => (
