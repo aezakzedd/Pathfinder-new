@@ -102,8 +102,8 @@ export default function TravellerInformation() {
         <div 
           key={`empty-start-${i}`} 
           style={{ 
-            padding: '8px',
-            minHeight: '32px'
+            padding: '6px',
+            minHeight: '28px'
           }} 
         />
       );
@@ -122,7 +122,7 @@ export default function TravellerInformation() {
           key={day}
           onClick={() => !isPast && handleDateClick(currentDate)}
           style={{
-            padding: '8px',
+            padding: '6px',
             textAlign: 'center',
             cursor: isPast ? 'not-allowed' : 'pointer',
             borderRadius: (isStart || isEnd) ? '50%' : '0',
@@ -135,10 +135,10 @@ export default function TravellerInformation() {
               isPast ? '#9ca3af' : 
               '#1f2937',
             fontWeight: (isStart || isEnd) ? '700' : '400',
-            fontSize: '13px',
+            fontSize: '12px',
             opacity: isPast ? 0.4 : 1,
             transition: 'all 0.2s ease',
-            minHeight: '32px',
+            minHeight: '28px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
@@ -168,8 +168,8 @@ export default function TravellerInformation() {
         <div 
           key={`empty-end-${i}`} 
           style={{ 
-            padding: '8px',
-            minHeight: '32px'
+            padding: '6px',
+            minHeight: '28px'
           }} 
         />
       );
@@ -182,7 +182,7 @@ export default function TravellerInformation() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '20px'
+          marginBottom: '12px'
         }}>
           <button
             onClick={previousMonth}
@@ -196,12 +196,12 @@ export default function TravellerInformation() {
               color: '#1f2937'
             }}
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={18} />
           </button>
           
           <div style={{
             fontWeight: '600',
-            fontSize: '15px',
+            fontSize: '14px',
             color: '#1f2937'
           }}>
             {monthName}
@@ -219,7 +219,7 @@ export default function TravellerInformation() {
               color: '#1f2937'
             }}
           >
-            <ChevronRight size={20} />
+            <ChevronRight size={18} />
           </button>
         </div>
 
@@ -234,9 +234,9 @@ export default function TravellerInformation() {
             <div
               key={index}
               style={{
-                padding: '8px 4px',
+                padding: '6px 4px',
                 textAlign: 'center',
-                fontSize: '11px',
+                fontSize: '10px',
                 fontWeight: '600',
                 color: '#6b7280'
               }}
@@ -278,7 +278,7 @@ export default function TravellerInformation() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '24px',
+      padding: '20px',
       boxSizing: 'border-box',
       overflow: 'auto'
     }}>
@@ -296,7 +296,7 @@ export default function TravellerInformation() {
         <div style={{
           display: 'flex',
           gap: '8px',
-          marginBottom: '24px'
+          marginBottom: '16px'
         }}>
           {[1, 2, 3].map((s) => (
             <div
@@ -316,29 +316,29 @@ export default function TravellerInformation() {
         {step === 1 && (
           <div style={{
             width: '100%',
-            maxWidth: '420px',
+            maxWidth: '380px',
             textAlign: 'center',
             animation: 'fadeIn 0.3s ease-in'
           }}>
             <h2 style={{
               color: 'white',
-              fontSize: '22px',
+              fontSize: '20px',
               fontWeight: '700',
-              marginBottom: '8px',
-              margin: '0 0 8px 0'
+              marginBottom: '6px',
+              margin: '0 0 6px 0'
             }}>When are you going?</h2>
             <p style={{
               color: '#9ca3af',
-              fontSize: '13px',
-              marginBottom: '20px',
-              margin: '0 0 20px 0'
+              fontSize: '12px',
+              marginBottom: '16px',
+              margin: '0 0 16px 0'
             }}>Choose a date range, up to 7 days.</p>
 
             {/* Calendar Container */}
             <div style={{
               backgroundColor: 'white',
-              borderRadius: '16px',
-              padding: '20px',
+              borderRadius: '14px',
+              padding: '16px',
               boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
             }}>
               {renderCalendar()}
@@ -542,7 +542,7 @@ export default function TravellerInformation() {
       <div style={{
         display: 'flex',
         gap: '12px',
-        marginTop: '20px',
+        marginTop: '16px',
         paddingTop: '12px',
         width: '100%',
         justifyContent: 'center',
