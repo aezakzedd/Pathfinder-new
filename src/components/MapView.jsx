@@ -559,7 +559,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return itineraryRef.current.some(item => item.name === spotName);
   }, []);
 
-  // Create info card HTML
+  // Create info card HTML - FIXED: Use text wrapping for long names
   const createInfoCardHTML = useCallback((spot) => {
     const categoryHTML = spot.categories
       .slice(0, 2)
@@ -575,6 +575,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           width: 28px;
           height: 28px;
           min-width: 28px;
+          flex-shrink: 0;
           border-radius: 14px;
           background-color: ${isInItinerary ? '#22c55e' : 'rgba(132, 204, 22, 0.95)'};
           border: none;
@@ -600,6 +601,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         <button id="close-card-btn" style="
           width: 28px;
           height: 28px;
+          min-width: 28px;
+          flex-shrink: 0;
           border-radius: 50%;
           background-color: rgba(0, 0, 0, 0.6);
           border: none;
@@ -725,7 +728,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         ${carouselHTML}
         <div style="padding: 12px 14px;">
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-            <i class="fa-solid fa-location-dot" style="font-size: 12px; color: #6b7280;"></i>
+            <i class="fa-solid fa-location-dot" style="font-size: 12px; color: #6b7280; flex-shrink: 0;"></i>
             <span style="color: #6b7280; font-size: 11px; font-weight: 500;">${spot.location}</span>
           </div>
           <h3 style="
@@ -734,6 +737,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             font-weight: 600;
             color: #111827;
             line-height: 1.4;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
           ">${spot.name}</h3>
           <div style="display: flex; flex-wrap: wrap;">
             ${categoryHTML}
@@ -900,7 +906,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           console.log('✅ Map loaded');
           mapLoaded.current = true;
           
-          // Add mask ONLY ONCE - check if it exists first
+          // Add mask ONLY ONCE
           if (!map.current.getSource('mask')) {
             map.current.addSource('mask', {
               type: 'geojson',
