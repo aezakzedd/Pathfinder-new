@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
-import { Map, ChevronDown, Calendar } from 'lucide-react';
+import { Map, ChevronDown, Calendar, Wallet } from 'lucide-react';
 import FloatingCard from '../components/FloatingCard';
 import MapView from '../components/MapView';
 import ChatBot from '../components/ChatBot';
@@ -14,6 +14,14 @@ export default function Explore() {
   const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
   const [isPositionCalculated, setIsPositionCalculated] = useState(false);
   const resizeTimeoutRef = useRef(null);
+  
+  // Budget state - lifted up to be shared between components
+  const [budget, setBudget] = useState(5000);
+  const [spent, setSpent] = useState(0);
+
+  // Calculate remaining budget and percentage
+  const remaining = budget - spent;
+  const percentageUsed = (spent / budget) * 100;
 
   // Memoized calculate function to prevent recreation
   const calculateTranslateValues = useCallback(() => {
@@ -229,14 +237,15 @@ export default function Explore() {
     position: 'relative'
   }), []);
 
-  // White container underneath the map
+  // White container underneath the map (Itinerary View)
   const whiteUnderContainerStyle = useMemo(() => ({
     width: '100%',
     height: '100%',
     backgroundColor: 'white',
     borderRadius: '16px',
     padding: '16px',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    position: 'relative'
   }), []);
 
   // Map container - properly sized to cover full parent content area when fullscreen
@@ -282,7 +291,7 @@ export default function Explore() {
               <div style={whiteCardTransformStyle}>
                 {/* Grey card background with TravellerInformation */}
                 <div style={whiteCardBackgroundStyle}>
-                  <TravellerInformation />
+                  <TravellerInformation budget={budget} setBudget={setBudget} />
                 </div>
               </div>
 
@@ -314,9 +323,123 @@ export default function Explore() {
           
           {/* Right container with white background underneath map */}
           <div style={rightContainerStyle}>
-            {/* White container underneath */}
+            {/* White container - Itinerary View */}
             <div style={whiteUnderContainerStyle}>
-              {/* Your content goes here */}
+              {/* Budget Tracker - Top Left Corner */}
+              <div style={{
+                position: 'absolute',
+                top: '16px',
+                left: '16px',
+                backgroundColor: '#000000',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                minWidth: '180px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                zIndex: 10,
+                border: '1px solid #374151'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginBottom: '8px'
+                }}>
+                  <Wallet size={16} color="#84cc16" strokeWidth={2} />
+                  <span style={{
+                    color: 'white',
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}>Budget Tracker</span>
+                </div>
+                
+                {/* Progress Bar */}
+                <div style={{
+                  width: '100%',
+                  height: '6px',
+                  backgroundColor: '#1f2937',
+                  borderRadius: '3px',
+                  overflow: 'hidden',
+                  marginBottom: '8px'
+                }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${Math.min(percentageUsed, 100)}%`,
+                    backgroundColor: percentageUsed > 90 ? '#ef4444' : percentageUsed > 70 ? '#f59e0b' : '#84cc16',
+                    transition: 'width 0.3s ease, background-color 0.3s ease'
+                  }} />
+                </div>
+
+                {/* Budget Details */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{
+                      color: '#9ca3af',
+                      fontSize: '10px'
+                    }}>Total Budget</span>
+                    <span style={{
+                      color: 'white',
+                      fontSize: '11px',
+                      fontWeight: '600'
+                    }}>₱{budget.toLocaleString()}</span>
+                  </div>
+                  
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{
+                      color: '#9ca3af',
+                      fontSize: '10px'
+                    }}>Spent</span>
+                    <span style={{
+                      color: percentageUsed > 90 ? '#ef4444' : '#f59e0b',
+                      fontSize: '11px',
+                      fontWeight: '600'
+                    }}>₱{spent.toLocaleString()}</span>
+                  </div>
+                  
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingTop: '4px',
+                    borderTop: '1px solid #374151'
+                  }}>
+                    <span style={{
+                      color: '#84cc16',
+                      fontSize: '10px',
+                      fontWeight: '600'
+                    }}>Remaining</span>
+                    <span style={{
+                      color: '#84cc16',
+                      fontSize: '12px',
+                      fontWeight: '700'
+                    }}>₱{remaining.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Itinerary content will go here */}
+              <div style={{
+                paddingTop: '80px',
+                height: '100%',
+                overflowY: 'auto'
+              }}>
+                <p style={{
+                  color: '#666',
+                  textAlign: 'center',
+                  fontSize: '14px'
+                }}>Your itinerary will appear here</p>
+              </div>
             </div>
             
             {/* Map container - covers full parent width when fullscreen */}
