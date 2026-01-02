@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Calendar, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, CloudFog } from 'lucide-react';
+import { Calendar, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, CloudFog, ChevronDown, Save } from 'lucide-react';
 
 export default function TravellerInformation() {
+  const [isExpanded, setIsExpanded] = useState(false); // Start minimized
   const [dateRange, setDateRange] = useState('Nov 30 - Dec 2');
   const [budget, setBudget] = useState(5000);
   const [activities, setActivities] = useState({
@@ -39,6 +40,18 @@ export default function TravellerInformation() {
     }));
   };
 
+  const handleSave = () => {
+    console.log('Saving itinerary:', {
+      dateRange,
+      budget,
+      activities: Object.entries(activities)
+        .filter(([_, checked]) => checked)
+        .map(([activity]) => activity)
+    });
+    // TODO: Implement save functionality
+    alert('Itinerary preferences saved!');
+  };
+
   // Get weather icon based on condition
   const getWeatherIcon = (weatherMain) => {
     const iconProps = { size: 48, color: '#84cc16', strokeWidth: 1.5 };
@@ -71,254 +84,368 @@ export default function TravellerInformation() {
       width: '100%',
       height: '100%',
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
+      flexDirection: 'column',
+      position: 'relative'
     }}>
+      {/* Header with Create Itinerary button and Save button */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gridTemplateRows: '1fr 1fr',
-        gap: '12px',
-        width: 'calc(100% - 48px)',
-        height: 'calc(100% - 48px)',
-        maxWidth: '90%',
-        maxHeight: '90%'
+        position: 'absolute',
+        top: '12px',
+        left: '12px',
+        right: '12px',
+        zIndex: 10,
+        display: 'flex',
+        gap: '8px',
+        alignItems: 'center'
       }}>
-        {/* Journey Dates Card */}
-        <div style={{
-          backgroundColor: '#000000', // Black background
-          borderRadius: '12px',
-          padding: '14px',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <h3 style={{
+        {/* Create Itinerary / Collapse button */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          style={{
+            padding: '10px 16px',
+            backgroundColor: '#84cc16',
             color: 'white',
-            fontSize: '13px',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '14px',
             fontWeight: '600',
-            marginBottom: '10px',
-            margin: 0
-          }}>Journey Dates</h3>
-          <div style={{
+            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            backgroundColor: '#1f2937',
-            padding: '8px',
-            borderRadius: '8px',
-            marginTop: '8px'
+            boxShadow: '0 2px 8px rgba(132, 204, 22, 0.3)',
+            transition: 'all 0.2s ease',
+            flex: isExpanded ? 'none' : '1'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#65a30d';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(132, 204, 22, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#84cc16';
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(132, 204, 22, 0.3)';
+          }}
+        >
+          {isExpanded ? (
+            <>
+              <ChevronDown size={18} strokeWidth={2.5} />
+              <span>Collapse</span>
+            </>
+          ) : (
+            <span>Create Itinerary</span>
+          )}
+        </button>
+
+        {/* Save button - only shown when expanded */}
+        {isExpanded && (
+          <button
+            onClick={handleSave}
+            style={{
+              padding: '10px 16px',
+              backgroundColor: '#1f2937',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#111827';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#1f2937';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2)';
+            }}
+          >
+            <Save size={18} strokeWidth={2.5} />
+            <span>Save</span>
+          </button>
+        )}
+      </div>
+
+      {/* Content - only shown when expanded */}
+      <div style={{
+        width: '100%',
+        height: '100%',
+        display: isExpanded ? 'flex' : 'none',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: '60px' // Space for header buttons
+      }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gridTemplateRows: '1fr 1fr',
+          gap: '12px',
+          width: 'calc(100% - 48px)',
+          height: 'calc(100% - 96px)',
+          maxWidth: '90%',
+          maxHeight: '90%'
+        }}>
+          {/* Journey Dates Card */}
+          <div style={{
+            backgroundColor: '#000000',
+            borderRadius: '12px',
+            padding: '14px',
+            display: 'flex',
+            flexDirection: 'column'
           }}>
-            <Calendar size={14} color="white" />
+            <h3 style={{
+              color: 'white',
+              fontSize: '13px',
+              fontWeight: '600',
+              marginBottom: '10px',
+              margin: 0
+            }}>Journey Dates</h3>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: '#1f2937',
+              padding: '8px',
+              borderRadius: '8px',
+              marginTop: '8px'
+            }}>
+              <Calendar size={14} color="white" />
+              <input
+                type="text"
+                value={dateRange}
+                onChange={(e) => setDateRange(e.target.value)}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '12px',
+                  outline: 'none',
+                  flex: 1
+                }}
+              />
+            </div>
+            <p style={{
+              color: '#9ca3af',
+              fontSize: '10px',
+              marginTop: 'auto',
+              paddingTop: '8px',
+              margin: 0
+            }}>Selected period is 3 days to Catanduanes</p>
+          </div>
+
+          {/* Budget Card */}
+          <div style={{
+            backgroundColor: '#000000',
+            borderRadius: '12px',
+            padding: '14px',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <h3 style={{
+              color: 'white',
+              fontSize: '13px',
+              fontWeight: '600',
+              marginBottom: '10px',
+              margin: 0
+            }}>Budget</h3>
             <input
-              type="text"
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
+              type="range"
+              min="1000"
+              max="50000"
+              step="1000"
+              value={budget}
+              onChange={(e) => setBudget(Number(e.target.value))}
               style={{
-                backgroundColor: 'transparent',
-                border: 'none',
-                color: 'white',
-                fontSize: '12px',
-                outline: 'none',
-                flex: 1
+                width: '100%',
+                accentColor: '#84cc16',
+                marginTop: '8px'
               }}
             />
-          </div>
-          <p style={{
-            color: '#9ca3af',
-            fontSize: '10px',
-            marginTop: 'auto',
-            paddingTop: '8px',
-            margin: 0
-          }}>Selected period is 3 days to Catanduanes</p>
-        </div>
-
-        {/* Budget Card */}
-        <div style={{
-          backgroundColor: '#000000', // Black background
-          borderRadius: '12px',
-          padding: '14px',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <h3 style={{
-            color: 'white',
-            fontSize: '13px',
-            fontWeight: '600',
-            marginBottom: '10px',
-            margin: 0
-          }}>Budget</h3>
-          <input
-            type="range"
-            min="1000"
-            max="50000"
-            step="1000"
-            value={budget}
-            onChange={(e) => setBudget(Number(e.target.value))}
-            style={{
-              width: '100%',
-              accentColor: '#84cc16',
-              marginTop: '8px'
-            }}
-          />
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginTop: '6px'
-          }}>
-            <span style={{ color: '#9ca3af', fontSize: '9px' }}>₱1,000</span>
-            <span style={{ color: 'white', fontSize: '12px', fontWeight: '600' }}>₱{budget.toLocaleString()}</span>
-            <span style={{ color: '#9ca3af', fontSize: '9px' }}>₱50,000</span>
-          </div>
-          <p style={{
-            color: '#9ca3af',
-            fontSize: '10px',
-            marginTop: 'auto',
-            paddingTop: '4px',
-            textAlign: 'center',
-            margin: 0
-          }}>Price range for your trip</p>
-        </div>
-
-        {/* Weather Card */}
-        <div style={{
-          backgroundColor: '#000000', // Black background
-          borderRadius: '12px',
-          padding: '14px',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <h3 style={{
-            color: 'white',
-            fontSize: '13px',
-            fontWeight: '600',
-            marginBottom: '10px',
-            margin: 0
-          }}>Weather in Catanduanes</h3>
-          {loading ? (
-            <p style={{ color: '#9ca3af', fontSize: '11px', margin: 0 }}>Loading...</p>
-          ) : weather && weather.main ? (
-            <div style={{ marginTop: '4px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-              {/* Weather Icon and Temperature */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '12px',
-                marginBottom: '8px'
-              }}>
-                {getWeatherIcon(weather.weather[0].main)}
-                <div>
-                  <span style={{
-                    fontSize: '32px',
-                    fontWeight: 'bold',
-                    color: 'white'
-                  }}>{Math.round(weather.main.temp)}°C</span>
-                </div>
-              </div>
-              
-              {/* Weather Description */}
-              <p style={{
-                color: 'white',
-                fontSize: '11px',
-                textTransform: 'capitalize',
-                textAlign: 'center',
-                margin: 0,
-                marginBottom: '4px'
-              }}>{weather.weather[0].description}</p>
-              <p style={{
-                color: '#9ca3af',
-                fontSize: '9px',
-                textAlign: 'center',
-                margin: 0,
-                marginBottom: '8px'
-              }}>Feels like {Math.round(weather.main.feels_like)}°C</p>
-              
-              {/* Humidity and Wind */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '6px',
-                marginTop: 'auto'
-              }}>
-                <div>
-                  <p style={{ color: '#9ca3af', fontSize: '9px', margin: 0 }}>Humidity</p>
-                  <p style={{ color: 'white', fontSize: '11px', margin: 0 }}>{weather.main.humidity}%</p>
-                </div>
-                <div>
-                  <p style={{ color: '#9ca3af', fontSize: '9px', margin: 0 }}>Wind</p>
-                  <p style={{ color: 'white', fontSize: '11px', margin: 0 }}>{Math.round(weather.wind.speed)} m/s</p>
-                </div>
-              </div>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: '6px'
+            }}>
+              <span style={{ color: '#9ca3af', fontSize: '9px' }}>₱1,000</span>
+              <span style={{ color: 'white', fontSize: '12px', fontWeight: '600' }}>₱{budget.toLocaleString()}</span>
+              <span style={{ color: '#9ca3af', fontSize: '9px' }}>₱50,000</span>
             </div>
-          ) : (
-            <p style={{ color: '#9ca3af', fontSize: '11px', margin: 0 }}>Weather unavailable</p>
-          )}
-        </div>
+            <p style={{
+              color: '#9ca3af',
+              fontSize: '10px',
+              marginTop: 'auto',
+              paddingTop: '4px',
+              textAlign: 'center',
+              margin: 0
+            }}>Price range for your trip</p>
+          </div>
 
-        {/* Activities Card */}
-        <div style={{
-          backgroundColor: '#000000', // Black background
-          borderRadius: '12px',
-          padding: '14px',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <h3 style={{
-            color: 'white',
-            fontSize: '13px',
-            fontWeight: '600',
-            marginBottom: '8px',
-            margin: 0
-          }}>What Would You Like To Do?</h3>
+          {/* Weather Card */}
           <div style={{
+            backgroundColor: '#000000',
+            borderRadius: '12px',
+            padding: '14px',
             display: 'flex',
-            flexDirection: 'column',
-            gap: '6px',
-            marginTop: '4px',
-            flex: 1
+            flexDirection: 'column'
           }}>
-            {Object.entries(activities).map(([key, value]) => (
-              <label
-                key={key}
-                style={{
+            <h3 style={{
+              color: 'white',
+              fontSize: '13px',
+              fontWeight: '600',
+              marginBottom: '10px',
+              margin: 0
+            }}>Weather in Catanduanes</h3>
+            {loading ? (
+              <p style={{ color: '#9ca3af', fontSize: '11px', margin: 0 }}>Loading...</p>
+            ) : weather && weather.main ? (
+              <div style={{ marginTop: '4px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                {/* Weather Icon and Temperature */}
+                <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                  padding: '5px 6px',
-                  borderRadius: '6px',
-                  backgroundColor: value ? '#374151' : 'transparent',
-                  transition: 'background-color 0.2s'
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={value}
-                  onChange={() => handleActivityChange(key)}
-                  style={{
-                    width: '14px',
-                    height: '14px',
-                    cursor: 'pointer',
-                    accentColor: '#84cc16'
-                  }}
-                />
-                <span style={{
+                  justifyContent: 'center',
+                  gap: '12px',
+                  marginBottom: '8px'
+                }}>
+                  {getWeatherIcon(weather.weather[0].main)}
+                  <div>
+                    <span style={{
+                      fontSize: '32px',
+                      fontWeight: 'bold',
+                      color: 'white'
+                    }}>{Math.round(weather.main.temp)}°C</span>
+                  </div>
+                </div>
+                
+                {/* Weather Description */}
+                <p style={{
                   color: 'white',
                   fontSize: '11px',
-                  textTransform: 'capitalize'
-                }}>{key}</span>
-              </label>
-            ))}
+                  textTransform: 'capitalize',
+                  textAlign: 'center',
+                  margin: 0,
+                  marginBottom: '4px'
+                }}>{weather.weather[0].description}</p>
+                <p style={{
+                  color: '#9ca3af',
+                  fontSize: '9px',
+                  textAlign: 'center',
+                  margin: 0,
+                  marginBottom: '8px'
+                }}>Feels like {Math.round(weather.main.feels_like)}°C</p>
+                
+                {/* Humidity and Wind */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '6px',
+                  marginTop: 'auto'
+                }}>
+                  <div>
+                    <p style={{ color: '#9ca3af', fontSize: '9px', margin: 0 }}>Humidity</p>
+                    <p style={{ color: 'white', fontSize: '11px', margin: 0 }}>{weather.main.humidity}%</p>
+                  </div>
+                  <div>
+                    <p style={{ color: '#9ca3af', fontSize: '9px', margin: 0 }}>Wind</p>
+                    <p style={{ color: 'white', fontSize: '11px', margin: 0 }}>{Math.round(weather.wind.speed)} m/s</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p style={{ color: '#9ca3af', fontSize: '11px', margin: 0 }}>Weather unavailable</p>
+            )}
           </div>
-          <p style={{
-            color: '#9ca3af',
-            fontSize: '10px',
-            marginTop: 'auto',
-            paddingTop: '6px',
-            margin: 0
-          }}>Select your preferred activities</p>
+
+          {/* Activities Card */}
+          <div style={{
+            backgroundColor: '#000000',
+            borderRadius: '12px',
+            padding: '14px',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <h3 style={{
+              color: 'white',
+              fontSize: '13px',
+              fontWeight: '600',
+              marginBottom: '8px',
+              margin: 0
+            }}>What Would You Like To Do?</h3>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              marginTop: '4px',
+              flex: 1
+            }}>
+              {Object.entries(activities).map(([key, value]) => (
+                <label
+                  key={key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    padding: '5px 6px',
+                    borderRadius: '6px',
+                    backgroundColor: value ? '#374151' : 'transparent',
+                    transition: 'background-color 0.2s'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={value}
+                    onChange={() => handleActivityChange(key)}
+                    style={{
+                      width: '14px',
+                      height: '14px',
+                      cursor: 'pointer',
+                      accentColor: '#84cc16'
+                    }}
+                  />
+                  <span style={{
+                    color: 'white',
+                    fontSize: '11px',
+                    textTransform: 'capitalize'
+                  }}>{key}</span>
+                </label>
+              ))}
+            </div>
+            <p style={{
+              color: '#9ca3af',
+              fontSize: '10px',
+              marginTop: 'auto',
+              paddingTop: '6px',
+              margin: 0
+            }}>Select your preferred activities</p>
+          </div>
         </div>
       </div>
+
+      {/* Minimized state placeholder */}
+      {!isExpanded && (
+        <div style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#9ca3af',
+          fontSize: '14px',
+          fontWeight: '500',
+          paddingTop: '60px'
+        }}>
+          Click "Create Itinerary" to start planning your trip
+        </div>
+      )}
     </div>
   );
 }
