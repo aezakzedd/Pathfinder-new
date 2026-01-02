@@ -7,7 +7,8 @@ import TravellerInformation from '../components/TravellerInformation';
 import NetworkStatus from '../components/NetworkStatus';
 
 export default function Explore() {
-  const [isMinimized, setIsMinimized] = useState(true); // Changed to true - minimized by default
+  const [isMinimized, setIsMinimized] = useState(true); // Minimized by default
+  const [hasMounted, setHasMounted] = useState(false); // Track first mount
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const containerRef = useRef(null);
   const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
@@ -44,6 +45,8 @@ export default function Explore() {
   useEffect(() => {
     // Calculate on mount
     calculateTranslateValues();
+    // Set mounted after initial calculation
+    setHasMounted(true);
 
     // Add debounced resize listener
     window.addEventListener('resize', handleResize);
@@ -117,10 +120,11 @@ export default function Explore() {
     transform: isMinimized 
       ? `translate(${translateValues.x}px, ${translateValues.y}px) scale(0.1)` 
       : 'translate(0, 0) scale(1)',
-    transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+    // Only animate after first mount
+    transition: hasMounted ? 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
     pointerEvents: isMinimized ? 'none' : 'auto',
     willChange: 'transform'
-  }), [isMinimized, translateValues.x, translateValues.y]);
+  }), [isMinimized, translateValues.x, translateValues.y, hasMounted]);
 
   const whiteCardBackgroundStyle = useMemo(() => ({
     position: 'absolute',
@@ -133,10 +137,11 @@ export default function Explore() {
     padding: '16px',
     boxSizing: 'border-box',
     opacity: isMinimized ? 0 : 1,
-    transition: 'opacity 0.4s ease',
+    // Only animate after first mount
+    transition: hasMounted ? 'opacity 0.4s ease' : 'none',
     willChange: 'opacity',
     overflow: 'hidden'
-  }), [isMinimized]);
+  }), [isMinimized, hasMounted]);
 
   const buttonStyle = useMemo(() => ({
     position: 'absolute',
@@ -153,20 +158,24 @@ export default function Explore() {
     transform: isMinimized 
       ? `translate(${translateValues.x}px, ${translateValues.y}px)` 
       : 'translate(0, 0)',
-    transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease',
+    // Only animate after first mount
+    transition: hasMounted 
+      ? 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease'
+      : 'none',
     zIndex: 20,
     pointerEvents: 'auto',
     boxShadow: isMinimized 
       ? '0 4px 20px rgba(132, 204, 22, 0.6)' 
       : '0 2px 8px rgba(0, 0, 0, 0.15)',
     willChange: 'transform, box-shadow'
-  }), [isMinimized, translateValues.x, translateValues.y]);
+  }), [isMinimized, translateValues.x, translateValues.y, hasMounted]);
 
   const chevronStyle = useMemo(() => ({
     transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
-    transition: 'transform 0.6s ease',
+    // Only animate after first mount
+    transition: hasMounted ? 'transform 0.6s ease' : 'none',
     willChange: 'transform'
-  }), [isMinimized]);
+  }), [isMinimized, hasMounted]);
 
   // Right container that holds both the white container and map overlay
   const rightContainerStyle = useMemo(() => ({
