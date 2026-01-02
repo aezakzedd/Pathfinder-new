@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Maximize, Minimize, Map as MapIcon, List, X, Heart, Navigation, Share2, ChevronUp } from 'lucide-react';
+import { Maximize, Minimize, Map as MapIcon, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedTouristSpots';
@@ -32,31 +32,9 @@ const PLATFORMS = {
   }
 };
 
-// Category icon mapping
-const CATEGORY_ICONS = {
-  'BEACHES': '🏖️',
-  'BEACH': '🏖️',
-  'WATERFALLS': '💧',
-  'WATERFALL': '💧',
-  'MOUNTAINS': '🏔️',
-  'MOUNTAIN': '🏔️',
-  'HIKING': '🥾',
-  'CAVES': '🕳️',
-  'CAVE': '🕳️',
-  'VIEWPOINTS': '🌅',
-  'VIEWPOINT': '🌅',
-  'HISTORICAL': '🏛️',
-  'CULTURAL': '🎭',
-  'NATURE': '🌿',
-  'ADVENTURE': '⛰️',
-  'PHOTOGRAPHY': '📸',
-  'SUNSET': '🌇',
-  'SUNRISE': '🌄',
-  'default': '📍'
-};
-
-// Helper function to get asset paths
+// Helper function to get asset paths - SIMPLIFIED STRUCTURE: src/assets/Binurong_Point/Binurong_Point1.jpg
 const getAssetPath = (spotName, filename) => {
+  // Convert spot name to folder name (replace spaces with underscores)
   const folderName = spotName.replace(/ /g, '_');
   return `/src/assets/${folderName}/${filename}`;
 };
@@ -76,6 +54,7 @@ const VideoSkeleton = () => (
       overflow: 'hidden'
     }}
   >
+    {/* Shimmer effect */}
     <div
       style={{
         position: 'absolute',
@@ -87,6 +66,7 @@ const VideoSkeleton = () => (
         animation: 'shimmer 2s infinite'
       }}
     />
+    {/* Loading icon */}
     <div
       style={{
         width: '48px',
@@ -131,6 +111,7 @@ const PerformanceMonitor = ({ show }) => {
         frameCount.current = 0;
         lastTime.current = now;
 
+        // Measure memory if available
         if (performance.memory) {
           const usedMB = Math.round(performance.memory.usedJSHeapSize / 1048576);
           setMemory(usedMB);
@@ -193,16 +174,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [modalSpot, setModalSpot] = useState(null);
 
   // Video optimization states
-  const [loadedVideos, setLoadedVideos] = useState(new Set([0]));
+  const [loadedVideos, setLoadedVideos] = useState(new Set([0])); // Start with first video
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const videoRefs = useRef([]);
   const iframeRefs = useRef([]);
   const observerRef = useRef(null);
-
-  // New UI states
-  const [savedSpots, setSavedSpots] = useState(new Set());
-  const [detailsExpanded, setDetailsExpanded] = useState(false);
-  const lastTapTime = useRef(0);
 
   // Performance monitoring
   const [showPerformance, setShowPerformance] = useState(false);
@@ -220,17 +196,20 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-  // Video queue system
+  // Video queue system: Keep only current, previous, and next videos loaded
   const updateVideoQueue = useCallback((centerIndex) => {
-    const videoCount = 3;
+    const videoCount = 3; // We have 3 test videos
     const newQueue = new Set();
 
+    // Add current video
     newQueue.add(centerIndex);
 
+    // Add previous video if exists
     if (centerIndex > 0) {
       newQueue.add(centerIndex - 1);
     }
 
+    // Add next video if exists
     if (centerIndex < videoCount - 1) {
       newQueue.add(centerIndex + 1);
     }
@@ -240,7 +219,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
     console.log('📹 Video Queue Update:', {
       current: centerIndex,
-      loaded: Array.from(newQueue)
+      loaded: Array.from(newQueue),
+      unloaded: Array.from({ length: videoCount }, (_, i) => i).filter(i => !newQueue.has(i))
     });
   }, []);
 
@@ -258,21 +238,28 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             console.log(`👁️ Video ${index} is now visible - Playing`);
             updateVideoQueue(index);
             
+            // Autoplay when video comes into view
             if (iframe) {
               const platform = getVideoPlatform(index);
               if (platform === 'youtube') {
+                // Send play command to YouTube iframe
                 iframe.contentWindow?.postMessage(
                   JSON.stringify({ event: 'command', func: 'playVideo', args: '' }),
                   '*'
                 );
+              } else if (platform === 'facebook') {
+                // Facebook autoplay is handled by URL parameter
+                console.log('📸 Facebook video autoplaying');
               }
             }
           } else {
             console.log(`👁️ Video ${index} left view - Pausing`);
             
+            // Pause when video leaves view
             if (iframe) {
               const platform = getVideoPlatform(index);
               if (platform === 'youtube') {
+                // Send pause command to YouTube iframe
                 iframe.contentWindow?.postMessage(
                   JSON.stringify({ event: 'command', func: 'pauseVideo', args: '' }),
                   '*'
@@ -284,11 +271,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       },
       {
         root: null,
-        threshold: 0.5,
+        threshold: 0.5, // Trigger when 50% visible
         rootMargin: '0px'
       }
     );
 
+    // Observe all video containers
     videoRefs.current.forEach((ref) => {
       if (ref) observerRef.current.observe(ref);
     });
@@ -300,7 +288,24 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     };
   }, [modalOpen, updateVideoQueue]);
 
-  // Load GeoJSON data
+  // Log performance metrics
+  useEffect(() => {
+    if (!modalOpen) return;
+
+    const logPerformance = setInterval(() => {
+      if (performance.memory) {
+        console.log('💾 Memory:', {
+          used: `${Math.round(performance.memory.usedJSHeapSize / 1048576)} MB`,
+          total: `${Math.round(performance.memory.totalJSHeapSize / 1048576)} MB`,
+          limit: `${Math.round(performance.memory.jsHeapSizeLimit / 1048576)} MB`
+        });
+      }
+    }, 5000); // Log every 5 seconds
+
+    return () => clearInterval(logPerformance);
+  }, [modalOpen]);
+
+  // Load GeoJSON data and extract selected spots
   useEffect(() => {
     const loadTouristSpots = async () => {
       console.log('Starting to load tourist spots...');
@@ -308,6 +313,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       
       for (const selection of selectedSpots) {
         try {
+          console.log(`Loading ${selection.geojsonFile}...`);
           const response = await fetch(`/data/${selection.geojsonFile}`);
           
           if (!response.ok) {
@@ -316,11 +322,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           }
           
           const geojson = await response.json();
+          
+          // Find the specific spot by name
           const feature = geojson.features.find(
             f => f.properties.name === selection.spotName
           );
           
           if (feature) {
+            // Add images for Binurong Point using new simplified folder structure
             let images = [];
             if (feature.properties.name === 'Binurong Point') {
               images = [
@@ -338,6 +347,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               images: images
             });
             console.log(`✓ Found: ${feature.properties.name}`);
+          } else {
+            console.error(`✗ Spot "${selection.spotName}" not found in ${selection.geojsonFile}`);
+            console.log('Available spots:', geojson.features.map(f => f.properties.name));
           }
         } catch (error) {
           console.error(`Error loading ${selection.geojsonFile}:`, error);
@@ -358,8 +370,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     
     if (!isAlreadyAdded) {
       setItinerary(prev => [...prev, spot]);
-      setSavedSpots(prev => new Set([...prev, spot.name]));
       console.log('Added to itinerary:', spot.name);
+    } else {
+      console.log('Already in itinerary:', spot.name);
     }
   };
 
@@ -368,14 +381,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     setModalImage(image);
     setModalSpot(spot);
     setModalOpen(true);
+    // Reset to first video when opening modal
     setLoadedVideos(new Set([0]));
     setCurrentVideoIndex(0);
-    setDetailsExpanded(false);
   };
 
   // Close modal
   const closeModal = () => {
     setModalOpen(false);
+    // Pause all videos when closing
     iframeRefs.current.forEach((iframe, index) => {
       if (iframe) {
         const platform = getVideoPlatform(index);
@@ -392,18 +406,17 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       setModalSpot(null);
       setLoadedVideos(new Set([0]));
       setCurrentVideoIndex(0);
-      setDetailsExpanded(false);
     }, 300);
   };
 
-  // Calculate marker scale
+  // Calculate marker scale based on zoom level
   const getMarkerScale = (zoom) => {
     const baseZoom = 9;
     const scale = Math.max(0.5, 1 - (zoom - baseZoom) * 0.1);
     return scale;
   };
 
-  // Update marker sizes
+  // Update marker sizes based on zoom
   const updateMarkerSizes = useCallback((zoom) => {
     const scale = getMarkerScale(zoom);
     markersRef.current.forEach(marker => {
@@ -434,13 +447,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   };
 
-  // Create info card HTML
+  // Create info card HTML content with image carousel
   const createInfoCardHTML = (spot) => {
     const categoryHTML = spot.categories
       .slice(0, 2)
       .map(cat => getCategoryPill(cat))
       .join('');
 
+    // Create carousel HTML if images exist
     const hasImages = spot.images && spot.images.length > 0;
     const carouselHTML = hasImages ? `
       <div id="carousel-container" style="
@@ -472,6 +486,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         `).join('')}
         
         ${spot.images.length > 1 ? `
+          <!-- Previous Button -->
           <button id="carousel-prev-btn" style="
             position: absolute;
             left: 8px;
@@ -494,6 +509,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             </svg>
           </button>
           
+          <!-- Next Button -->
           <button id="carousel-next-btn" style="
             position: absolute;
             right: 8px;
@@ -516,6 +532,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             </svg>
           </button>
           
+          <!-- Image Counter -->
           <div id="image-counter" style="
             position: absolute;
             bottom: 8px;
@@ -643,18 +660,28 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   };
 
-  // Add tourist spot markers
+  // Add tourist spot markers - improved with better state checking
   const addTouristSpotMarkers = useCallback(() => {
+    // Check if we have everything we need
     if (!map.current || !mapLoaded.current || touristSpots.length === 0) {
+      console.log('⏳ Waiting for prerequisites:', {
+        hasMap: !!map.current,
+        mapLoaded: mapLoaded.current,
+        spotsCount: touristSpots.length
+      });
       return;
     }
 
+    console.log(`🗺️ Adding ${touristSpots.length} markers to map...`);
+
+    // Clear existing markers
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
 
     const currentZoom = map.current.getZoom();
     const scale = getMarkerScale(currentZoom);
 
+    // Add markers for each tourist spot
     touristSpots.forEach((spot, index) => {
       const markerEl = document.createElement('div');
       markerEl.className = 'custom-marker';
@@ -709,6 +736,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         popupRef.current = popup;
 
+        // Setup carousel and button listeners after popup is added
         setTimeout(() => {
           let currentIdx = 0;
           const images = document.querySelectorAll('.carousel-image');
@@ -726,6 +754,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             }
           }
 
+          // Add click handlers to images
           images.forEach((img) => {
             img.addEventListener('click', (e) => {
               const imageUrl = e.target.getAttribute('data-image-url');
@@ -796,7 +825,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       });
 
       markersRef.current.push(marker);
+      console.log(`✓ Marker ${index + 1}: ${spot.name}`);
     });
+
+    console.log(`✅ Successfully added ${markersRef.current.length} markers!`);
   }, [touristSpots]);
 
   // Initialize map
@@ -814,6 +846,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       [123.5, 12.8],
       [125.0, 14.8]
     ];
+
+    console.log('🌍 Initializing map...');
 
     fetch(`https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`)
       .then(response => response.json())
@@ -843,7 +877,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           antialias: false,
           preserveDrawingBuffer: false,
           fadeDuration: 0,
-          maxParallelImageRequests: 4,
+          maxParallelImageRequests: 4, // Reduced from 8 for Raspberry Pi
           refreshExpiredTiles: false,
           trackResize: true,
           maxZoom: 18,
@@ -856,6 +890,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         });
 
         map.current.on('load', () => {
+          console.log('✅ Map loaded successfully');
           mapLoaded.current = true;
           
           const maskGeoJSON = {
@@ -896,7 +931,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             }
           });
 
+          // Try to add markers if data is already loaded
           if (dataLoaded && touristSpots.length > 0) {
+            console.log('🎯 Data already loaded, adding markers immediately');
             addTouristSpotMarkers();
           }
         });
@@ -922,8 +959,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     };
   }, [updateMarkerSizes, dataLoaded, touristSpots, addTouristSpotMarkers]);
 
+  // CRITICAL: Add markers when BOTH map is ready AND tourist spots are loaded
   useEffect(() => {
     if (mapLoaded.current && dataLoaded && touristSpots.length > 0) {
+      console.log('🎯 Both map and data ready, adding markers...');
+      // Small delay to ensure map is fully rendered
       const timer = setTimeout(() => {
         addTouristSpotMarkers();
       }, 100);
@@ -932,6 +972,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   }, [dataLoaded, touristSpots, addTouristSpotMarkers]);
 
+  // Debounced resize handler
   const handleResize = useCallback(() => {
     if (!map.current) return;
     
@@ -991,45 +1032,22 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   }, [onToggleFullscreen]);
 
-  // Get platform for video
+  // Get platform for video based on index
   const getVideoPlatform = (index) => {
     if (index === 1) return 'youtube';
     return 'facebook';
   };
 
-  // Get category icon
-  const getCategoryIcon = (categories) => {
-    if (!categories || categories.length === 0) return CATEGORY_ICONS.default;
-    const category = categories[0].toUpperCase();
-    return CATEGORY_ICONS[category] || CATEGORY_ICONS.default;
-  };
-
-  // Handle double tap to save
-  const handleDoubleTap = (spot) => {
-    const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300;
-    
-    if (now - lastTapTime.current < DOUBLE_TAP_DELAY) {
-      // Double tap detected
-      addToItinerary(spot);
-      console.log('💚 Double tap - saved to itinerary!');
-    }
-    
-    lastTapTime.current = now;
-  };
-
-  // Video card component
+  // Video card component with lazy loading
   const VideoCard = ({ index, isLoaded }) => {
     const platform = getVideoPlatform(index);
     const platformConfig = PLATFORMS[platform];
     const isLandscape = platform === 'youtube';
-    const isSaved = modalSpot && savedSpots.has(modalSpot.name);
 
     return (
       <div
         ref={(el) => (videoRefs.current[index] = el)}
         data-video-index={index}
-        onClick={() => modalSpot && handleDoubleTap(modalSpot)}
         style={{
           width: '100%',
           height: '100vh',
@@ -1037,8 +1055,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           alignItems: 'center',
           justifyContent: 'center',
           scrollSnapAlign: 'start',
-          scrollSnapStop: 'always',
-          position: 'relative'
+          scrollSnapStop: 'always'
         }}
       >
         <div
@@ -1055,7 +1072,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             flexDirection: 'column'
           }}
         >
-          {/* Video iframe */}
           <div
             style={{
               width: '100%',
@@ -1069,6 +1085,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             {!isLoaded ? (
               <VideoSkeleton />
             ) : platform === 'youtube' ? (
+              // YouTube embed (landscape)
               <iframe 
                 ref={(el) => (iframeRefs.current[index] = el)}
                 width="100%" 
@@ -1087,6 +1104,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
                 }}
               />
             ) : (
+              // Facebook video (portrait)
               <iframe 
                 ref={(el) => (iframeRefs.current[index] = el)}
                 src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0&autoplay=true" 
@@ -1107,73 +1125,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             )}
           </div>
           
-          {/* PRIORITY 1: Gradient overlay for text readability */}
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: '200px',
-              background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 40%, transparent 100%)',
-              pointerEvents: 'none',
-              zIndex: 1
-            }}
-          />
-
-          {/* PRIORITY 1: Video counter with dots */}
-          {modalSpot && isLoaded && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '16px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                display: 'flex',
-                gap: '6px',
-                zIndex: 10
-              }}
-            >
-              {[0, 1, 2].map((dotIndex) => (
-                <div
-                  key={dotIndex}
-                  style={{
-                    width: dotIndex === index ? '20px' : '8px',
-                    height: '8px',
-                    borderRadius: '4px',
-                    backgroundColor: dotIndex === index ? '#84cc16' : 'rgba(255,255,255,0.4)',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
-                  }}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* PRIORITY 1: Weather widget (mock data) */}
-          {modalSpot && isLoaded && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                padding: '8px 12px',
-                borderRadius: '12px',
-                backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                backdropFilter: 'blur(10px)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                zIndex: 10,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.4)'
-              }}
-            >
-              <span style={{ fontSize: '16px' }}>☀️</span>
-              <span style={{ color: 'white', fontSize: '14px', fontWeight: '600' }}>28°C</span>
-            </div>
-          )}
-
-          {/* Bottom info section */}
+          {/* Minimal overlay with just location and platform pill */}
           {modalSpot && isLoaded && (
             <div
               style={{
@@ -1181,448 +1133,61 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
                 bottom: '16px',
                 left: '16px',
                 right: '16px',
-                zIndex: 10,
                 display: 'flex',
-                flexDirection: 'column',
-                gap: '12px'
-              }}
-            >
-              {/* PRIORITY 2: Category icon tags */}
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '8px',
-                  flexWrap: 'wrap'
-                }}
-              >
-                {modalSpot.categories.slice(0, 3).map((cat, idx) => {
-                  const icon = getCategoryIcon([cat]);
-                  return (
-                    <div
-                      key={idx}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '16px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                        backdropFilter: 'blur(10px)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        border: '1px solid rgba(255, 255, 255, 0.3)'
-                      }}
-                    >
-                      <span style={{ fontSize: '14px' }}>{icon}</span>
-                      <span style={{
-                        color: 'white',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        textShadow: '0 2px 4px rgba(0,0,0,0.8)'
-                      }}>
-                        {cat.toLowerCase().replace('_', ' ')}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Location and platform row */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-end',
-                  justifyContent: 'space-between',
-                  gap: '12px'
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <h3 style={{
-                    margin: 0,
-                    fontSize: '18px',
-                    fontWeight: '700',
-                    color: 'white',
-                    textShadow: '0 2px 8px rgba(0,0,0,0.8)',
-                    marginBottom: '4px'
-                  }}>
-                    {modalSpot.name}
-                  </h3>
-                  <p style={{
-                    margin: 0,
-                    fontSize: '13px',
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    textShadow: '0 2px 8px rgba(0,0,0,0.8)'
-                  }}>
-                    📍 {modalSpot.location}
-                  </p>
-                </div>
-
-                {/* Platform pill */}
-                <div
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    backgroundColor: platformConfig.color,
-                    color: platformConfig.textColor,
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-                    flexShrink: 0
-                  }}
-                >
-                  {platformConfig.name}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* PRIORITY 1: Animated action buttons */}
-          {modalSpot && isLoaded && (
-            <div
-              style={{
-                position: 'absolute',
-                right: '16px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                display: 'flex',
-                flexDirection: 'column',
+                alignItems: 'flex-end',
+                justifyContent: 'space-between',
                 gap: '12px',
                 zIndex: 10
               }}
             >
-              {/* Save button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  addToItinerary(modalSpot);
-                }}
-                style={{
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '50%',
-                  border: 'none',
-                  backgroundColor: isSaved ? '#84cc16' : 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                  animation: isSaved ? 'pulse 0.5s ease' : 'none'
-                }}
-              >
-                <Heart 
-                  size={24} 
-                  color="white" 
-                  fill={isSaved ? 'white' : 'none'}
-                  strokeWidth={2}
-                />
-              </button>
+              {/* Location text */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{
+                  margin: 0,
+                  fontSize: '13px',
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  textShadow: '0 2px 8px rgba(0,0,0,0.8)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
+                  {modalSpot.location}
+                </p>
+              </div>
 
-              {/* Directions button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  console.log('🧭 Get directions to:', modalSpot.name);
-                }}
+              {/* Platform pill */}
+              <div
                 style={{
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '50%',
-                  border: 'none',
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  backgroundColor: platformConfig.color,
+                  color: platformConfig.textColor,
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  textShadow: 'none',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+                  flexShrink: 0,
+                  letterSpacing: '0.3px'
                 }}
               >
-                <Navigation size={24} color="white" strokeWidth={2} />
-              </button>
-
-              {/* Share button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  console.log('📤 Share:', modalSpot.name);
-                }}
-                style={{
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '50%',
-                  border: 'none',
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-                }}
-              >
-                <Share2 size={24} color="white" strokeWidth={2} />
-              </button>
+                {platformConfig.name}
+              </div>
             </div>
           )}
-
-          {/* PRIORITY 2: Swipe-up indicator for details */}
-          {modalSpot && isLoaded && !detailsExpanded && (
-            <button
-              onClick={() => setDetailsExpanded(true)}
-              style={{
-                position: 'absolute',
-                bottom: '80px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                padding: '8px 20px',
-                borderRadius: '20px',
-                border: 'none',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                backdropFilter: 'blur(10px)',
-                color: 'white',
-                fontSize: '13px',
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-                zIndex: 10,
-                animation: 'bounce 2s infinite',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-              }}
-            >
-              Swipe up for details
-              <ChevronUp size={16} />
-            </button>
-          )}
         </div>
-
         <style>
           {`
             @keyframes fadeIn {
               from { opacity: 0; }
               to { opacity: 1; }
             }
-            @keyframes pulse {
-              0%, 100% { transform: scale(1); }
-              50% { transform: scale(1.1); }
-            }
-            @keyframes bounce {
-              0%, 100% { transform: translate(-50%, 0); }
-              50% { transform: translate(-50%, -8px); }
-            }
           `}
         </style>
       </div>
     );
   };
 
-  // PRIORITY 2: Details drawer component
-  const DetailsDrawer = () => {
-    if (!modalSpot || !detailsExpanded) return null;
-
-    return (
-      <div
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '60vh',
-          backgroundColor: 'white',
-          borderTopLeftRadius: '24px',
-          borderTopRightRadius: '24px',
-          boxShadow: '0 -8px 32px rgba(0,0,0,0.3)',
-          zIndex: 10003,
-          animation: 'slideUp 0.3s ease',
-          overflow: 'auto',
-          padding: '24px'
-        }}
-      >
-        {/* Drag handle */}
-        <div
-          style={{
-            width: '40px',
-            height: '4px',
-            backgroundColor: '#d1d5db',
-            borderRadius: '2px',
-            margin: '0 auto 20px',
-            cursor: 'pointer'
-          }}
-          onClick={() => setDetailsExpanded(false)}
-        />
-
-        <h2 style={{
-          margin: '0 0 8px 0',
-          fontSize: '24px',
-          fontWeight: '700',
-          color: '#111827'
-        }}>
-          {modalSpot.name}
-        </h2>
-
-        <p style={{
-          margin: '0 0 16px 0',
-          color: '#6b7280',
-          fontSize: '14px'
-        }}>
-          📍 {modalSpot.location}
-        </p>
-
-        <div style={{
-          display: 'flex',
-          gap: '8px',
-          marginBottom: '20px',
-          flexWrap: 'wrap'
-        }}>
-          {modalSpot.categories.map((cat, idx) => {
-            const icon = getCategoryIcon([cat]);
-            const colors = categoryColors[cat.toUpperCase()] || categoryColors.default;
-            return (
-              <div
-                key={idx}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '16px',
-                  backgroundColor: colors.bg,
-                  color: colors.text,
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <span>{icon}</span>
-                {cat.toLowerCase().replace('_', ' ')}
-              </div>
-            );
-          })}
-        </div>
-
-        <div style={{
-          marginBottom: '20px',
-          padding: '16px',
-          backgroundColor: '#f9fafb',
-          borderRadius: '12px'
-        }}>
-          <h3 style={{
-            margin: '0 0 8px 0',
-            fontSize: '16px',
-            fontWeight: '600',
-            color: '#111827'
-          }}>
-            Quick Info
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#6b7280' }}>Best time to visit:</span>
-              <strong style={{ color: '#111827' }}>Sunrise & Sunset 🌅</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#6b7280' }}>Entry fee:</span>
-              <strong style={{ color: '#111827' }}>Free 💚</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#6b7280' }}>Distance from Virac:</span>
-              <strong style={{ color: '#111827' }}>~15 km 🚗</strong>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h3 style={{
-            margin: '0 0 12px 0',
-            fontSize: '16px',
-            fontWeight: '600',
-            color: '#111827'
-          }}>
-            About
-          </h3>
-          <p style={{
-            margin: 0,
-            color: '#4b5563',
-            fontSize: '14px',
-            lineHeight: '1.6'
-          }}>
-            {modalSpot.description || 'Binurong Point offers breathtaking views of the Pacific Ocean and stunning rock formations. This scenic viewpoint is perfect for photography enthusiasts and nature lovers, especially during golden hour when the sun paints the sky in vibrant colors.'}
-          </p>
-        </div>
-
-        <style>
-          {`
-            @keyframes slideUp {
-              from {
-                transform: translateY(100%);
-              }
-              to {
-                transform: translateY(0);
-              }
-            }
-          `}
-        </style>
-      </div>
-    );
-  };
-
-  // PRIORITY 2: Thumbnail strip navigation
-  const ThumbnailStrip = () => {
-    if (!modalSpot) return null;
-
-    return (
-      <div
-        style={{
-          position: 'fixed',
-          bottom: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          gap: '8px',
-          padding: '8px 16px',
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '24px',
-          zIndex: 10002,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
-        }}
-      >
-        {[0, 1, 2].map((thumbIndex) => {
-          const platform = getVideoPlatform(thumbIndex);
-          const isActive = thumbIndex === currentVideoIndex;
-          
-          return (
-            <div
-              key={thumbIndex}
-              onClick={() => {
-                const element = videoRefs.current[thumbIndex];
-                element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }}
-              style={{
-                width: isActive ? '60px' : '50px',
-                height: isActive ? '60px' : '50px',
-                borderRadius: '12px',
-                backgroundColor: isActive ? '#84cc16' : 'rgba(255, 255, 255, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                border: isActive ? '2px solid white' : '2px solid transparent',
-                fontSize: '20px'
-              }}
-            >
-              {platform === 'youtube' ? '📹' : '📱'}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  // Modal content
+  // Modal content component - OPTIMIZED WITH LAZY LOADING
   const ModalContent = () => (
     <div
       onClick={closeModal}
@@ -1643,17 +1208,18 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         transition: 'opacity 0.3s ease',
       }}
     >
+      {/* Performance Monitor */}
       <PerformanceMonitor show={showPerformance} />
 
-      {/* Close button */}
+      {/* Close button - fixed position */}
       <button
         onClick={closeModal}
         style={{
           position: 'fixed',
           top: '20px',
           right: '20px',
-          width: '50px',
-          height: '50px',
+          width: '40px',
+          height: '40px',
           borderRadius: '50%',
           backgroundColor: 'rgba(0, 0, 0, 0.7)',
           border: 'none',
@@ -1664,11 +1230,17 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           transition: 'background-color 0.2s',
           zIndex: 10001
         }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        }}
       >
         <X color="white" size={24} strokeWidth={2.5} />
       </button>
 
-      {/* Scrollable video container */}
+      {/* Scrollable container with snap behavior */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
@@ -1680,6 +1252,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           WebkitOverflowScrolling: 'touch'
         }}
       >
+        {/* Render 3 video cards with lazy loading */}
         {[0, 1, 2].map((index) => (
           <VideoCard 
             key={index} 
@@ -1689,11 +1262,29 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         ))}
       </div>
 
-      {/* PRIORITY 2: Thumbnail strip */}
-      <ThumbnailStrip />
-
-      {/* PRIORITY 2: Details drawer */}
-      <DetailsDrawer />
+      {/* Debug info (only visible when performance monitor is on) */}
+      {showPerformance && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            color: 'white',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            zIndex: 10002,
+            border: '1px solid rgba(132, 204, 22, 0.3)'
+          }}
+        >
+          <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#84cc16' }}>Video Queue</div>
+          <div>Current: {currentVideoIndex}</div>
+          <div>Loaded: [{Array.from(loadedVideos).join(', ')}]</div>
+          <div style={{ marginTop: '8px', fontSize: '11px', color: '#9ca3af' }}>Press Ctrl+Shift+P to toggle</div>
+        </div>
+      )}
     </div>
   );
 
@@ -1705,6 +1296,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         position: 'relative'
       }} 
     >
+      {/* Modal rendered via Portal to document.body - ensures it appears above everything */}
       {modalOpen && createPortal(<ModalContent />, document.body)}
 
       {activeView === 'map' && (
@@ -1725,7 +1317,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             cursor: 'pointer',
             zIndex: 10,
             boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            transition: 'all 0.5s ease-in-out'
+            transition: 'all 0.5s ease-in-out',
+            willChange: 'top, left, background-color'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#f3f4f6';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'white';
           }}
         >
           {isFullscreen ? (
@@ -1808,7 +1407,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             left: 0,
             width: '100%',
             height: '100%',
-            borderRadius: '16px',
+            borderRadius: isFullscreen ? '16px' : '16px',
             backgroundColor: 'white',
             display: 'flex',
             alignItems: 'center',
