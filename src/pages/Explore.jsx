@@ -81,7 +81,7 @@ export default function Explore() {
   // Memoize styles to prevent recreation on every render
   const containerStyle = useMemo(() => ({
     width: '90vw',
-    height: '85vh', // Reduced from 90vh to leave space for title and bottom gap
+    height: '88vh', // Increased from 85vh to 88vh for better spacing
     border: '1px solid white',
     borderRadius: '24px',
     backgroundColor: 'transparent',
@@ -275,10 +275,10 @@ export default function Explore() {
         <NetworkStatus />
       </div>
 
-      {/* PATHFINDER Title - centered above container */}
+      {/* PATHFINDER Title - aligned with icons */}
       <div style={{
         position: 'absolute',
-        top: '2vh',
+        top: '1.2vh', // Aligned with Map and NetworkStatus icons
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 20,
@@ -291,8 +291,8 @@ export default function Explore() {
         PATHFINDER
       </div>
       
-      {/* Centered container for FloatingCard - moved down */}
-      <div className="w-full h-full flex items-center justify-center" style={{ paddingTop: '8vh' }}>
+      {/* Centered container for FloatingCard - adjusted padding */}
+      <div className="w-full h-full flex items-center justify-center" style={{ paddingTop: '4vh' }}>
         <div style={containerStyle}>
           {/* Left container with ChatBot in black background */}
           <div style={leftContainerStyle}>
