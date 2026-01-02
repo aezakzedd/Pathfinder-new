@@ -175,6 +175,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const map = useRef(null);
   const mapLoaded = useRef(false);
   const markersRef = useRef([]);
+  const markerElementsRef = useRef(new Map()); // Store marker elements by spot name
   const popupRef = useRef(null);
   const savedState = useRef({ center: [124.2, 13.8], zoom: DEFAULT_ZOOM });
   const resizeTimeout = useRef(null);
@@ -773,6 +774,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     // Clear old markers
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
+    markerElementsRef.current.clear();
 
     const currentZoom = map.current.getZoom();
     const scale = getMarkerScale(currentZoom);
@@ -808,8 +810,13 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           pointer-events: none;
           text-align: center;
           line-height: 1.2;
+          opacity: 1;
+          transition: opacity 0.3s ease;
         ">${spot.name}</div>
       `;
+      
+      // Store marker element reference
+      markerElementsRef.current.set(spot.name, markerEl);
       
       const iconElement = markerEl.querySelector('i');
       markerEl.addEventListener('mouseenter', () => {
@@ -825,6 +832,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
       markerEl.addEventListener('click', () => {
         setSelectedSpot(spot);
+        
+        // Hide label of clicked marker
+        const label = markerEl.querySelector('.marker-label');
+        if (label) {
+          label.style.opacity = '0';
+        }
         
         if (popupRef.current) popupRef.current.remove();
 
@@ -883,6 +896,16 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
                 popupRef.current.remove();
                 popupRef.current = null;
               }
+              
+              // Show label again when popup is closed
+              const currentMarkerEl = markerElementsRef.current.get(spot.name);
+              if (currentMarkerEl) {
+                const currentLabel = currentMarkerEl.querySelector('.marker-label');
+                if (currentLabel) {
+                  currentLabel.style.opacity = '1';
+                }
+              }
+              
               setSelectedSpot(null);
             });
           }
