@@ -747,7 +747,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   }, [onToggleFullscreen]);
 
-  // Modal content component - UPDATED FOR LANDSCAPE VIDEO
+  // Modal content component - VIDEO ROTATED TO LANDSCAPE
   const ModalContent = () => (
     <div
       onClick={closeModal}
@@ -768,7 +768,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         transition: 'opacity 0.3s ease',
       }}
     >
-      {/* Modal card - landscape format for video */}
+      {/* Modal card - landscape format with rotated video */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
@@ -813,31 +813,45 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           <X color="white" size={24} strokeWidth={2.5} />
         </button>
 
-        {/* Facebook Video Embed - Landscape */}
+        {/* Facebook Video Embed - Rotated 90deg clockwise for landscape */}
         <div
           style={{
             width: '100%',
             position: 'relative',
             paddingBottom: '56.25%', // 16:9 aspect ratio
-            backgroundColor: '#000000'
+            backgroundColor: '#000000',
+            overflow: 'hidden'
           }}
         >
-          <iframe 
-            src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0" 
+          <div
             style={{
               position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              overflow: 'hidden'
+              top: '50%',
+              left: '50%',
+              width: '177.78%', // Height/Width ratio adjustment for rotation
+              height: '177.78%',
+              transform: 'translate(-50%, -50%) rotate(90deg)',
+              transformOrigin: 'center center'
             }}
-            scrolling="no" 
-            frameBorder="0" 
-            allowFullScreen={true}
-            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-          />
+          >
+            <iframe 
+              src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0" 
+              width="476"
+              height="267"
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                border: 'none',
+                overflow: 'hidden'
+              }}
+              scrolling="no" 
+              frameBorder="0" 
+              allowFullScreen={true}
+              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            />
+          </div>
         </div>
 
         {/* Spot info overlay at bottom */}
