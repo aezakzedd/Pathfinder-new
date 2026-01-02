@@ -72,7 +72,7 @@ const categoryColors = {
   default: { bg: '#f3f4f6', text: '#1f2937' }
 };
 
-const ItineraryView = ({ itinerary, onRemoveItem }) => {
+const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
   const [expandedDates, setExpandedDates] = useState({ 'Feb 01, Sun': true });
 
   if (itinerary.length === 0) {
@@ -218,6 +218,11 @@ const ItineraryView = ({ itinerary, onRemoveItem }) => {
 
                   {/* Place Card */}
                   <div
+                    onClick={() => {
+                      if (onCardClick) {
+                        onCardClick(place);
+                      }
+                    }}
                     style={{
                       flex: 1,
                       backgroundColor: 'white',
