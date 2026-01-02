@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, X, Calendar } from 'lucide-react';
+import { MapPin, X, Calendar, Map, Palmtree, Sun, Compass } from 'lucide-react';
 
 // Helper to calculate estimated travel time (mock for now)
 const calculateTravelTime = (place1, place2) => {
@@ -22,44 +22,217 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
           justifyContent: 'center',
           flexDirection: 'column',
           padding: '40px 20px',
-          color: '#9ca3af',
-          backgroundColor: 'white'
+          background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfccb 100%)',
+          position: 'relative',
+          overflow: 'hidden'
         }}
       >
-        {/* Create Itinerary Button */}
+        {/* Decorative background elements */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            padding: '12px 24px',
-            backgroundColor: '#84cc16',
-            borderRadius: '24px',
-            cursor: 'pointer',
-            boxShadow: '0 4px 20px rgba(132, 204, 22, 0.6)',
-            transition: 'all 0.3s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.05)';
-            e.currentTarget.style.boxShadow = '0 6px 24px rgba(132, 204, 22, 0.7)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 4px 20px rgba(132, 204, 22, 0.6)';
+            position: 'absolute',
+            top: '10%',
+            right: '15%',
+            opacity: 0.15,
+            transform: 'rotate(15deg)'
           }}
         >
-          <Calendar color="black" size={20} strokeWidth={3} />
-          <span
+          <Palmtree size={80} color="#84cc16" strokeWidth={1.5} />
+        </div>
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '15%',
+            left: '10%',
+            opacity: 0.12,
+            transform: 'rotate(-20deg)'
+          }}
+        >
+          <Map size={100} color="#65a30d" strokeWidth={1.5} />
+        </div>
+        <div
+          style={{
+            position: 'absolute',
+            top: '20%',
+            left: '20%',
+            opacity: 0.1,
+            animation: 'float 6s ease-in-out infinite'
+          }}
+        >
+          <Sun size={60} color="#fbbf24" strokeWidth={1.5} />
+        </div>
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '25%',
+            right: '20%',
+            opacity: 0.12,
+            animation: 'float 8s ease-in-out infinite'
+          }}
+        >
+          <Compass size={70} color="#84cc16" strokeWidth={1.5} />
+        </div>
+
+        {/* Main content */}
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '24px'
+          }}
+        >
+          {/* Icon circle with gradient */}
+          <div
             style={{
-              color: 'black',
-              fontSize: '14px',
-              fontWeight: '600'
+              width: '120px',
+              height: '120px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #84cc16 0%, #65a30d 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 10px 40px rgba(132, 204, 22, 0.3)',
+              animation: 'pulse 3s ease-in-out infinite'
             }}
           >
-            Create Itinerary
-          </span>
+            <Calendar color="white" size={56} strokeWidth={2} />
+          </div>
+
+          {/* Text content */}
+          <div
+            style={{
+              textAlign: 'center',
+              maxWidth: '320px'
+            }}
+          >
+            <h3
+              style={{
+                margin: 0,
+                marginBottom: '8px',
+                fontSize: '24px',
+                fontWeight: '700',
+                color: '#1f2937',
+                letterSpacing: '-0.02em'
+              }}
+            >
+              Start Your Adventure
+            </h3>
+            <p
+              style={{
+                margin: 0,
+                fontSize: '14px',
+                color: '#6b7280',
+                lineHeight: '1.6'
+              }}
+            >
+              Build your perfect itinerary by adding places from the map.
+              <br />
+              Let's explore Catanduanes together!
+            </p>
+          </div>
+
+          {/* Create Itinerary Button */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '14px 32px',
+              background: 'linear-gradient(135deg, #84cc16 0%, #65a30d 100%)',
+              borderRadius: '28px',
+              cursor: 'pointer',
+              boxShadow: '0 8px 24px rgba(132, 204, 22, 0.4)',
+              transition: 'all 0.3s ease',
+              marginTop: '8px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 12px 32px rgba(132, 204, 22, 0.5)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(132, 204, 22, 0.4)';
+            }}
+          >
+            <Calendar color="white" size={20} strokeWidth={2.5} />
+            <span
+              style={{
+                color: 'white',
+                fontSize: '15px',
+                fontWeight: '600',
+                letterSpacing: '-0.01em'
+              }}
+            >
+              Create Itinerary
+            </span>
+          </div>
+
+          {/* Suggestion chips */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '8px',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              marginTop: '16px'
+            }}
+          >
+            {['Beaches', 'Waterfalls', 'Heritage'].map((tag) => (
+              <div
+                key={tag}
+                style={{
+                  padding: '6px 16px',
+                  borderRadius: '20px',
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  fontSize: '12px',
+                  color: '#6b7280',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#84cc16';
+                  e.currentTarget.style.borderColor = '#84cc16';
+                  e.currentTarget.style.color = 'white';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.color = '#6b7280';
+                }}
+              >
+                {tag}
+              </div>
+            ))}
+          </div>
         </div>
+
+        {/* CSS animations */}
+        <style>
+          {`
+            @keyframes pulse {
+              0%, 100% {
+                transform: scale(1);
+              }
+              50% {
+                transform: scale(1.05);
+              }
+            }
+            @keyframes float {
+              0%, 100% {
+                transform: translateY(0) rotate(0deg);
+              }
+              50% {
+                transform: translateY(-20px) rotate(10deg);
+              }
+            }
+          `}
+        </style>
       </div>
     );
   }
