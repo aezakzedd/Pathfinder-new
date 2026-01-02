@@ -721,13 +721,17 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
 
     return `
-      <div style="
+      <div class="info-card-popup" style="
         width: 280px;
         background-color: white;
         border-radius: 12px;
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
         overflow: hidden;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        transform: scale(0.3);
+        opacity: 0;
+        transform-origin: bottom center;
+        transition: transform 0.3s ease-out, opacity 0.3s ease-out;
       ">
         ${carouselHTML}
         <div style="
@@ -915,7 +919,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         popupRef.current = popup;
 
+        // Trigger animation after popup is added to DOM
         setTimeout(() => {
+          const popupCard = document.querySelector('.info-card-popup');
+          if (popupCard) {
+            popupCard.style.transform = 'scale(1)';
+            popupCard.style.opacity = '1';
+          }
+
           let currentIdx = 0;
           const images = document.querySelectorAll('.carousel-image');
           const counter = document.getElementById('image-counter');
