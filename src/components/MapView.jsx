@@ -8,6 +8,30 @@ import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedT
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
 
+// Platform configuration
+const PLATFORMS = {
+  facebook: {
+    name: 'Facebook',
+    color: '#1877F2',
+    textColor: '#FFFFFF'
+  },
+  tiktok: {
+    name: 'TikTok',
+    color: '#000000',
+    textColor: '#FFFFFF'
+  },
+  youtube: {
+    name: 'YouTube',
+    color: '#FF0000',
+    textColor: '#FFFFFF'
+  },
+  instagram: {
+    name: 'Instagram',
+    color: '#E4405F',
+    textColor: '#FFFFFF'
+  }
+};
+
 // Helper function to get asset paths - SIMPLIFIED STRUCTURE: src/assets/Binurong_Point/Binurong_Point1.jpg
 const getAssetPath = (spotName, filename) => {
   // Convert spot name to folder name (replace spaces with underscores)
@@ -990,9 +1014,17 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   }, [onToggleFullscreen]);
 
+  // Get platform for video based on index
+  const getVideoPlatform = (index) => {
+    if (index === 1) return 'tiktok';
+    return 'facebook';
+  };
+
   // Video card component with lazy loading
   const VideoCard = ({ index, isLoaded }) => {
     const tiktokRef = useRef(null);
+    const platform = getVideoPlatform(index);
+    const platformConfig = PLATFORMS[platform];
 
     // Process TikTok embed when it becomes loaded
     useEffect(() => {
@@ -1104,46 +1136,54 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               />
             )}
           </div>
-          {modalSpot && (
+          
+          {/* Minimal overlay with just location and platform pill */}
+          {modalSpot && isLoaded && (
             <div
               style={{
                 position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                padding: '16px',
-                background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 70%, transparent 100%)',
-                color: 'white',
+                bottom: '16px',
+                left: '16px',
+                right: '16px',
+                display: 'flex',
+                alignItems: 'flex-end',
+                justifyContent: 'space-between',
+                gap: '12px',
                 zIndex: 10
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <h3 style={{
+              {/* Location text */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{
                   margin: 0,
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                  fontSize: '13px',
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  textShadow: '0 2px 8px rgba(0,0,0,0.8)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
                 }}>
-                  {modalSpot.name}
-                </h3>
-                <span style={{
-                  fontSize: '12px',
-                  padding: '2px 8px',
-                  backgroundColor: isLoaded ? (index === 1 ? 'rgba(255, 0, 80, 0.8)' : 'rgba(132, 204, 22, 0.8)') : 'rgba(255, 255, 255, 0.2)',
-                  borderRadius: '12px',
-                  fontWeight: '600'
-                }}>
-                  {isLoaded ? (index === 1 ? '🎵 TikTok' : `${index + 1}/3`) : 'Loading...'}
-                </span>
+                  {modalSpot.location}
+                </p>
               </div>
-              <p style={{
-                margin: 0,
-                fontSize: '13px',
-                color: '#d1d5db',
-                textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-              }}>
-                {modalSpot.location}
-              </p>
+
+              {/* Platform pill */}
+              <div
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  backgroundColor: platformConfig.color,
+                  color: platformConfig.textColor,
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  textShadow: 'none',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+                  flexShrink: 0,
+                  letterSpacing: '0.3px'
+                }}
+              >
+                {platformConfig.name}
+              </div>
             </div>
           )}
         </div>
