@@ -175,7 +175,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const map = useRef(null);
   const mapLoaded = useRef(false);
   const markersRef = useRef([]);
-  const markersAdded = useRef(false); // Track if markers have been added
   const popupRef = useRef(null);
   const savedState = useRef({ center: [124.2, 13.8], zoom: DEFAULT_ZOOM });
   const resizeTimeout = useRef(null);
@@ -314,7 +313,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   // Call drawRoutes when itinerary changes
   useEffect(() => {
     drawRoutes();
-  }, [itinerary.length]); // Only trigger when LENGTH changes
+  }, [itinerary.length, drawRoutes]); // Only trigger when LENGTH changes
 
   // Video queue system
   const updateVideoQueue = useCallback((centerIndex) => {
@@ -746,14 +745,18 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   }, [getCategoryPill, isSpotInItinerary]);
 
-  // Add tourist spot markers - ONLY RUNS ONCE
+  // Add tourist spot markers
   const addTouristSpotMarkers = useCallback(() => {
-    if (!map.current || !mapLoaded.current || touristSpots.length === 0 || markersAdded.current) {
+    if (!map.current || !mapLoaded.current || touristSpots.length === 0) {
+      console.log('⏳ Waiting for prerequisites');
       return;
     }
 
     console.log('🗺️ Adding', touristSpots.length, 'markers');
-    markersAdded.current = true;
+
+    // Clear old markers
+    markersRef.current.forEach(marker => marker.remove());
+    markersRef.current = [];
 
     const currentZoom = map.current.getZoom();
     const scale = getMarkerScale(currentZoom);
@@ -866,7 +869,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     console.log('✅ Added', markersRef.current.length, 'markers');
   }, [touristSpots, addToItinerary, handleImageClick, createInfoCardHTML, isSpotInItinerary]);
 
-  // Initialize map - ONLY ONCE
+  // Initialize map
   useEffect(() => {
     if (map.current) return;
 
@@ -920,11 +923,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             source: 'mask',
             paint: { 'fill-color': '#000000', 'fill-opacity': 1 }
           });
-
-          // Add markers if data ready
-          if (dataLoaded && touristSpots.length > 0) {
-            addTouristSpotMarkers();
-          }
         });
       });
 
@@ -933,12 +931,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       markersRef.current.forEach(marker => marker.remove());
       if (map.current) map.current.remove();
     };
-  }, [dataLoaded, touristSpots, addTouristSpotMarkers, updateMarkerSizes]);
+  }, [updateMarkerSizes]);
 
-  // Add markers when data loads - ONLY ONCE
+  // Add markers when data loads OR when itinerary changes (to update button states)
   useEffect(() => {
-    if (mapLoaded.current && dataLoaded && touristSpots.length > 0 && !markersAdded.current) {
-      console.log('🎯 Data ready, adding markers');
+    if (mapLoaded.current && dataLoaded && touristSpots.length > 0) {
+      console.log('🎯 Triggering marker add');
       setTimeout(addTouristSpotMarkers, 100);
     }
   }, [dataLoaded, touristSpots, addTouristSpotMarkers]);
@@ -993,7 +991,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           scrollSnapAlign: 'start'
         }}
       >
-        <div style={{ width: isLandscape ? '500px' : '300px', height: '85vh', maxHeight: isLandscape ? '400px' : '600px', backgroundColor: '#000', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.8)', overflow: 'hidden' }}>
+        <div style={{ width: isLandscape ? '500px' : '300px', height: '85vh', maxHeight: isLandscape ? '400px' : '600px', backgroundColor: '#000', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.8)', overflow: 'hidden', position: 'relative' }}>
           {!isLoaded ? (
             <VideoSkeleton />
           ) : platform === 'youtube' ? (
