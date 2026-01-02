@@ -747,7 +747,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   }, [onToggleFullscreen]);
 
-  // Modal content component
+  // Modal content component - UPDATED WITH FACEBOOK VIDEO
   const ModalContent = () => (
     <div
       onClick={closeModal}
@@ -757,7 +757,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         left: 0,
         width: '100vw',
         height: '100vh',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        backgroundColor: 'rgba(0, 0, 0, 0.85)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
         zIndex: 9999,
@@ -768,19 +768,22 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         transition: 'opacity 0.3s ease',
       }}
     >
-      {/* Modal card - vertical rectangle placeholder */}
+      {/* Modal card - vertical rectangle with Facebook video */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '400px',
-          height: '80vh',
-          backgroundColor: '#1f2937',
-          borderRadius: '24px',
+          width: '300px',
+          height: '85vh',
+          maxHeight: '600px',
+          backgroundColor: '#000000',
+          borderRadius: '16px',
           position: 'relative',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
           transform: modalOpen ? 'scale(1)' : 'scale(0.9)',
           transition: 'transform 0.3s ease',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
         {/* Close button */}
@@ -788,69 +791,89 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           onClick={closeModal}
           style={{
             position: 'absolute',
-            top: '16px',
-            right: '16px',
-            width: '40px',
-            height: '40px',
+            top: '12px',
+            right: '12px',
+            width: '36px',
+            height: '36px',
             borderRadius: '50%',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
             border: 'none',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
             transition: 'background-color 0.2s',
-            zIndex: 10
+            zIndex: 20
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
           }}
         >
-          <X color="white" size={24} strokeWidth={2} />
+          <X color="white" size={20} strokeWidth={2.5} />
         </button>
 
-        {/* Placeholder content - TikTok style vertical scrolling will go here */}
+        {/* Facebook Video Embed */}
         <div
           style={{
             width: '100%',
             height: '100%',
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '40px',
-            color: 'white'
+            backgroundColor: '#000000'
           }}
         >
-          {modalImage && modalSpot && (
-            <>
-              <img
-                src={modalImage}
-                alt={modalSpot.name}
-                style={{
-                  width: '100%',
-                  height: 'auto',
-                  maxHeight: '60%',
-                  objectFit: 'cover',
-                  borderRadius: '12px',
-                  marginBottom: '20px'
-                }}
-              />
-              <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '8px', textAlign: 'center' }}>
-                {modalSpot.name}
-              </h2>
-              <p style={{ fontSize: '14px', color: '#9ca3af', textAlign: 'center' }}>
-                {modalSpot.location}
-              </p>
-              <div style={{ marginTop: '20px', fontSize: '12px', color: '#6b7280', textAlign: 'center' }}>
-                TikTok-style vertical scrolling will be implemented here
-              </div>
-            </>
-          )}
+          <iframe 
+            src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0" 
+            width="267" 
+            height="476" 
+            style={{
+              border: 'none',
+              overflow: 'hidden',
+              borderRadius: '8px'
+            }}
+            scrolling="no" 
+            frameBorder="0" 
+            allowFullScreen={true}
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+          />
         </div>
+
+        {/* Optional: Spot info overlay at bottom */}
+        {modalSpot && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              padding: '16px',
+              background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 70%, transparent 100%)',
+              color: 'white',
+              zIndex: 10
+            }}
+          >
+            <h3 style={{
+              margin: '0 0 4px 0',
+              fontSize: '16px',
+              fontWeight: '600',
+              textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+            }}>
+              {modalSpot.name}
+            </h3>
+            <p style={{
+              margin: 0,
+              fontSize: '13px',
+              color: '#d1d5db',
+              textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+            }}>
+              {modalSpot.location}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
