@@ -264,7 +264,8 @@ export default function Explore() {
     zIndex: isMapFullscreen ? 30 : 1
   }), [isMapFullscreen]);
 
-  // Budget tracker overlay - positioned above map when not fullscreen
+  // Budget tracker overlay - only visible when itinerary content should be visible (no map overlays)
+  // Hidden when: map is in normal view (covering itinerary) OR map is fullscreen
   const budgetTrackerStyle = useMemo(() => ({
     position: 'absolute',
     top: '16px',
@@ -274,13 +275,13 @@ export default function Explore() {
     padding: '12px 16px',
     minWidth: '180px',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-    // Show above map (z-index 2) when map is not fullscreen, hide when fullscreen
-    zIndex: isMapFullscreen ? 0 : 2,
-    opacity: isMapFullscreen ? 0 : 1,
+    // Hidden by default since map covers itinerary
+    zIndex: 0,
+    opacity: 0,
     transition: 'opacity 0.3s ease',
     border: '1px solid #374151',
-    pointerEvents: isMapFullscreen ? 'none' : 'auto'
-  }), [isMapFullscreen]);
+    pointerEvents: 'none'
+  }), []);
 
   return (
     <div className="h-screen w-screen bg-black overflow-hidden">
@@ -365,7 +366,7 @@ export default function Explore() {
               />
             </div>
 
-            {/* Budget Tracker Overlay - Above map when not fullscreen */}
+            {/* Budget Tracker Overlay - Hidden in map view, only shows when viewing itinerary */}
             <div style={budgetTrackerStyle}>
               <div style={{
                 display: 'flex',
