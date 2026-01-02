@@ -8,6 +8,7 @@ import PlaceDetailsSidebar from './PlaceDetailsSidebar';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
+const SIDEBAR_WIDTH = 420; // Fixed sidebar width
 
 // Platform configuration
 const PLATFORMS = {
@@ -174,7 +175,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [modalImage, setModalImage] = useState(null);
   const [modalSpot, setModalSpot] = useState(null);
 
-  // Sidebar state - NEW
+  // Sidebar state
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarPlace, setSidebarPlace] = useState(null);
 
@@ -381,7 +382,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   };
 
-  // Handle image click to open modal - UPDATED to also open sidebar
+  // Handle image click to open modal - opens sidebar automatically
   const handleImageClick = (image, spot) => {
     setModalImage(image);
     setModalSpot(spot);
@@ -394,7 +395,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     setCurrentVideoIndex(0);
   };
 
-  // Close modal - UPDATED to also close sidebar
+  // Close modal - also closes sidebar
   const closeModal = () => {
     setModalOpen(false);
     setSidebarOpen(false);
@@ -419,7 +420,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }, 300);
   };
 
-  // Close sidebar handler - NEW
+  // Close sidebar handler
   const closeSidebar = () => {
     setSidebarOpen(false);
     setTimeout(() => {
@@ -1208,106 +1209,125 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     );
   };
 
-  // Modal content component - OPTIMIZED WITH LAZY LOADING
-  const ModalContent = () => (
-    <div
-      onClick={closeModal}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        backgroundColor: 'rgba(0, 0, 0, 0.85)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        zIndex: 9999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: modalOpen ? 1 : 0,
-        transition: 'opacity 0.3s ease',
-      }}
-    >
-      {/* Performance Monitor */}
-      <PerformanceMonitor show={showPerformance} />
+  // Modal content component - NEW LAYOUT with sidebar beside videos
+  const ModalContent = () => {
+    // Calculate available width for video container when sidebar is open
+    const videoContainerWidth = sidebarOpen 
+      ? `calc(100vw - ${SIDEBAR_WIDTH}px)` 
+      : '100vw';
 
-      {/* Close button - fixed position */}
-      <button
+    return (
+      <div
         onClick={closeModal}
         style={{
           position: 'fixed',
-          top: '20px',
-          right: '20px',
-          width: '40px',
-          height: '40px',
-          borderRadius: '50%',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          border: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          transition: 'background-color 0.2s',
-          zIndex: 10001
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        }}
-      >
-        <X color="white" size={24} strokeWidth={2.5} />
-      </button>
-
-      {/* Scrollable container with snap behavior */}
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
+          top: 0,
+          left: 0,
           width: '100vw',
           height: '100vh',
-          overflowY: 'scroll',
-          scrollSnapType: 'y mandatory',
-          scrollBehavior: 'smooth',
-          WebkitOverflowScrolling: 'touch'
+          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          zIndex: 9998, // Below sidebar (9999)
+          display: 'flex',
+          flexDirection: 'row',
+          opacity: modalOpen ? 1 : 0,
+          transition: 'opacity 0.3s ease',
         }}
       >
-        {/* Render 3 video cards with lazy loading */}
-        {[0, 1, 2].map((index) => (
-          <VideoCard 
-            key={index} 
-            index={index} 
-            isLoaded={loadedVideos.has(index)}
-          />
-        ))}
-      </div>
+        {/* Performance Monitor */}
+        <PerformanceMonitor show={showPerformance} />
 
-      {/* Debug info (only visible when performance monitor is on) */}
-      {showPerformance && (
-        <div
+        {/* Close button - fixed position */}
+        <button
+          onClick={closeModal}
           style={{
             position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            color: 'white',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            fontFamily: 'monospace',
-            fontSize: '12px',
-            zIndex: 10002,
-            border: '1px solid rgba(132, 204, 22, 0.3)'
+            top: '20px',
+            left: '20px',
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s',
+            zIndex: 10001
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
           }}
         >
-          <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#84cc16' }}>Video Queue</div>
-          <div>Current: {currentVideoIndex}</div>
-          <div>Loaded: [{Array.from(loadedVideos).join(', ')}]</div>
-          <div style={{ marginTop: '8px', fontSize: '11px', color: '#9ca3af' }}>Press Ctrl+Shift+P to toggle</div>
+          <X color="white" size={24} strokeWidth={2.5} />
+        </button>
+
+        {/* Video container - width adjusts based on sidebar */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            width: videoContainerWidth,
+            height: '100vh',
+            overflowY: 'scroll',
+            scrollSnapType: 'y mandatory',
+            scrollBehavior: 'smooth',
+            WebkitOverflowScrolling: 'touch',
+            transition: 'width 0.3s ease'
+          }}
+        >
+          {/* Render 3 video cards with lazy loading */}
+          {[0, 1, 2].map((index) => (
+            <VideoCard 
+              key={index} 
+              index={index} 
+              isLoaded={loadedVideos.has(index)}
+            />
+          ))}
         </div>
-      )}
-    </div>
-  );
+
+        {/* Spacer for sidebar - only visible when sidebar is open */}
+        {sidebarOpen && (
+          <div
+            style={{
+              width: `${SIDEBAR_WIDTH}px`,
+              height: '100vh',
+              flexShrink: 0,
+              pointerEvents: 'none'
+            }}
+          />
+        )}
+
+        {/* Debug info (only visible when performance monitor is on) */}
+        {showPerformance && (
+          <div
+            style={{
+              position: 'fixed',
+              bottom: '20px',
+              right: '20px',
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              color: 'white',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              fontFamily: 'monospace',
+              fontSize: '12px',
+              zIndex: 10002,
+              border: '1px solid rgba(132, 204, 22, 0.3)'
+            }}
+          >
+            <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#84cc16' }}>Video Queue</div>
+            <div>Current: {currentVideoIndex}</div>
+            <div>Loaded: [{Array.from(loadedVideos).join(', ')}]</div>
+            <div style={{ marginTop: '8px', fontSize: '11px', color: '#9ca3af' }}>Press Ctrl+Shift+P to toggle</div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div 
@@ -1320,7 +1340,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       {/* Modal rendered via Portal to document.body - ensures it appears above everything */}
       {modalOpen && createPortal(<ModalContent />, document.body)}
 
-      {/* PlaceDetailsSidebar rendered via Portal - NEW */}
+      {/* PlaceDetailsSidebar rendered via Portal */}
       {createPortal(
         <PlaceDetailsSidebar 
           place={sidebarPlace} 
