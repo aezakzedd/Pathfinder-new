@@ -179,6 +179,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const videoRefs = useRef([]);
   const observerRef = useRef(null);
   const tiktokScriptLoaded = useRef(false);
+  const [tiktokReady, setTiktokReady] = useState(false);
 
   // Performance monitoring
   const [showPerformance, setShowPerformance] = useState(false);
@@ -187,9 +188,17 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   useEffect(() => {
     if (tiktokScriptLoaded.current) return;
 
+    console.log('🎵 Loading TikTok embed script...');
     const script = document.createElement('script');
     script.src = 'https://www.tiktok.com/embed.js';
     script.async = true;
+    script.onload = () => {
+      console.log('✅ TikTok script loaded');
+      setTiktokReady(true);
+    };
+    script.onerror = () => {
+      console.error('❌ Failed to load TikTok script');
+    };
     document.body.appendChild(script);
     tiktokScriptLoaded.current = true;
 
@@ -237,16 +246,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       loaded: Array.from(newQueue),
       unloaded: Array.from({ length: videoCount }, (_, i) => i).filter(i => !newQueue.has(i))
     });
-
-    // Trigger TikTok script to process embeds when video 1 (TikTok) is loaded
-    if (newQueue.has(1) && window.tiktok) {
-      setTimeout(() => {
-        if (window.tiktok && window.tiktok.process) {
-          window.tiktok.process();
-          console.log('🎵 TikTok embed processed');
-        }
-      }, 100);
-    }
   }, []);
 
   // Intersection Observer for lazy loading
@@ -1025,18 +1024,28 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     const tiktokRef = useRef(null);
     const platform = getVideoPlatform(index);
     const platformConfig = PLATFORMS[platform];
+    const [embedRendered, setEmbedRendered] = useState(false);
 
     // Process TikTok embed when it becomes loaded
     useEffect(() => {
-      if (index === 1 && isLoaded && tiktokRef.current && window.tiktok) {
-        setTimeout(() => {
-          if (window.tiktok && window.tiktok.process) {
-            window.tiktok.process();
-            console.log('🎵 TikTok embed initialized for video', index);
-          }
-        }, 200);
+      if (index === 1 && isLoaded && !embedRendered && tiktokRef.current) {
+        console.log('🎵 Processing TikTok embed for video', index);
+        
+        // Multiple attempts to ensure TikTok embed loads
+        const attempts = [100, 300, 500, 1000];
+        attempts.forEach((delay) => {
+          setTimeout(() => {
+            if (window.tiktok?.process) {
+              window.tiktok.process();
+              console.log(`✅ TikTok processed (attempt at ${delay}ms)`);
+              setEmbedRendered(true);
+            } else {
+              console.log(`⏳ TikTok not ready yet (${delay}ms)`);
+            }
+          }, delay);
+        });
       }
-    }, [index, isLoaded]);
+    }, [index, isLoaded, embedRendered]);
 
     return (
       <div
@@ -1089,7 +1098,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
                   alignItems: 'center',
                   justifyContent: 'center',
                   opacity: 0,
-                  animation: 'fadeIn 0.5s ease-in forwards'
+                  animation: 'fadeIn 0.5s ease-in 0.3s forwards'
                 }}
               >
                 <blockquote 
@@ -1097,11 +1106,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
                   cite="https://www.tiktok.com/@joansfootprints/video/7353150074429476101" 
                   data-video-id="7353150074429476101" 
                   style={{ 
-                    maxWidth: '325px', 
-                    minWidth: '267px',
-                    margin: 0,
-                    borderRadius: '8px',
-                    overflow: 'hidden'
+                    maxWidth: '605px',
+                    minWidth: '325px',
+                    margin: 0
                   }}
                 > 
                   <section> 
@@ -1109,10 +1116,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
                       target="_blank" 
                       title="@joansfootprints" 
                       href="https://www.tiktok.com/@joansfootprints?refer=embed"
+                      rel="noopener noreferrer"
                     >
                       @joansfootprints
                     </a> 
-                    This is Binurong Point, Catanduanes✨ Best time to go here is sunrise and sunset!❤️
+                    {' '}This is Binurong Point, Catanduanes✨ Best time to go here is sunrise and sunset!❤️
                   </section> 
                 </blockquote>
               </div>
@@ -1294,6 +1302,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#84cc16' }}>Video Queue</div>
           <div>Current: {currentVideoIndex}</div>
           <div>Loaded: [{Array.from(loadedVideos).join(', ')}]</div>
+          <div>TikTok Ready: {tiktokReady ? '✅' : '⏳'}</div>
           <div style={{ marginTop: '8px', fontSize: '11px', color: '#9ca3af' }}>Press Ctrl+Shift+P to toggle</div>
         </div>
       )}
