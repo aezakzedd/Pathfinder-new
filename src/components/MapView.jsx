@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, memo, useState } from 'react';
+import { useEffect, useRef, useCallback, memo, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Maximize, Minimize, Map as MapIcon, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
@@ -41,19 +41,22 @@ const getAssetPath = (spotName, filename) => {
   return `/src/assets/${folderName}/${filename}`;
 };
 
-// Helper function to fetch route between two coordinates using OSRM (free open-source routing)
+// Helper function to fetch route between two coordinates using OSRM
 const fetchRoute = async (start, end) => {
   try {
     const url = `https://router.project-osrm.org/route/v1/driving/${start[0]},${start[1]};${end[0]},${end[1]}?overview=full&geometries=geojson`;
+    console.log('🔄 Fetching route from', start, 'to', end);
     const response = await fetch(url);
     const data = await response.json();
     
     if (data.routes && data.routes.length > 0) {
+      console.log('✅ Route fetched successfully');
       return data.routes[0].geometry;
     }
+    console.log('❌ No routes found');
     return null;
   } catch (error) {
-    console.error('Error fetching route:', error);
+    console.error('❌ Error fetching route:', error);
     return null;
   }
 };
@@ -203,6 +206,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   // Performance monitoring
   const [showPerformance, setShowPerformance] = useState(false);
 
+  // Create a memoized set of itinerary place names for quick lookup
+  const itineraryNames = useMemo(() => {
+    return new Set(itinerary.map(item => item.name));
+  }, [itinerary]);
+
   // Toggle performance monitor with Ctrl+Shift+P
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -216,35 +224,50 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-  // Draw routing lines when itinerary changes
+  // Draw routing lines when itinerary changes - COMPLETELY SEPARATE FROM MARKERS
   useEffect(() => {
-    if (!map.current || !mapLoaded.current || itinerary.length < 2) {
-      // Remove existing route if any
-      if (map.current && map.current.getSource('route')) {
-        if (map.current.getLayer('route-line')) map.current.removeLayer('route-line');
-        if (map.current.getLayer('route-outline')) map.current.removeLayer('route-outline');
-        map.current.removeSource('route');
-      }
+    if (!map.current || !mapLoaded.current) {
+      console.log('⏳ Map not ready for routing');
+      return;
+    }
+
+    // Remove existing route first
+    if (map.current.getSource('route')) {
+      if (map.current.getLayer('route-line')) map.current.removeLayer('route-line');
+      if (map.current.getLayer('route-outline')) map.current.removeLayer('route-outline');
+      map.current.removeSource('route');
+      console.log('🗑️ Removed old routes');
+    }
+
+    // Only draw if we have 2+ places
+    if (itinerary.length < 2) {
+      console.log('⏭️ Not enough places for routing');
       return;
     }
 
     const drawRoutes = async () => {
-      console.log('Drawing routes for', itinerary.length, 'places');
+      console.log('🎨 Drawing routes for', itinerary.length, 'places');
       
       // Fetch all route segments
       const routeSegments = [];
       for (let i = 0; i < itinerary.length - 1; i++) {
         const start = itinerary[i].coordinates;
         const end = itinerary[i + 1].coordinates;
+        console.log(`🔗 Segment ${i + 1}: ${itinerary[i].name} → ${itinerary[i + 1].name}`);
         const route = await fetchRoute(start, end);
         if (route) {
           routeSegments.push(route);
         }
       }
 
-      if (routeSegments.length === 0) return;
+      if (routeSegments.length === 0) {
+        console.log('❌ No route segments fetched');
+        return;
+      }
 
-      // Combine all segments into one MultiLineString
+      console.log(`✅ Fetched ${routeSegments.length} route segments`);
+
+      // Combine all segments into one FeatureCollection
       const combinedGeometry = {
         type: 'FeatureCollection',
         features: routeSegments.map(geometry => ({
@@ -252,13 +275,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           geometry: geometry
         }))
       };
-
-      // Remove existing route layers and source
-      if (map.current.getSource('route')) {
-        if (map.current.getLayer('route-line')) map.current.removeLayer('route-line');
-        if (map.current.getLayer('route-outline')) map.current.removeLayer('route-outline');
-        map.current.removeSource('route');
-      }
 
       // Add new route source
       map.current.addSource('route', {
@@ -298,11 +314,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }
       });
 
-      console.log('✅ Routes drawn successfully');
+      console.log('🎉 Routes drawn successfully on map!');
     };
 
     drawRoutes();
-  }, [itinerary]);
+  }, [itinerary]); // ONLY depends on itinerary, NOT on touristSpots or other state
 
   // Video queue system
   const updateVideoQueue = useCallback((centerIndex) => {
@@ -318,8 +334,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
     console.log('📹 Video Queue Update:', {
       current: centerIndex,
-      loaded: Array.from(newQueue),
-      unloaded: Array.from({ length: videoCount }, (_, i) => i).filter(i => !newQueue.has(i))
+      loaded: Array.from(newQueue)
     });
   }, []);
 
@@ -334,7 +349,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           const iframe = iframeRefs.current[index];
           
           if (entry.isIntersecting) {
-            console.log(`👁️ Video ${index} is now visible - Playing`);
             updateVideoQueue(index);
             
             if (iframe) {
@@ -347,8 +361,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               }
             }
           } else {
-            console.log(`👁️ Video ${index} left view - Pausing`);
-            
             if (iframe) {
               const platform = getVideoPlatform(index);
               if (platform === 'youtube') {
@@ -451,13 +463,13 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     loadTouristSpots();
   }, []);
 
-  // Add to itinerary handler - NO map reload
+  // Add to itinerary handler - NO map operations
   const addToItinerary = useCallback((spot, buttonElement) => {
     setItinerary(prev => {
       const isAlreadyAdded = prev.some(item => item.name === spot.name);
       
       if (!isAlreadyAdded) {
-        console.log('Added to itinerary:', spot.name);
+        console.log('✅ Added to itinerary:', spot.name);
         
         // Update button to show check icon
         if (buttonElement) {
@@ -465,32 +477,25 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
-            <span class="btn-text" style="
-              max-width: 0;
-              opacity: 0;
-              margin-left: 0;
-              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-              font-size: 11px;
-              font-weight: 600;
-              color: white;
-            ">Added!</span>
           `;
           buttonElement.style.backgroundColor = '#22c55e';
           buttonElement.style.pointerEvents = 'none';
+          buttonElement.style.minWidth = '28px';
         }
         
         return [...prev, spot];
       }
       
+      console.log('ℹ️ Already in itinerary:', spot.name);
       return prev;
     });
   }, []);
 
   // Remove from itinerary handler
-  const removeFromItinerary = (index) => {
+  const removeFromItinerary = useCallback((index) => {
     setItinerary(prev => prev.filter((_, i) => i !== index));
     console.log('Removed from itinerary at index:', index);
-  };
+  }, []);
 
   // Handle card click from itinerary
   const handleCardClick = useCallback((place) => {
@@ -508,7 +513,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   }, []);
 
   // Handle image click to open modal
-  const handleImageClick = (image, spot) => {
+  const handleImageClick = useCallback((image, spot) => {
     setModalImage(image);
     setModalSpot(spot);
     setModalOpen(true);
@@ -516,10 +521,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     setSidebarOpen(true);
     setLoadedVideos(new Set([0]));
     setCurrentVideoIndex(0);
-  };
+  }, []);
 
   // Close modal
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setModalOpen(false);
     setSidebarOpen(false);
     iframeRefs.current.forEach((iframe, index) => {
@@ -540,15 +545,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       setLoadedVideos(new Set([0]));
       setCurrentVideoIndex(0);
     }, 300);
-  };
+  }, []);
 
   // Close sidebar handler
-  const closeSidebar = () => {
+  const closeSidebar = useCallback(() => {
     setSidebarOpen(false);
     setTimeout(() => {
       setSidebarPlace(null);
     }, 300);
-  };
+  }, []);
 
   // Calculate marker scale based on zoom level
   const getMarkerScale = (zoom) => {
@@ -570,7 +575,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   }, []);
 
   // Get category pill HTML
-  const getCategoryPill = (category) => {
+  const getCategoryPill = useCallback((category) => {
     const colors = categoryColors[category] || categoryColors.default;
     return `
       <span style="
@@ -586,16 +591,16 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         margin-bottom: 4px;
       ">${category.toLowerCase().replace('_', ' ')}</span>
     `;
-  };
+  }, []);
 
-  // Create info card HTML - FIXED: Close button positioning
-  const createInfoCardHTML = (spot) => {
+  // Create info card HTML - PROPERLY FIXED button positioning
+  const createInfoCardHTML = useCallback((spot) => {
     const categoryHTML = spot.categories
       .slice(0, 2)
       .map(cat => getCategoryPill(cat))
       .join('');
 
-    const isInItinerary = itinerary.some(item => item.name === spot.name);
+    const isInItinerary = itineraryNames.has(spot.name);
 
     const hasImages = spot.images && spot.images.length > 0;
     const carouselHTML = hasImages ? `
@@ -606,6 +611,55 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         position: relative;
         overflow: hidden;
       ">
+        <!-- Buttons container - absolute positioning within image area -->
+        <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 15;">
+          <button id="add-to-itinerary-btn" class="add-itinerary-btn" style="
+            height: 28px;
+            min-width: 28px;
+            border-radius: 14px;
+            background-color: ${isInItinerary ? '#22c55e' : 'rgba(132, 204, 22, 0.9)'};
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: ${isInItinerary ? 'default' : 'pointer'};
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            white-space: nowrap;
+            padding: 0 10px;
+            pointer-events: ${isInItinerary ? 'none' : 'auto'};
+          ">
+            ${isInItinerary ? `
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            ` : `
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            `}
+          </button>
+
+          <button id="close-card-btn" style="
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+          ">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
         ${spot.images.map((img, idx) => `
           <img 
             src="${img}" 
@@ -697,6 +751,49 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         align-items: center;
         justify-content: center;
       ">
+        <!-- Buttons for no-image case -->
+        <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 15;">
+          <button id="add-to-itinerary-btn" class="add-itinerary-btn" style="
+            height: 28px;
+            min-width: 28px;
+            border-radius: 14px;
+            background-color: ${isInItinerary ? '#22c55e' : 'rgba(132, 204, 22, 0.9)'};
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: ${isInItinerary ? 'default' : 'pointer'};
+            pointer-events: ${isInItinerary ? 'none' : 'auto'};
+          ">
+            ${isInItinerary ? `
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            ` : `
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            `}
+          </button>
+
+          <button id="close-card-btn" style="
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+          ">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
         <i class="fa-solid fa-location-dot" style="font-size: 48px; color: #9ca3af;"></i>
       </div>
     `;
@@ -713,74 +810,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       ">
         ${carouselHTML}
 
-        <div style="padding: 12px 14px 12px 14px; background-color: white; position: relative;">
-          <!-- Buttons positioned absolutely on top right of white content area -->
-          <div style="position: absolute; top: -198px; right: 8px; display: flex; gap: 6px; z-index: 11;">
-            <button id="add-to-itinerary-btn" class="add-itinerary-btn" style="
-              height: 28px;
-              min-width: 28px;
-              border-radius: 14px;
-              background-color: ${isInItinerary ? '#22c55e' : 'rgba(132, 204, 22, 0.9)'};
-              border: none;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              cursor: ${isInItinerary ? 'default' : 'pointer'};
-              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-              overflow: hidden;
-              white-space: nowrap;
-              padding: 0 10px;
-              pointer-events: ${isInItinerary ? 'none' : 'auto'};
-            ">
-              ${isInItinerary ? `
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span class="btn-text" style="
-                  max-width: 0;
-                  opacity: 0;
-                  margin-left: 0;
-                  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                  font-size: 11px;
-                  font-weight: 600;
-                  color: white;
-                ">Added!</span>
-              ` : `
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                <span class="btn-text" style="
-                  max-width: 0;
-                  opacity: 0;
-                  margin-left: 0;
-                  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                  font-size: 11px;
-                  font-weight: 600;
-                  color: white;
-                ">Add to Itinerary</span>
-              `}
-            </button>
-
-            <button id="close-card-btn" style="
-              width: 28px;
-              height: 28px;
-              border-radius: 50%;
-              background-color: rgba(0, 0, 0, 0.5);
-              border: none;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              cursor: pointer;
-              transition: background-color 0.2s;
-            ">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-
+        <div style="padding: 12px 14px; background-color: white;">
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
             <i class="fa-solid fa-location-dot fa-bounce" style="font-size: 12px; color: #6b7280;"></i>
             <span style="color: #6b7280; font-size: 11px; font-weight: 500;">${spot.location}</span>
@@ -799,7 +829,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             -webkit-box-orient: vertical;
             line-height: 1.4;
             max-height: 2.8em;
-            padding-right: 64px;
           ">${spot.name}</h3>
 
           <div style="display: flex; flex-wrap: wrap; gap: 0;">
@@ -807,22 +836,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           </div>
         </div>
       </div>
-
-      <style>
-        .add-itinerary-btn:hover {
-          background-color: rgba(132, 204, 22, 1) !important;
-          min-width: 140px !important;
-        }
-        .add-itinerary-btn:hover .btn-text {
-          max-width: 120px !important;
-          opacity: 1 !important;
-          margin-left: 6px !important;
-        }
-      </style>
     `;
-  };
+  }, [getCategoryPill, itineraryNames]);
 
-  // Add tourist spot markers - with dependency on itinerary for button state
+  // Add tourist spot markers - ONLY DEPENDS ON touristSpots (not itinerary)
   const addTouristSpotMarkers = useCallback(() => {
     if (!map.current || !mapLoaded.current || touristSpots.length === 0) {
       console.log('⏳ Waiting for prerequisites:', {
@@ -966,7 +983,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           }
 
           const addBtn = document.getElementById('add-to-itinerary-btn');
-          if (addBtn) {
+          if (addBtn && !itineraryNames.has(spot.name)) {
             addBtn.addEventListener('click', () => addToItinerary(spot, addBtn));
           }
         }, 0);
@@ -982,13 +999,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       });
 
       markersRef.current.push(marker);
-      console.log(`✓ Marker ${index + 1}: ${spot.name}`);
     });
 
     console.log(`✅ Successfully added ${markersRef.current.length} markers!`);
-  }, [touristSpots, itinerary, addToItinerary]);
+  }, [touristSpots, addToItinerary, handleImageClick, createInfoCardHTML, itineraryNames]);
 
-  // Initialize map
+  // Initialize map - ONLY ONCE
   useEffect(() => {
     if (map.current) return;
 
@@ -1117,7 +1133,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     };
   }, [updateMarkerSizes, dataLoaded, touristSpots, addTouristSpotMarkers]);
 
-  // Add markers when both map and data ready
+  // Add markers when both map and data ready - ONLY ONCE
   useEffect(() => {
     if (mapLoaded.current && dataLoaded && touristSpots.length > 0) {
       console.log('🎯 Both map and data ready, adding markers...');
@@ -1129,20 +1145,33 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   }, [dataLoaded, touristSpots, addTouristSpotMarkers]);
 
-  // Update popup when itinerary changes (for button state)
+  // ONLY update popup HTML when itinerary changes (don't recreate markers)
   useEffect(() => {
-    if (mapLoaded.current && touristSpots.length > 0 && popupRef.current && selectedSpot) {
+    if (selectedSpot && popupRef.current) {
       const newHTML = createInfoCardHTML(selectedSpot);
       popupRef.current.setHTML(newHTML);
       
+      // Re-attach event listeners
       setTimeout(() => {
         const addBtn = document.getElementById('add-to-itinerary-btn');
-        if (addBtn) {
+        const closeBtn = document.getElementById('close-card-btn');
+        
+        if (addBtn && !itineraryNames.has(selectedSpot.name)) {
           addBtn.addEventListener('click', () => addToItinerary(selectedSpot, addBtn));
+        }
+        
+        if (closeBtn) {
+          closeBtn.addEventListener('click', () => {
+            if (popupRef.current) {
+              popupRef.current.remove();
+              popupRef.current = null;
+            }
+            setSelectedSpot(null);
+          });
         }
       }, 0);
     }
-  }, [itinerary, selectedSpot, addToItinerary]);
+  }, [itineraryNames, selectedSpot, createInfoCardHTML, addToItinerary]);
 
   // Debounced resize handler
   const handleResize = useCallback(() => {
