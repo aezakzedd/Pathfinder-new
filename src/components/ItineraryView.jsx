@@ -21,10 +21,10 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
           alignItems: 'center',
           justifyContent: 'center',
           flexDirection: 'column',
-          padding: '40px 20px',
           background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfccb 100%)',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          borderRadius: '16px'
         }}
       >
         {/* Decorative background elements */}
@@ -73,15 +73,21 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
           <Compass size={70} color="#84cc16" strokeWidth={1.5} />
         </div>
 
-        {/* Main content */}
+        {/* Main content - absolutely centered */}
         <div
           style={{
-            position: 'relative',
-            zIndex: 1,
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '24px'
+            gap: '24px',
+            width: '100%',
+            maxWidth: '400px',
+            padding: '0 20px',
+            boxSizing: 'border-box'
           }}
         >
           {/* Icon circle with gradient */}
