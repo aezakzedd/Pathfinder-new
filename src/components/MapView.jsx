@@ -15,6 +15,118 @@ const getAssetPath = (spotName, filename) => {
   return `/src/assets/${folderName}/${filename}`;
 };
 
+// Loading Skeleton Component
+const VideoSkeleton = () => (
+  <div
+    style={{
+      width: '267px',
+      height: '476px',
+      backgroundColor: '#1a1a1a',
+      borderRadius: '8px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+      overflow: 'hidden'
+    }}
+  >
+    {/* Shimmer effect */}
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: '-100%',
+        width: '100%',
+        height: '100%',
+        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
+        animation: 'shimmer 2s infinite'
+      }}
+    />
+    {/* Loading icon */}
+    <div
+      style={{
+        width: '48px',
+        height: '48px',
+        border: '4px solid rgba(255,255,255,0.1)',
+        borderTopColor: '#84cc16',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite'
+      }}
+    />
+    <style>
+      {`
+        @keyframes shimmer {
+          0% { left: -100%; }
+          100% { left: 100%; }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}
+    </style>
+  </div>
+);
+
+// Performance Monitor Component
+const PerformanceMonitor = ({ show }) => {
+  const [fps, setFps] = useState(0);
+  const [memory, setMemory] = useState(0);
+  const frameCount = useRef(0);
+  const lastTime = useRef(performance.now());
+
+  useEffect(() => {
+    if (!show) return;
+
+    const measureFPS = () => {
+      frameCount.current++;
+      const now = performance.now();
+      const delta = now - lastTime.current;
+
+      if (delta >= 1000) {
+        setFps(Math.round((frameCount.current * 1000) / delta));
+        frameCount.current = 0;
+        lastTime.current = now;
+
+        // Measure memory if available
+        if (performance.memory) {
+          const usedMB = Math.round(performance.memory.usedJSHeapSize / 1048576);
+          setMemory(usedMB);
+        }
+      }
+
+      requestAnimationFrame(measureFPS);
+    };
+
+    const rafId = requestAnimationFrame(measureFPS);
+    return () => cancelAnimationFrame(rafId);
+  }, [show]);
+
+  if (!show) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: '80px',
+        right: '20px',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        color: '#84cc16',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        fontFamily: 'monospace',
+        fontSize: '14px',
+        zIndex: 10002,
+        minWidth: '150px',
+        border: '1px solid rgba(132, 204, 22, 0.3)'
+      }}
+    >
+      <div style={{ marginBottom: '4px', fontWeight: 'bold', color: 'white' }}>Performance</div>
+      <div>FPS: <span style={{ color: fps < 30 ? '#ef4444' : fps < 50 ? '#f59e0b' : '#84cc16' }}>{fps}</span></div>
+      {memory > 0 && <div>Memory: {memory} MB</div>}
+    </div>
+  );
+};
+
 const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -36,6 +148,106 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [modalOpen, setModalOpen] = useState(false);
   const [modalImage, setModalImage] = useState(null);
   const [modalSpot, setModalSpot] = useState(null);
+
+  // Video optimization states
+  const [loadedVideos, setLoadedVideos] = useState(new Set([0])); // Start with first video
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const videoRefs = useRef([]);
+  const observerRef = useRef(null);
+
+  // Performance monitoring
+  const [showPerformance, setShowPerformance] = useState(false);
+
+  // Toggle performance monitor with Ctrl+Shift+P
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+        setShowPerformance(prev => !prev);
+        console.log('Performance monitor toggled');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
+
+  // Video queue system: Keep only current, previous, and next videos loaded
+  const updateVideoQueue = useCallback((centerIndex) => {
+    const videoCount = 3; // We have 3 test videos
+    const newQueue = new Set();
+
+    // Add current video
+    newQueue.add(centerIndex);
+
+    // Add previous video if exists
+    if (centerIndex > 0) {
+      newQueue.add(centerIndex - 1);
+    }
+
+    // Add next video if exists
+    if (centerIndex < videoCount - 1) {
+      newQueue.add(centerIndex + 1);
+    }
+
+    setLoadedVideos(newQueue);
+    setCurrentVideoIndex(centerIndex);
+
+    console.log('📹 Video Queue Update:', {
+      current: centerIndex,
+      loaded: Array.from(newQueue),
+      unloaded: Array.from({ length: videoCount }, (_, i) => i).filter(i => !newQueue.has(i))
+    });
+  }, []);
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    if (!modalOpen) return;
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = parseInt(entry.target.dataset.videoIndex);
+            console.log(`👁️ Video ${index} is now visible`);
+            updateVideoQueue(index);
+          }
+        });
+      },
+      {
+        root: null,
+        threshold: 0.5, // Trigger when 50% visible
+        rootMargin: '0px'
+      }
+    );
+
+    // Observe all video containers
+    videoRefs.current.forEach((ref) => {
+      if (ref) observerRef.current.observe(ref);
+    });
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [modalOpen, updateVideoQueue]);
+
+  // Log performance metrics
+  useEffect(() => {
+    if (!modalOpen) return;
+
+    const logPerformance = setInterval(() => {
+      if (performance.memory) {
+        console.log('💾 Memory:', {
+          used: `${Math.round(performance.memory.usedJSHeapSize / 1048576)} MB`,
+          total: `${Math.round(performance.memory.totalJSHeapSize / 1048576)} MB`,
+          limit: `${Math.round(performance.memory.jsHeapSizeLimit / 1048576)} MB`
+        });
+      }
+    }, 5000); // Log every 5 seconds
+
+    return () => clearInterval(logPerformance);
+  }, [modalOpen]);
 
   // Load GeoJSON data and extract selected spots
   useEffect(() => {
@@ -113,6 +325,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     setModalImage(image);
     setModalSpot(spot);
     setModalOpen(true);
+    // Reset to first video when opening modal
+    setLoadedVideos(new Set([0]));
+    setCurrentVideoIndex(0);
   };
 
   // Close modal
@@ -121,6 +336,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     setTimeout(() => {
       setModalImage(null);
       setModalSpot(null);
+      setLoadedVideos(new Set([0]));
+      setCurrentVideoIndex(0);
     }, 300);
   };
 
@@ -592,7 +809,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           antialias: false,
           preserveDrawingBuffer: false,
           fadeDuration: 0,
-          maxParallelImageRequests: 8,
+          maxParallelImageRequests: 4, // Reduced from 8 for Raspberry Pi
           refreshExpiredTiles: false,
           trackResize: true,
           maxZoom: 18,
@@ -747,7 +964,121 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   }, [onToggleFullscreen]);
 
-  // Modal content component - VERTICAL SCROLLING WITH MULTIPLE VIDEOS
+  // Video card component with lazy loading
+  const VideoCard = ({ index, isLoaded }) => (
+    <div
+      ref={(el) => (videoRefs.current[index] = el)}
+      data-video-index={index}
+      style={{
+        width: '100%',
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        scrollSnapAlign: 'start',
+        scrollSnapStop: 'always'
+      }}
+    >
+      <div
+        style={{
+          width: '300px',
+          height: '85vh',
+          maxHeight: '600px',
+          backgroundColor: '#000000',
+          borderRadius: '16px',
+          position: 'relative',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#000000'
+          }}
+        >
+          {isLoaded ? (
+            <iframe 
+              src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0" 
+              width="267" 
+              height="476" 
+              style={{
+                border: 'none',
+                overflow: 'hidden',
+                borderRadius: '8px',
+                opacity: 0,
+                animation: 'fadeIn 0.5s ease-in forwards'
+              }}
+              scrolling="no" 
+              frameBorder="0" 
+              allowFullScreen={true}
+              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            />
+          ) : (
+            <VideoSkeleton />
+          )}
+        </div>
+        {modalSpot && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              padding: '16px',
+              background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 70%, transparent 100%)',
+              color: 'white',
+              zIndex: 10
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <h3 style={{
+                margin: 0,
+                fontSize: '16px',
+                fontWeight: '600',
+                textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+              }}>
+                {modalSpot.name}
+              </h3>
+              <span style={{
+                fontSize: '12px',
+                padding: '2px 8px',
+                backgroundColor: isLoaded ? 'rgba(132, 204, 22, 0.8)' : 'rgba(255, 255, 255, 0.2)',
+                borderRadius: '12px',
+                fontWeight: '600'
+              }}>
+                {isLoaded ? `${index + 1}/3` : 'Loading...'}
+              </span>
+            </div>
+            <p style={{
+              margin: 0,
+              fontSize: '13px',
+              color: '#d1d5db',
+              textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+            }}>
+              {modalSpot.location}
+            </p>
+          </div>
+        )}
+      </div>
+      <style>
+        {`
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+        `}
+      </style>
+    </div>
+  );
+
+  // Modal content component - OPTIMIZED WITH LAZY LOADING
   const ModalContent = () => (
     <div
       onClick={closeModal}
@@ -768,6 +1099,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         transition: 'opacity 0.3s ease',
       }}
     >
+      {/* Performance Monitor */}
+      <PerformanceMonitor show={showPerformance} />
+
       {/* Close button - fixed position */}
       <button
         onClick={closeModal}
@@ -809,261 +1143,39 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           WebkitOverflowScrolling: 'touch'
         }}
       >
-        {/* Video 1 */}
-        <div
-          style={{
-            width: '100%',
-            height: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            scrollSnapAlign: 'start',
-            scrollSnapStop: 'always'
-          }}
-        >
-          <div
-            style={{
-              width: '300px',
-              height: '85vh',
-              maxHeight: '600px',
-              backgroundColor: '#000000',
-              borderRadius: '16px',
-              position: 'relative',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-            <div
-              style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#000000'
-              }}
-            >
-              <iframe 
-                src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0" 
-                width="267" 
-                height="476" 
-                style={{
-                  border: 'none',
-                  overflow: 'hidden',
-                  borderRadius: '8px'
-                }}
-                scrolling="no" 
-                frameBorder="0" 
-                allowFullScreen={true}
-                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-              />
-            </div>
-            {modalSpot && (
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  padding: '16px',
-                  background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 70%, transparent 100%)',
-                  color: 'white',
-                  zIndex: 10
-                }}
-              >
-                <h3 style={{
-                  margin: '0 0 4px 0',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-                }}>
-                  {modalSpot.name} - Video 1
-                </h3>
-                <p style={{
-                  margin: 0,
-                  fontSize: '13px',
-                  color: '#d1d5db',
-                  textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-                }}>
-                  {modalSpot.location}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Video 2 - Duplicate */}
-        <div
-          style={{
-            width: '100%',
-            height: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            scrollSnapAlign: 'start',
-            scrollSnapStop: 'always'
-          }}
-        >
-          <div
-            style={{
-              width: '300px',
-              height: '85vh',
-              maxHeight: '600px',
-              backgroundColor: '#000000',
-              borderRadius: '16px',
-              position: 'relative',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-            <div
-              style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#000000'
-              }}
-            >
-              <iframe 
-                src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0" 
-                width="267" 
-                height="476" 
-                style={{
-                  border: 'none',
-                  overflow: 'hidden',
-                  borderRadius: '8px'
-                }}
-                scrolling="no" 
-                frameBorder="0" 
-                allowFullScreen={true}
-                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-              />
-            </div>
-            {modalSpot && (
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  padding: '16px',
-                  background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 70%, transparent 100%)',
-                  color: 'white',
-                  zIndex: 10
-                }}
-              >
-                <h3 style={{
-                  margin: '0 0 4px 0',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-                }}>
-                  {modalSpot.name} - Video 2
-                </h3>
-                <p style={{
-                  margin: 0,
-                  fontSize: '13px',
-                  color: '#d1d5db',
-                  textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-                }}>
-                  {modalSpot.location}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Video 3 - Duplicate */}
-        <div
-          style={{
-            width: '100%',
-            height: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            scrollSnapAlign: 'start',
-            scrollSnapStop: 'always'
-          }}
-        >
-          <div
-            style={{
-              width: '300px',
-              height: '85vh',
-              maxHeight: '600px',
-              backgroundColor: '#000000',
-              borderRadius: '16px',
-              position: 'relative',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-            <div
-              style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#000000'
-              }}
-            >
-              <iframe 
-                src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&t=0" 
-                width="267" 
-                height="476" 
-                style={{
-                  border: 'none',
-                  overflow: 'hidden',
-                  borderRadius: '8px'
-                }}
-                scrolling="no" 
-                frameBorder="0" 
-                allowFullScreen={true}
-                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-              />
-            </div>
-            {modalSpot && (
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  padding: '16px',
-                  background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 70%, transparent 100%)',
-                  color: 'white',
-                  zIndex: 10
-                }}
-              >
-                <h3 style={{
-                  margin: '0 0 4px 0',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-                }}>
-                  {modalSpot.name} - Video 3
-                </h3>
-                <p style={{
-                  margin: 0,
-                  fontSize: '13px',
-                  color: '#d1d5db',
-                  textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-                }}>
-                  {modalSpot.location}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Render 3 video cards with lazy loading */}
+        {[0, 1, 2].map((index) => (
+          <VideoCard 
+            key={index} 
+            index={index} 
+            isLoaded={loadedVideos.has(index)}
+          />
+        ))}
       </div>
+
+      {/* Debug info (only visible when performance monitor is on) */}
+      {showPerformance && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            color: 'white',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            zIndex: 10002,
+            border: '1px solid rgba(132, 204, 22, 0.3)'
+          }}
+        >
+          <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#84cc16' }}>Video Queue</div>
+          <div>Current: {currentVideoIndex}</div>
+          <div>Loaded: [{Array.from(loadedVideos).join(', ')}]</div>
+          <div style={{ marginTop: '8px', fontSize: '11px', color: '#9ca3af' }}>Press Ctrl+Shift+P to toggle</div>
+        </div>
+      )}
     </div>
   );
 
