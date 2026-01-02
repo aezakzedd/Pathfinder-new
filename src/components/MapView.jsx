@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Maximize, Minimize, PanelLeft, List, X } from 'lucide-react';
+import { Maximize, Minimize, Map, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedTouristSpots';
@@ -10,7 +10,6 @@ import ItineraryView from './ItineraryView';
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
 const SIDEBAR_WIDTH = 480;
-const LEFT_SIDEBAR_WIDTH = 320;
 
 // Platform configuration
 const PLATFORMS = {
@@ -171,7 +170,7 @@ const PerformanceMonitor = ({ show }) => {
   );
 };
 
-const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen, leftSidebarOpen, setLeftSidebarOpen }) {
+const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const mapLoaded = useRef(false);
@@ -1122,47 +1121,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       {modalOpen && createPortal(<ModalContent />, document.body)}
       {createPortal(<PlaceDetailsSidebar place={sidebarPlace} isOpen={sidebarOpen} onClose={closeSidebar} onCloseModal={closeModal} />, document.body)}
 
-      {/* Left Sidebar Toggle Button - positioned outside map container */}
-      <button 
-        onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
-        style={{ 
-          position: 'absolute', 
-          top: '-50px', 
-          left: '12px', 
-          width: '44px', 
-          height: '44px', 
-          borderRadius: '8px', 
-          backgroundColor: 'white', 
-          border: 'none', 
-          cursor: 'pointer', 
-          zIndex: 1000, 
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'all 0.2s ease'
-        }}
-      >
-        <PanelLeft color="#1e40af" size={22} />
-      </button>
-
-      {/* Left Sidebar - slides from outside */}
-      <div style={{
-        position: 'absolute',
-        top: '-50px',
-        left: leftSidebarOpen ? '0' : `-${LEFT_SIDEBAR_WIDTH}px`,
-        width: `${LEFT_SIDEBAR_WIDTH}px`,
-        height: 'calc(100% + 50px)',
-        backgroundColor: 'white',
-        boxShadow: leftSidebarOpen ? '4px 0 12px rgba(0,0,0,0.1)' : 'none',
-        zIndex: 999,
-        transition: 'left 0.3s ease',
-        overflowY: 'auto',
-        borderRadius: '16px'
-      }}>
-        {/* Sidebar content - blank for now */}
-      </div>
-
       {activeView === 'map' && (
         <button onClick={handleToggleFullscreen} style={{ position: 'absolute', top: '12px', left: '12px', width: '36px', height: '36px', borderRadius: '4px', backgroundColor: 'white', border: 'none', cursor: 'pointer', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
           {isFullscreen ? <Minimize color="black" size={18} /> : <Maximize color="black" size={18} />}
@@ -1171,7 +1129,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
       <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10, display: 'flex', backgroundColor: 'white', borderRadius: '16px', padding: '3px', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', gap: '3px' }}>
         <button onClick={() => setActiveView('map')} style={{ padding: '6px 10px', border: 'none', borderRadius: '13px', backgroundColor: activeView === 'map' ? '#1f2937' : 'transparent', color: activeView === 'map' ? 'white' : '#6b7280', cursor: 'pointer' }}>
-          <PanelLeft size={16} />
+          <Map size={16} />
         </button>
         <button onClick={() => setActiveView('itinerary')} style={{ padding: '6px 10px', border: 'none', borderRadius: '13px', backgroundColor: activeView === 'itinerary' ? '#1f2937' : 'transparent', color: activeView === 'itinerary' ? 'white' : '#6b7280', cursor: 'pointer' }}>
           <List size={16} />
