@@ -532,73 +532,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     });
   }, []);
 
-  // Update label positions dynamically based on marker position on screen
-  const updateMarkerLabelPositions = useCallback(() => {
-    if (!map.current || !mapContainer.current) return;
-
-    const mapRect = mapContainer.current.getBoundingClientRect();
-    const edgeThreshold = 80; // pixels from edge to trigger label repositioning
-
-    markersRef.current.forEach(marker => {
-      const element = marker.getElement();
-      const label = element?.querySelector('.marker-label');
-      if (!label) return;
-
-      const markerRect = element.getBoundingClientRect();
-      const markerCenterX = markerRect.left + markerRect.width / 2;
-      const markerBottom = markerRect.bottom;
-
-      // Check if marker is near left edge
-      const isNearLeftEdge = markerCenterX < edgeThreshold;
-      // Check if marker is near right edge
-      const isNearRightEdge = markerCenterX > (mapRect.width - edgeThreshold);
-      // Check if marker is near top edge (label would be cut off above)
-      const isNearTopEdge = markerRect.top < edgeThreshold;
-
-      // Reset any previous transformations
-      label.style.transform = '';
-      label.style.marginTop = '6px';
-      label.style.marginBottom = '';
-      label.style.order = '';
-
-      // If near top edge, move label below the marker icon
-      if (isNearTopEdge) {
-        // Reorder: label should appear after icon
-        element.style.flexDirection = 'column-reverse';
-        label.style.marginTop = '';
-        label.style.marginBottom = '6px';
-      } else {
-        element.style.flexDirection = 'column';
-      }
-
-      // Adjust horizontal position if near edges
-      if (isNearLeftEdge) {
-        label.style.transform = 'translateX(20px)';
-      } else if (isNearRightEdge) {
-        label.style.transform = 'translateX(-20px)';
-      }
-    });
-  }, []);
-
-  // Update label positions on zoom and move
-  useEffect(() => {
-    if (!map.current) return;
-
-    const handleMapUpdate = () => {
-      updateMarkerLabelPositions();
-    };
-
-    map.current.on('move', handleMapUpdate);
-    map.current.on('zoom', handleMapUpdate);
-
-    return () => {
-      if (map.current) {
-        map.current.off('move', handleMapUpdate);
-        map.current.off('zoom', handleMapUpdate);
-      }
-    };
-  }, [updateMarkerLabelPositions]);
-
   // Get category pill HTML
   const getCategoryPill = useCallback((category) => {
     const colors = categoryColors[category] || categoryColors.default;
@@ -824,7 +757,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   }, [getCategoryPill, isSpotInItinerary]);
 
-  // Add tourist spot markers - with dynamic label positioning
+  // Add tourist spot markers
   const addTouristSpotMarkers = useCallback(() => {
     if (!map.current || !mapLoaded.current || touristSpots.length === 0) {
       console.log('⏳ Waiting: map=%s, loaded=%s, spots=%d', !!map.current, mapLoaded.current, touristSpots.length);
@@ -891,7 +824,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             text-align: center;
             line-height: 1.2;
             opacity: 1;
-            transition: opacity 0.3s ease, transform 0.2s ease;
+            transition: opacity 0.3s ease;
           ">${spot.name}</div>
         `;
       } else {
@@ -932,7 +865,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             text-align: center;
             line-height: 1.2;
             opacity: 1;
-            transition: opacity 0.3s ease, transform 0.2s ease;
+            transition: opacity 0.3s ease;
           ">${spot.name}</div>
         `;
       }
@@ -1060,10 +993,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     });
 
     console.log('✅ Successfully added', markersRef.current.length, 'markers with iOS-style design!');
-    
-    // Initial label position update
-    setTimeout(() => updateMarkerLabelPositions(), 100);
-  }, [touristSpots, addToItinerary, handleImageClick, createInfoCardHTML, isSpotInItinerary, updateMarkerLabelPositions]);
+  }, [touristSpots, addToItinerary, handleImageClick, createInfoCardHTML, isSpotInItinerary]);
 
   // Initialize map ONCE
   useEffect(() => {
@@ -1167,10 +1097,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       if (map.current) {
         map.current.resize();
         map.current.jumpTo({ center: savedState.current.center, zoom: savedState.current.zoom });
-        updateMarkerLabelPositions();
       }
     }, 100);
-  }, [updateMarkerLabelPositions]);
+  }, []);
 
   useEffect(() => {
     if (map.current) previousZoom.current = map.current.getZoom();
