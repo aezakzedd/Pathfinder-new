@@ -524,23 +524,18 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return scale;
   };
 
-  // Update marker sizes based on zoom (but NOT label text)
+  // Update marker sizes based on zoom (only for standard pin markers, NOT image markers)
   const updateMarkerSizes = useCallback((zoom) => {
     const scale = getMarkerScale(zoom);
     markersRef.current.forEach(marker => {
       const element = marker.getElement();
       const icon = element?.querySelector('i');
-      const imageIcon = element?.querySelector('.image-marker-icon');
       
+      // Only scale standard pin markers, skip image markers
       if (icon) {
         icon.style.fontSize = `${42 * scale}px`;
       }
-      if (imageIcon) {
-        const size = 60 * scale;
-        imageIcon.style.width = `${size}px`;
-        imageIcon.style.height = `${size}px`;
-      }
-      // Label font size remains constant - no scaling
+      // Image markers remain constant size - no scaling
     });
   }, []);
 
@@ -793,12 +788,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       const hasImage = isBinurong && spot.images && spot.images.length > 0;
       
       if (hasImage) {
-        // Custom image marker for Binurong Point
-        const size = 60 * scale;
+        // Custom image marker for Binurong Point - FIXED SIZE, no scaling
         markerEl.innerHTML = `
           <div class="image-marker-icon" style="
-            width: ${size}px;
-            height: ${size}px;
+            width: 60px;
+            height: 60px;
             border-radius: 16px;
             overflow: hidden;
             background-color: white;
@@ -850,7 +844,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           imageIcon.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
         });
       } else {
-        // Standard pin marker for other locations
+        // Standard pin marker for other locations - scales with zoom
         markerEl.innerHTML = `
           <i class="fa-solid fa-location-dot" style="
             font-size: ${42 * scale}px;
