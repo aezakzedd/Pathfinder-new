@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
-import { Map, ChevronDown } from 'lucide-react';
+import { Map, ChevronDown, Calendar } from 'lucide-react';
 import FloatingCard from '../components/FloatingCard';
 import MapView from '../components/MapView';
 import ChatBot from '../components/ChatBot';
@@ -181,12 +181,34 @@ export default function Explore() {
     whiteSpace: 'nowrap'
   }), [isMinimized, translateValues.x, translateValues.y, hasMounted, isPositionCalculated]);
 
-  const chevronStyle = useMemo(() => ({
-    transform: isMinimized ? 'rotate(-45deg)' : 'rotate(135deg)',
-    // Only animate after first mount
-    transition: hasMounted ? 'transform 0.6s ease' : 'none',
-    willChange: 'transform',
+  // Icon container style with crossfade animation
+  const iconContainerStyle = useMemo(() => ({
+    position: 'relative',
+    width: '20px',
+    height: '20px',
     flexShrink: 0
+  }), []);
+
+  // Calendar icon style - visible when minimized
+  const calendarIconStyle = useMemo(() => ({
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    opacity: isMinimized ? 1 : 0,
+    transform: isMinimized ? 'scale(1) rotate(0deg)' : 'scale(0.5) rotate(90deg)',
+    transition: hasMounted ? 'opacity 0.4s ease, transform 0.4s ease' : 'none',
+    willChange: 'opacity, transform'
+  }), [isMinimized, hasMounted]);
+
+  // Chevron icon style - visible when expanded
+  const chevronIconStyle = useMemo(() => ({
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    opacity: isMinimized ? 0 : 1,
+    transform: isMinimized ? 'scale(0.5) rotate(-90deg)' : 'scale(1) rotate(135deg)',
+    transition: hasMounted ? 'opacity 0.4s ease, transform 0.6s ease' : 'none',
+    willChange: 'opacity, transform'
   }), [isMinimized, hasMounted]);
 
   const textStyle = useMemo(() => ({
@@ -264,14 +286,27 @@ export default function Explore() {
                 </div>
               </div>
 
-              {/* Green button with chevron and text */}
+              {/* Green button with icon transition and text */}
               <div onClick={toggleMinimize} style={buttonStyle}>
-                <ChevronDown 
-                  color="black" 
-                  size={20} 
-                  strokeWidth={3} 
-                  style={chevronStyle}
-                />
+                {/* Icon container with crossfade animation */}
+                <div style={iconContainerStyle}>
+                  {/* Calendar icon - visible when minimized */}
+                  <div style={calendarIconStyle}>
+                    <Calendar 
+                      color="black" 
+                      size={20} 
+                      strokeWidth={3}
+                    />
+                  </div>
+                  {/* Chevron icon - visible when expanded */}
+                  <div style={chevronIconStyle}>
+                    <ChevronDown 
+                      color="black" 
+                      size={20} 
+                      strokeWidth={3}
+                    />
+                  </div>
+                </div>
                 <span style={textStyle}>Create Itinerary</span>
               </div>
             </div>
