@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
-import { Map, ChevronDown, Calendar } from 'lucide-react';
+import { Map, ChevronDown, Calendar, PanelLeft } from 'lucide-react';
 import FloatingCard from '../components/FloatingCard';
 import MapView from '../components/MapView';
 import ChatBot from '../components/ChatBot';
@@ -81,7 +81,7 @@ export default function Explore() {
   // Memoize styles to prevent recreation on every render
   const containerStyle = useMemo(() => ({
     width: '90vw',
-    height: '88vh', // Increased from 85vh to 88vh for better spacing
+    height: '88vh',
     border: '1px solid white',
     borderRadius: '24px',
     backgroundColor: 'transparent',
@@ -265,9 +265,43 @@ export default function Explore() {
         `}
       </style>
 
-      {/* Map icon - top left */}
-      <div className="absolute z-20" style={{ top: '1.2vh', left: '1.2vw' }}>
-        <Map color="white" size={28} strokeWidth={2} />
+      {/* Sidebar button - OUTSIDE rounded rectangle, top left */}
+      <button 
+        onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+        className="absolute z-20" 
+        style={{ 
+          top: '1.2vh', 
+          left: '1.2vw',
+          width: '44px',
+          height: '44px',
+          borderRadius: '8px',
+          backgroundColor: 'white',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+        }}
+      >
+        <PanelLeft color="#1e40af" size={22} />
+      </button>
+
+      {/* Left Sidebar - OUTSIDE rounded rectangle */}
+      <div style={{
+        position: 'absolute',
+        top: '1.2vh',
+        left: leftSidebarOpen ? '1.2vw' : 'calc(-320px + 1.2vw)',
+        width: '320px',
+        height: 'calc(100vh - 1.2vh - 1.2vh)',
+        backgroundColor: 'white',
+        boxShadow: leftSidebarOpen ? '4px 0 12px rgba(0,0,0,0.15)' : 'none',
+        zIndex: 15,
+        transition: 'left 0.3s ease',
+        borderRadius: '12px',
+        overflowY: 'auto'
+      }}>
+        {/* Blank sidebar content */}
       </div>
       
       {/* Network status - top right */}
@@ -278,7 +312,7 @@ export default function Explore() {
       {/* PATHFINDER Title - aligned with icons */}
       <div style={{
         position: 'absolute',
-        top: '1.2vh', // Aligned with Map and NetworkStatus icons
+        top: '1.2vh',
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 20,
@@ -291,7 +325,7 @@ export default function Explore() {
         PATHFINDER
       </div>
       
-      {/* Centered container for FloatingCard - adjusted padding */}
+      {/* Centered container for FloatingCard */}
       <div className="w-full h-full flex items-center justify-center" style={{ paddingTop: '4vh' }}>
         <div style={containerStyle}>
           {/* Left container with ChatBot in black background */}
@@ -348,8 +382,6 @@ export default function Explore() {
               <MapView 
                 isFullscreen={isMapFullscreen}
                 onToggleFullscreen={toggleMapFullscreen}
-                leftSidebarOpen={leftSidebarOpen}
-                setLeftSidebarOpen={setLeftSidebarOpen}
               />
             </div>
           </div>
