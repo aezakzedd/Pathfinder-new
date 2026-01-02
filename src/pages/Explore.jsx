@@ -291,7 +291,7 @@ export default function Explore() {
       <div style={{
         position: 'absolute',
         top: '1.2vh',
-        left: leftSidebarOpen ? '1.2vw' : 'calc(-320px + 1.2vw)',
+        left: leftSidebarOpen ? '1.2vw' : '-320px', // Changed: completely off-screen when closed
         width: '320px',
         height: 'calc(100vh - 1.2vh - 1.2vh)',
         backgroundColor: 'white',
