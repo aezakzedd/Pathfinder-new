@@ -275,23 +275,22 @@ export default function Explore() {
           width: '44px',
           height: '44px',
           borderRadius: '8px',
-          backgroundColor: 'white',
+          backgroundColor: 'transparent',
           border: 'none',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+          justifyContent: 'center'
         }}
       >
-        <PanelLeft color="#1e40af" size={22} />
+        <PanelLeft color="white" size={28} strokeWidth={2} />
       </button>
 
       {/* Left Sidebar - OUTSIDE rounded rectangle */}
       <div style={{
         position: 'absolute',
         top: '1.2vh',
-        left: leftSidebarOpen ? '1.2vw' : '-320px', // Changed: completely off-screen when closed
+        left: leftSidebarOpen ? '1.2vw' : '-320px',
         width: '320px',
         height: 'calc(100vh - 1.2vh - 1.2vh)',
         backgroundColor: 'white',
