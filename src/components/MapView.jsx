@@ -793,7 +793,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             border: 3px solid white;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
           ">
             <img 
               src="${spot.images[0]}" 
@@ -839,7 +839,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             border: 3px solid white;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -891,8 +891,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       markerEl.addEventListener('click', () => {
         setSelectedSpot(spot);
         
-        // Hide label of clicked marker
+        // Hide both icon and label of clicked marker
+        const icon = markerEl.querySelector('.image-marker-icon');
         const label = markerEl.querySelector('.marker-label');
+        if (icon) {
+          icon.style.opacity = '0';
+        }
         if (label) {
           label.style.opacity = '0';
         }
@@ -962,10 +966,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
                 popupRef.current = null;
               }
               
-              // Show label again when popup is closed
+              // Show both icon and label again when popup is closed
               const currentMarkerEl = markerElementsRef.current.get(spot.name);
               if (currentMarkerEl) {
+                const currentIcon = currentMarkerEl.querySelector('.image-marker-icon');
                 const currentLabel = currentMarkerEl.querySelector('.marker-label');
+                if (currentIcon) {
+                  currentIcon.style.opacity = '1';
+                }
                 if (currentLabel) {
                   currentLabel.style.opacity = '1';
                 }
