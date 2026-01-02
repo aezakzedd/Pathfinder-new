@@ -57,7 +57,7 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
           </h2>
         </div>
 
-        {/* Places List with Timeline */}
+        {/* Places List */}
         {isExpanded && (
           <div style={{ padding: '0 20px 20px 20px' }}>
             {itinerary.map((place, index) => {
@@ -66,67 +66,27 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
 
               return (
                 <React.Fragment key={`${place.name}-${index}`}>
-                  {/* Place Card Container */}
+                  {/* Place Card - Centered */}
                   <div
                     style={{
-                      position: 'relative',
                       display: 'flex',
-                      gap: '12px'
+                      justifyContent: 'center',
+                      marginBottom: '16px'
                     }}
                   >
-                    {/* Timeline Circle */}
-                    <div
-                      style={{
-                        position: 'relative',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        paddingTop: '8px'
-                      }}
-                    >
-                      {/* Circle */}
-                      <div
-                        style={{
-                          width: '20px',
-                          height: '20px',
-                          borderRadius: '50%',
-                          backgroundColor: 'white',
-                          border: '3px solid #111827',
-                          flexShrink: 0,
-                          zIndex: 1
-                        }}
-                      />
-
-                      {/* Vertical line to transport indicator */}
-                      {!isLast && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: '28px',
-                            width: '2px',
-                            height: 'calc(100% - 8px)',
-                            backgroundColor: '#d1d5db',
-                            zIndex: 0
-                          }}
-                        />
-                      )}
-                    </div>
-
-                    {/* Place Card */}
                     <div
                       onClick={() => {
                         if (onCardClick) onCardClick(place);
                       }}
                       style={{
-                        flex: 1,
+                        width: '100%',
+                        maxWidth: '500px',
                         backgroundColor: 'white',
                         borderRadius: '12px',
                         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
                         overflow: 'hidden',
                         transition: 'box-shadow 0.2s ease',
-                        cursor: 'pointer',
-                        marginTop: '8px',
-                        marginBottom: '8px'
+                        cursor: 'pointer'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
@@ -185,11 +145,23 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
                             {place.name}
                           </h3>
 
-                          {/* Location */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: 'auto' }}>
+                          {/* Rating */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>4.1</span>
+                            <div style={{ display: 'flex', gap: '2px' }}>
+                              {[1, 2, 3, 4].map(i => (
+                                <span key={i} style={{ color: '#22c55e', fontSize: '11px' }}>●</span>
+                              ))}
+                              <span style={{ color: '#d1d5db', fontSize: '11px' }}>●</span>
+                            </div>
+                            <span style={{ fontSize: '12px', color: '#6b7280' }}>(205)</span>
+                          </div>
+
+                          {/* Location and Category */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: 'auto' }}>
                             <MapPin size={12} color="#6b7280" strokeWidth={2} />
                             <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                              {place.location}
+                              {place.categories && place.categories.length > 0 ? place.categories[0].toLowerCase().replace('_', ' ') : 'beach'}
                             </span>
                           </div>
                         </div>
@@ -212,20 +184,20 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
                               width: '24px',
                               height: '24px',
                               borderRadius: '50%',
-                              backgroundColor: '#f3f4f6',
+                              backgroundColor: '#fee2e2',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               transition: 'all 0.2s ease'
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = '#fee2e2';
+                              e.currentTarget.style.backgroundColor = '#fecaca';
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = '#f3f4f6';
+                              e.currentTarget.style.backgroundColor = '#fee2e2';
                             }}
                           >
-                            <X size={14} color="#6b7280" strokeWidth={2.5} />
+                            <X size={14} color="#dc2626" strokeWidth={2.5} />
                           </div>
                         </div>
                       </div>
@@ -236,60 +208,42 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
                   {!isLast && travelTime && (
                     <div
                       style={{
-                        position: 'relative',
                         display: 'flex',
-                        gap: '12px',
-                        marginTop: '0px',
-                        marginBottom: '0px'
+                        justifyContent: 'center',
+                        marginBottom: '16px'
                       }}
                     >
-                      {/* Vertical line continues */}
-                      <div
-                        style={{
-                          position: 'relative',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          width: '20px'
-                        }}
-                      >
+                      {/* Vertical line above */}
+                      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        {/* Line */}
                         <div
                           style={{
                             width: '2px',
-                            height: '100%',
-                            backgroundColor: '#d1d5db'
+                            height: '20px',
+                            backgroundColor: '#fb7185'
                           }}
                         />
-                      </div>
 
-                      {/* Transport Button */}
-                      <div
-                        style={{
-                          flex: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '12px 0'
-                        }}
-                      >
+                        {/* Transport Button */}
                         <div
                           style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '8px',
-                            padding: '8px 16px',
-                            backgroundColor: '#fef3c7',
-                            borderRadius: '24px',
-                            border: '1px solid #fbbf24'
+                            justifyContent: 'center',
+                            gap: '6px',
+                            padding: '6px 14px',
+                            backgroundColor: '#fff1f2',
+                            borderRadius: '20px',
+                            border: '1px solid #fb7185'
                           }}
                         >
                           {/* Car icon - minimalistic */}
                           <svg
-                            width="16"
-                            height="16"
+                            width="14"
+                            height="14"
                             viewBox="0 0 24 24"
                             fill="none"
-                            stroke="#000000"
+                            stroke="#fb7185"
                             strokeWidth="2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -302,14 +256,23 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick }) => {
                           {/* Time text */}
                           <span
                             style={{
-                              fontSize: '13px',
+                              fontSize: '12px',
                               fontWeight: '600',
-                              color: '#000000'
+                              color: '#fb7185'
                             }}
                           >
-                            {travelTime}
+                            1h {travelTime}
                           </span>
                         </div>
+
+                        {/* Line below */}
+                        <div
+                          style={{
+                            width: '2px',
+                            height: '20px',
+                            backgroundColor: '#fb7185'
+                          }}
+                        />
                       </div>
                     </div>
                   )}
