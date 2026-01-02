@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Maximize, Minimize, LayoutPanelLeft, List, X } from 'lucide-react';
+import { Maximize, Minimize, PanelLeft, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedTouristSpots';
@@ -10,6 +10,7 @@ import ItineraryView from './ItineraryView';
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
 const SIDEBAR_WIDTH = 480;
+const LEFT_SIDEBAR_WIDTH = 320;
 
 // Platform configuration
 const PLATFORMS = {
@@ -197,6 +198,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   // Sidebar state
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarPlace, setSidebarPlace] = useState(null);
+
+  // Left sidebar state
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
 
   // Video optimization states
   const [loadedVideos, setLoadedVideos] = useState(new Set([0]));
@@ -561,7 +565,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return itineraryRef.current.some(item => item.name === spotName);
   }, []);
 
-  // Create info card HTML - FIXED: Enforce width constraint properly
+  // Create info card HTML
   const createInfoCardHTML = useCallback((spot) => {
     const categoryHTML = spot.categories
       .slice(0, 2)
@@ -1117,35 +1121,103 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   );
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <div style={{ width: '100%', height: '100vh', position: 'relative', display: 'flex', flexDirection: 'column' }}>
       {modalOpen && createPortal(<ModalContent />, document.body)}
       {createPortal(<PlaceDetailsSidebar place={sidebarPlace} isOpen={sidebarOpen} onClose={closeSidebar} onCloseModal={closeModal} />, document.body)}
 
-      {activeView === 'map' && (
-        <button onClick={handleToggleFullscreen} style={{ position: 'absolute', top: '12px', left: '12px', width: '36px', height: '36px', borderRadius: '4px', backgroundColor: 'white', border: 'none', cursor: 'pointer', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-          {isFullscreen ? <Minimize color="black" size={18} /> : <Maximize color="black" size={18} />}
-        </button>
-      )}
-
-      <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10, display: 'flex', backgroundColor: 'white', borderRadius: '16px', padding: '3px', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', gap: '3px' }}>
-        <button onClick={() => setActiveView('map')} style={{ padding: '6px 10px', border: 'none', borderRadius: '13px', backgroundColor: activeView === 'map' ? '#1f2937' : 'transparent', color: activeView === 'map' ? 'white' : '#6b7280', cursor: 'pointer' }}>
-          <LayoutPanelLeft size={16} />
-        </button>
-        <button onClick={() => setActiveView('itinerary')} style={{ padding: '6px 10px', border: 'none', borderRadius: '13px', backgroundColor: activeView === 'itinerary' ? '#1f2937' : 'transparent', color: activeView === 'itinerary' ? 'white' : '#6b7280', cursor: 'pointer' }}>
-          <List size={16} />
-        </button>
+      {/* Header with PATHFINDER */}
+      <div style={{ 
+        position: 'absolute', 
+        top: '24px', 
+        left: '50%', 
+        transform: 'translateX(-50%)', 
+        zIndex: 1000,
+        fontFamily: '"Nura Black", sans-serif',
+        fontSize: '32px',
+        fontWeight: 900,
+        letterSpacing: '2px',
+        color: '#1e40af'
+      }}>
+        PATHFINDER
       </div>
 
-      <div ref={mapContainer} style={{ width: '100%', height: '100%', borderRadius: '16px', overflow: 'hidden', display: activeView === 'map' ? 'block' : 'none' }} />
+      {/* Left Sidebar Toggle Button */}
+      <button 
+        onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+        style={{ 
+          position: 'absolute', 
+          top: '90px', 
+          left: '20px', 
+          width: '44px', 
+          height: '44px', 
+          borderRadius: '8px', 
+          backgroundColor: 'white', 
+          border: 'none', 
+          cursor: 'pointer', 
+          zIndex: 1000, 
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.2s ease'
+        }}
+      >
+        <PanelLeft color="#1e40af" size={22} />
+      </button>
 
-      {activeView === 'itinerary' && (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '16px', backgroundColor: 'white', overflow: 'hidden' }}>
-          <ItineraryView itinerary={itinerary} onRemoveItem={removeFromItinerary} onCardClick={handleCardClick} />
+      {/* Left Sidebar */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: leftSidebarOpen ? '0' : `-${LEFT_SIDEBAR_WIDTH}px`,
+        width: `${LEFT_SIDEBAR_WIDTH}px`,
+        height: '100vh',
+        backgroundColor: 'white',
+        boxShadow: leftSidebarOpen ? '4px 0 12px rgba(0,0,0,0.1)' : 'none',
+        zIndex: 999,
+        transition: 'left 0.3s ease',
+        overflowY: 'auto'
+      }}>
+        {/* Sidebar content - blank for now */}
+      </div>
+
+      {/* Map Container - moved down with gaps */}
+      <div style={{ 
+        position: 'absolute',
+        top: '90px',
+        left: '20px',
+        right: '20px',
+        bottom: '20px',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        {activeView === 'map' && (
+          <button onClick={handleToggleFullscreen} style={{ position: 'absolute', top: '12px', left: '12px', width: '36px', height: '36px', borderRadius: '4px', backgroundColor: 'white', border: 'none', cursor: 'pointer', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+            {isFullscreen ? <Minimize color="black" size={18} /> : <Maximize color="black" size={18} />}
+          </button>
+        )}
+
+        <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10, display: 'flex', backgroundColor: 'white', borderRadius: '16px', padding: '3px', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', gap: '3px' }}>
+          <button onClick={() => setActiveView('map')} style={{ padding: '6px 10px', border: 'none', borderRadius: '13px', backgroundColor: activeView === 'map' ? '#1f2937' : 'transparent', color: activeView === 'map' ? 'white' : '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PanelLeft size={16} />
+          </button>
+          <button onClick={() => setActiveView('itinerary')} style={{ padding: '6px 10px', border: 'none', borderRadius: '13px', backgroundColor: activeView === 'itinerary' ? '#1f2937' : 'transparent', color: activeView === 'itinerary' ? 'white' : '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <List size={16} />
+          </button>
         </div>
-      )}
+
+        <div ref={mapContainer} style={{ width: '100%', height: '100%', borderRadius: '16px', overflow: 'hidden', display: activeView === 'map' ? 'block' : 'none' }} />
+
+        {activeView === 'itinerary' && (
+          <div style={{ width: '100%', height: '100%', borderRadius: '16px', backgroundColor: 'white', overflow: 'hidden' }}>
+            <ItineraryView itinerary={itinerary} onRemoveItem={removeFromItinerary} onCardClick={handleCardClick} />
+          </div>
+        )}
+      </div>
 
       <style>
         {`
+          @import url('https://fonts.cdnfonts.com/css/nura-black');
           .maplibregl-popup-content { padding: 0 !important; background: transparent !important; box-shadow: none !important; }
           .maplibregl-popup-tip { display: none !important; }
           .video-scroll-container::-webkit-scrollbar { display: none; }
