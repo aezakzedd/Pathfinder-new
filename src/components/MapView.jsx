@@ -31,10 +31,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [dataLoaded, setDataLoaded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
-  // Sidebar state
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarImage, setSidebarImage] = useState(null);
-  const [sidebarSpot, setSidebarSpot] = useState(null);
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalImage, setModalImage] = useState(null);
+  const [modalSpot, setModalSpot] = useState(null);
 
   // Load GeoJSON data and extract selected spots
   useEffect(() => {
@@ -107,19 +107,19 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
   };
 
-  // Handle image click to open sidebar
+  // Handle image click to open modal
   const handleImageClick = (image, spot) => {
-    setSidebarImage(image);
-    setSidebarSpot(spot);
-    setSidebarOpen(true);
+    setModalImage(image);
+    setModalSpot(spot);
+    setModalOpen(true);
   };
 
-  // Close sidebar
-  const closeSidebar = () => {
-    setSidebarOpen(false);
+  // Close modal
+  const closeModal = () => {
+    setModalOpen(false);
     setTimeout(() => {
-      setSidebarImage(null);
-      setSidebarSpot(null);
+      setModalImage(null);
+      setModalSpot(null);
     }, 300);
   };
 
@@ -754,99 +754,113 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         position: 'relative'
       }} 
     >
-      {/* Sidebar overlay */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: sidebarOpen ? 'calc((90vw - 24px - 48px) / 2)' : '0',
-          height: '100vh',
-          backgroundColor: '#1f2937',
-          zIndex: 100,
-          transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
-          transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          overflow: 'hidden',
-          boxShadow: sidebarOpen ? '4px 0 20px rgba(0, 0, 0, 0.3)' : 'none'
-        }}
-      >
-        {/* Close button */}
-        <button
-          onClick={closeSidebar}
+      {/* Modal overlay with blurred background */}
+      {modalOpen && (
+        <div
+          onClick={closeModal}
           style={{
-            position: 'absolute',
-            top: '20px',
-            right: '20px',
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            border: 'none',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            zIndex: 100,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s',
-            zIndex: 10
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+            opacity: modalOpen ? 1 : 0,
+            transition: 'opacity 0.3s ease',
           }}
         >
-          <X color="white" size={24} strokeWidth={2} />
-        </button>
-
-        {/* Sidebar content */}
-        {sidebarImage && sidebarSpot && (
+          {/* Modal card - vertical rectangle placeholder */}
           <div
+            onClick={(e) => e.stopPropagation()}
             style={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '40px'
+              width: '400px',
+              height: '80vh',
+              backgroundColor: '#1f2937',
+              borderRadius: '24px',
+              position: 'relative',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+              transform: modalOpen ? 'scale(1)' : 'scale(0.9)',
+              transition: 'transform 0.3s ease',
+              overflow: 'hidden'
             }}
           >
-            <img
-              src={sidebarImage}
-              alt={sidebarSpot.name}
+            {/* Close button */}
+            <button
+              onClick={closeModal}
               style={{
-                maxWidth: '100%',
-                maxHeight: '80vh',
-                objectFit: 'contain',
-                borderRadius: '12px',
-                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+                zIndex: 10
               }}
-            />
-            <h2
-              style={{
-                color: 'white',
-                fontSize: '24px',
-                fontWeight: '600',
-                marginTop: '20px',
-                textAlign: 'center'
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
               }}
-            >
-              {sidebarSpot.name}
-            </h2>
-            <p
-              style={{
-                color: '#9ca3af',
-                fontSize: '14px',
-                marginTop: '8px',
-                textAlign: 'center'
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
               }}
             >
-              {sidebarSpot.location}
-            </p>
+              <X color="white" size={24} strokeWidth={2} />
+            </button>
+
+            {/* Placeholder content - TikTok style vertical scrolling will go here */}
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '40px',
+                color: 'white'
+              }}
+            >
+              {modalImage && modalSpot && (
+                <>
+                  <img
+                    src={modalImage}
+                    alt={modalSpot.name}
+                    style={{
+                      width: '100%',
+                      height: 'auto',
+                      maxHeight: '60%',
+                      objectFit: 'cover',
+                      borderRadius: '12px',
+                      marginBottom: '20px'
+                    }}
+                  />
+                  <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '8px', textAlign: 'center' }}>
+                    {modalSpot.name}
+                  </h2>
+                  <p style={{ fontSize: '14px', color: '#9ca3af', textAlign: 'center' }}>
+                    {modalSpot.location}
+                  </p>
+                  <div style={{ marginTop: '20px', fontSize: '12px', color: '#6b7280', textAlign: 'center' }}>
+                    TikTok-style vertical scrolling will be implemented here
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {activeView === 'map' && (
         <button
