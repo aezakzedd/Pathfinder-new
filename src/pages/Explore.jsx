@@ -10,6 +10,7 @@ export default function Explore() {
   const [isMinimized, setIsMinimized] = useState(true); // Minimized by default
   const [hasMounted, setHasMounted] = useState(false); // Track first mount
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
   const containerRef = useRef(null);
   const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
   const [isPositionCalculated, setIsPositionCalculated] = useState(false);
@@ -80,7 +81,7 @@ export default function Explore() {
   // Memoize styles to prevent recreation on every render
   const containerStyle = useMemo(() => ({
     width: '90vw',
-    height: '90vh',
+    height: '85vh', // Reduced from 90vh to leave space for title and bottom gap
     border: '1px solid white',
     borderRadius: '24px',
     backgroundColor: 'transparent',
@@ -257,6 +258,13 @@ export default function Explore() {
 
   return (
     <div className="h-screen w-screen bg-black overflow-hidden">
+      {/* Import Nura Black font */}
+      <style>
+        {`
+          @import url('https://fonts.cdnfonts.com/css/nura-black');
+        `}
+      </style>
+
       {/* Map icon - top left */}
       <div className="absolute z-20" style={{ top: '1.2vh', left: '1.2vw' }}>
         <Map color="white" size={28} strokeWidth={2} />
@@ -266,9 +274,25 @@ export default function Explore() {
       <div className="absolute z-20" style={{ top: '1.2vh', right: '1.2vw' }}>
         <NetworkStatus />
       </div>
+
+      {/* PATHFINDER Title - centered above container */}
+      <div style={{
+        position: 'absolute',
+        top: '2vh',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 20,
+        fontFamily: '"Nura Black", sans-serif',
+        fontSize: '36px',
+        fontWeight: 900,
+        letterSpacing: '3px',
+        color: '#1e40af'
+      }}>
+        PATHFINDER
+      </div>
       
-      {/* Centered container for FloatingCard */}
-      <div className="w-full h-full flex items-center justify-center">
+      {/* Centered container for FloatingCard - moved down */}
+      <div className="w-full h-full flex items-center justify-center" style={{ paddingTop: '8vh' }}>
         <div style={containerStyle}>
           {/* Left container with ChatBot in black background */}
           <div style={leftContainerStyle}>
@@ -324,6 +348,8 @@ export default function Explore() {
               <MapView 
                 isFullscreen={isMapFullscreen}
                 onToggleFullscreen={toggleMapFullscreen}
+                leftSidebarOpen={leftSidebarOpen}
+                setLeftSidebarOpen={setLeftSidebarOpen}
               />
             </div>
           </div>
