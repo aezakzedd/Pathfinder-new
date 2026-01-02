@@ -93,9 +93,20 @@ export default function TravellerInformation() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Calculate total cells needed (always show 6 rows for consistency)
+    const totalCells = 42; // 6 rows × 7 days
+
     // Empty cells for days before month starts
     for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} style={{ padding: '6px' }} />);
+      days.push(
+        <div 
+          key={`empty-start-${i}`} 
+          style={{ 
+            padding: '8px',
+            minHeight: '32px'
+          }} 
+        />
+      );
     }
 
     // Days of the month
@@ -147,6 +158,20 @@ export default function TravellerInformation() {
         >
           {day}
         </div>
+      );
+    }
+
+    // Fill remaining cells to reach 42 total (6 rows)
+    const remainingCells = totalCells - days.length;
+    for (let i = 0; i < remainingCells; i++) {
+      days.push(
+        <div 
+          key={`empty-end-${i}`} 
+          style={{ 
+            padding: '8px',
+            minHeight: '32px'
+          }} 
+        />
       );
     }
 
@@ -202,6 +227,7 @@ export default function TravellerInformation() {
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(7, 1fr)',
+          gridTemplateRows: 'repeat(7, auto)', // 1 header row + 6 date rows
           gap: '2px'
         }}>
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
