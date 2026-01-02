@@ -27,8 +27,16 @@ export default function Explore() {
       const translateY = -(height - 40 - 8);
       
       setTranslateValues({ x: translateX, y: translateY });
+      
+      // Enable animations after first calculation
+      if (!hasMounted) {
+        // Use requestAnimationFrame to ensure DOM has painted with correct position first
+        requestAnimationFrame(() => {
+          setHasMounted(true);
+        });
+      }
     }
-  }, []);
+  }, [hasMounted]);
 
   // Debounced resize handler for better performance
   const handleResize = useCallback(() => {
@@ -46,8 +54,6 @@ export default function Explore() {
   useEffect(() => {
     // Calculate on mount
     calculateTranslateValues();
-    // Set mounted after initial calculation
-    setHasMounted(true);
 
     // Add debounced resize listener
     window.addEventListener('resize', handleResize);
