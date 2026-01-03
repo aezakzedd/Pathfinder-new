@@ -193,7 +193,7 @@ const PerformanceMonitor = ({ show }) => {
   );
 };
 
-const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen }) {
+const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen, selectedDates }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const mapLoaded = useRef(false);
@@ -818,6 +818,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     
     // Determine how many markers to show based on zoom
     const maxMarkers = getMaxMarkersForZoom(zoom);
+    // Force iOS style for Binurong Point, otherwise use zoom-based logic
     const useIOSStyle = zoom < ZOOM_THRESHOLDS.MIN_ZOOM_1_MARKER;
     
     const currentVisibleSpots = new Set();
@@ -846,9 +847,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       const isCurrentlyVisible = visibleMarkersRef.current.has(spot.name);
       
       if (!isCurrentlyVisible) {
-        // Add marker
+        // Add marker - Force iOS style for Binurong Point
         currentVisibleSpots.add(spot.name);
-        const markerEl = createMarkerElement(spot, zoom, useIOSStyle);
+        const forceIOSForBinurong = spot.name === "Binurong Point";
+        const markerEl = createMarkerElement(spot, zoom, useIOSStyle || forceIOSForBinurong);
         markerElementsRef.current.set(spot.name, markerEl);
 
         const marker = new maplibregl.Marker({ 
@@ -997,268 +999,3 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     debounce(() => updateVisibleMarkers(), 150),
     [updateVisibleMarkers]
   );
-
-  // Initialize map
-  useEffect(() => {
-    if (map.current) return;
-
-    const fontAwesomeLink = document.createElement('link');
-    fontAwesomeLink.rel = 'stylesheet';
-    fontAwesomeLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css';
-    document.head.appendChild(fontAwesomeLink);
-
-    const bounds = [[123.5, 12.8], [125.0, 14.8]];
-
-    fetch(`https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: Failed to load map style`);
-        }
-        return response.json();
-      })
-      .then(style => {
-        // Remove all text/label layers
-        style.layers = style.layers.filter(layer => layer.type !== 'symbol');
-        
-        // Remove problematic glyphs URL
-        if (style.glyphs) {
-          delete style.glyphs;
-        }
-
-        map.current = new maplibregl.Map({
-          container: mapContainer.current,
-          style: style,
-          center: [124.2, 13.8],
-          zoom: DEFAULT_ZOOM,
-          pitch: 0,
-          bearing: 0,
-          attributionControl: false,
-          maxBounds: bounds,
-          
-          // RPI Performance Settings with 3D enabled
-          antialias: false,
-          fadeDuration: 0,
-          localIdeographFontFamily: false,
-          preserveDrawingBuffer: false,
-          refreshExpiredTiles: false,
-          maxTileCacheSize: 50,
-          optimizeForTerrain: false,
-          pitchWithRotate: true,
-          touchPitch: true,
-          maxPitch: 85,
-          minPitch: 0
-        });
-
-        // Add navigation controls with 3D support
-        map.current.addControl(
-          new maplibregl.NavigationControl({
-            visualizePitch: true,
-            showCompass: true,
-            showZoom: true
-          }),
-          'top-right'
-        );
-
-        // Add scale control at bottom right with black/white theme
-        const scaleControl = new maplibregl.ScaleControl({
-          maxWidth: 100,
-          unit: 'metric'
-        });
-        map.current.addControl(scaleControl, 'bottom-right');
-
-        map.current.on('zoom', () => updateMarkerSizes(map.current.getZoom()));
-        map.current.on('moveend', debouncedUpdateMarkers);
-        map.current.on('zoomend', debouncedUpdateMarkers);
-
-        map.current.on('load', () => {
-          mapLoaded.current = true;
-          
-          // Add sky layer for proper 3D pitch rendering
-          map.current.setSky({
-            'sky-color': '#000000',
-            'sky-horizon-blend': 0.3,
-            'horizon-color': '#000000',
-            'horizon-fog-blend': 0.3,
-            'fog-color': '#000000',
-            'fog-ground-blend': 0.2
-          });
-          
-          if (!map.current.getSource('mask')) {
-            map.current.addSource('mask', {
-              type: 'geojson',
-              data: {
-                type: 'Feature',
-                geometry: {
-                  type: 'Polygon',
-                  coordinates: [
-                    [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]],
-                    [[124.011, 13.35], [124.011, 14.15], [124.45, 14.15], [124.45, 13.35], [124.011, 13.35]]
-                  ]
-                }
-              }
-            });
-
-            map.current.addLayer({
-              id: 'mask-layer',
-              type: 'fill',
-              source: 'mask',
-              paint: { 'fill-color': '#000000', 'fill-opacity': 1 }
-            });
-          }
-
-          if (dataLoaded && touristSpots.length > 0) {
-            setTimeout(() => updateVisibleMarkers(), 200);
-          }
-        });
-      })
-      .catch(error => {
-        console.error('Map initialization error:', error);
-      });
-
-    return () => {
-      if (popupRef.current) popupRef.current.remove();
-      markersRef.current.forEach(marker => {
-        marker.remove();
-        marker = null;
-      });
-      markersRef.current = [];
-      markerElementsRef.current.clear();
-      visibleMarkersRef.current.clear();
-      
-      if (map.current) {
-        map.current.off('moveend', debouncedUpdateMarkers);
-        map.current.off('zoomend', debouncedUpdateMarkers);
-        map.current.remove();
-        map.current = null;
-        mapLoaded.current = false;
-      }
-    };
-  }, [updateMarkerSizes, debouncedUpdateMarkers, updateVisibleMarkers, dataLoaded, touristSpots]);
-
-  useEffect(() => {
-    if (mapLoaded.current && dataLoaded && touristSpots.length > 0) {
-      const timer = setTimeout(() => updateVisibleMarkers(), 200);
-      return () => clearTimeout(timer);
-    }
-  }, [dataLoaded, touristSpots, updateVisibleMarkers]);
-
-  const handleResize = useCallback(() => {
-    if (!map.current) return;
-    if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
-    resizeTimeout.current = setTimeout(() => {
-      if (map.current) {
-        map.current.resize();
-        map.current.jumpTo({ center: savedState.current.center, zoom: savedState.current.zoom });
-      }
-    }, 100);
-  }, []);
-
-  useEffect(() => {
-    if (map.current) previousZoom.current = map.current.getZoom();
-    if (animationTimeout.current) clearTimeout(animationTimeout.current);
-    animationTimeout.current = setTimeout(handleResize, 750);
-    return () => clearTimeout(animationTimeout.current);
-  }, [isFullscreen, handleResize]);
-
-  const handleToggleFullscreen = useCallback(() => {
-    if (onToggleFullscreen) onToggleFullscreen();
-  }, [onToggleFullscreen]);
-
-  const getVideoPlatform = (index) => index === 1 ? 'youtube' : 'facebook';
-
-  const VideoCard = ({ index, isLoaded }) => {
-    const platform = getVideoPlatform(index);
-    const platformConfig = PLATFORMS[platform];
-    const isLandscape = platform === 'youtube';
-
-    return (
-      <div ref={(el) => (videoRefs.current[index] = el)} data-video-index={index}
-        style={{ width: '100%', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', scrollSnapAlign: 'start' }}>
-        <div style={{ width: isLandscape ? '500px' : '300px', height: '85vh', maxHeight: isLandscape ? '400px' : '600px', backgroundColor: '#000', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.8)', overflow: 'hidden', position: 'relative' }}>
-          {!isLoaded ? <VideoSkeleton /> : platform === 'youtube' ? (
-            <iframe ref={(el) => (iframeRefs.current[index] = el)} width="100%" height="100%" 
-              src="https://www.youtube.com/embed/j6IsY1PR5XE?enablejsapi=1&autoplay=1&mute=1" 
-              frameBorder="0" allowFullScreen style={{ border: 'none', borderRadius: '16px' }} />
-          ) : (
-            <iframe ref={(el) => (iframeRefs.current[index] = el)}
-              src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&autoplay=true" 
-              width="267" height="476" frameBorder="0" allowFullScreen style={{ border: 'none', borderRadius: '8px' }} />
-          )}
-          {modalSpot && isLoaded && (
-            <div style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px', display: 'flex', justifyContent: 'space-between', zIndex: 10 }}>
-              <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.8)', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>
-                {modalSpot.location}
-              </p>
-              <div style={{ padding: '6px 14px', borderRadius: '20px', backgroundColor: platformConfig.color, color: platformConfig.textColor, fontSize: '12px', fontWeight: '600' }}>
-                {platformConfig.name}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const ModalContent = () => (
-    <div onClick={closeModal} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 9998, display: 'flex' }}>
-      <PerformanceMonitor show={showPerformance} />
-      <div onClick={(e) => e.stopPropagation()} style={{ width: sidebarOpen ? `calc(100vw - ${SIDEBAR_WIDTH}px)` : '100vw', height: '100vh', overflowY: 'scroll', scrollSnapType: 'y mandatory', scrollbarWidth: 'none' }} className="video-scroll-container">
-        {[0, 1, 2].map((index) => <VideoCard key={index} index={index} isLoaded={loadedVideos.has(index)} />)}
-      </div>
-      {sidebarOpen && <div style={{ width: `${SIDEBAR_WIDTH}px`, height: '100vh' }} />}
-    </div>
-  );
-
-  return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {modalOpen && createPortal(<ModalContent />, document.body)}
-      {createPortal(<PlaceDetailsSidebar place={sidebarPlace} isOpen={sidebarOpen} onClose={closeSidebar} onCloseModal={closeModal} />, document.body)}
-
-      {activeView === 'map' && (
-        <button onClick={handleToggleFullscreen} style={{ position: 'absolute', top: '12px', left: '12px', width: '36px', height: '36px', borderRadius: '4px', backgroundColor: 'white', border: 'none', cursor: 'pointer', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-          {isFullscreen ? <Minimize color="black" size={18} /> : <Maximize color="black" size={18} />}
-        </button>
-      )}
-
-      <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10, display: 'flex', backgroundColor: 'white', borderRadius: '16px', padding: '3px', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', gap: '3px' }}>
-        <button onClick={() => setActiveView('map')} style={{ padding: '6px 10px', border: 'none', borderRadius: '13px', backgroundColor: activeView === 'map' ? '#1f2937' : 'transparent', color: activeView === 'map' ? 'white' : '#6b7280', cursor: 'pointer' }}>
-          <MapIcon size={16} />
-        </button>
-        <button onClick={() => setActiveView('itinerary')} style={{ padding: '6px 10px', border: 'none', borderRadius: '13px', backgroundColor: activeView === 'itinerary' ? '#1f2937' : 'transparent', color: activeView === 'itinerary' ? 'white' : '#6b7280', cursor: 'pointer' }}>
-          <List size={16} />
-        </button>
-      </div>
-
-      <div ref={mapContainer} style={{ width: '100%', height: '100%', borderRadius: '16px', overflow: 'hidden', display: activeView === 'map' ? 'block' : 'none' }} />
-
-      {activeView === 'itinerary' && (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '16px', backgroundColor: 'white', overflow: 'hidden' }}>
-          <ItineraryView itinerary={itinerary} onRemoveItem={removeFromItinerary} onCardClick={handleCardClick} />
-        </div>
-      )}
-
-      <style>
-        {`
-          .maplibregl-popup-content { padding: 0 !important; background: transparent !important; box-shadow: none !important; }
-          .maplibregl-popup-tip { display: none !important; }
-          .video-scroll-container::-webkit-scrollbar { display: none; }
-          
-          /* Scale control black/white theme */
-          .maplibregl-ctrl-scale {
-            background-color: rgba(255, 255, 255, 0.95) !important;
-            color: #000000 !important;
-            border: 2px solid #000000 !important;
-            border-top: none !important;
-            font-size: 11px !important;
-            font-weight: 600 !important;
-            padding: 2px 6px !important;
-            margin-bottom: 8px !important;
-            margin-right: 8px !important;
-          }
-        `}
-      </style>
-    </div>
-  );
-});
-
-export default MapView;
