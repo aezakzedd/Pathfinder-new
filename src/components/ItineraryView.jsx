@@ -8,7 +8,14 @@ const calculateTravelTime = (place1, place2) => {
   return times[Math.floor(Math.random() * times.length)];
 };
 
-const ItineraryView = ({ itinerary, onRemoveItem, onCardClick, onGetStarted }) => {
+// Helper to format date nicely
+const formatDate = (date) => {
+  if (!date) return '';
+  const options = { month: 'short', day: '2-digit', weekday: 'short' };
+  return date.toLocaleDateString('en-US', options).replace(',', '');
+};
+
+const ItineraryView = ({ itinerary, onRemoveItem, onCardClick, onGetStarted, selectedDates }) => {
   const [expandedDates, setExpandedDates] = useState({ 'Feb 01, Sun': true });
 
   if (itinerary.length === 0) {
@@ -244,9 +251,12 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick, onGetStarted }) =
     );
   }
 
-  // Group itinerary by date (for now, all go to same date)
-  const dateGroup = 'Feb 01, Sun';
-  const isExpanded = expandedDates[dateGroup];
+  // Determine date to display - use selected dates if available, otherwise default
+  const dateToDisplay = selectedDates && selectedDates.startDate 
+    ? formatDate(selectedDates.startDate)
+    : 'Feb 01, Sun';
+  
+  const isExpanded = expandedDates[dateToDisplay] !== undefined ? expandedDates[dateToDisplay] : true;
 
   return (
     <div
@@ -262,8 +272,13 @@ const ItineraryView = ({ itinerary, onRemoveItem, onCardClick, onGetStarted }) =
         {/* Date Header */}
         <div style={{ padding: '16px 20px', backgroundColor: 'white' }}>
           <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
-            {dateGroup}
+            {dateToDisplay}
           </h2>
+          {selectedDates && selectedDates.startDate && selectedDates.endDate && (
+            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6b7280' }}>
+              {formatDate(selectedDates.startDate)} - {formatDate(selectedDates.endDate)}
+            </p>
+          )}
         </div>
 
         {/* Places List */}
