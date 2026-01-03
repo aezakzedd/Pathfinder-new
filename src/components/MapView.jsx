@@ -12,6 +12,9 @@ const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
 const SIDEBAR_WIDTH = 480;
 
+// Popularity threshold - spots with more than this many images are "popular"
+const POPULARITY_THRESHOLD = 3;
+
 // Platform configuration
 const PLATFORMS = {
   facebook: {
@@ -171,6 +174,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const mapLoaded = useRef(false);
   const markersRef = useRef([]);
   const markerElementsRef = useRef(new Map()); // Store marker elements by spot name
+  const visibleMarkersRef = useRef(new Set()); // Track which markers are currently visible
   const popupRef = useRef(null);
   const savedState = useRef({ center: [124.2, 13.8], zoom: DEFAULT_ZOOM });
   const resizeTimeout = useRef(null);
@@ -404,13 +408,18 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               feature.properties.name
             );
             
+            // Determine if spot is popular based on image count
+            const imageCount = mediaData.images.length;
+            const isPopular = imageCount > POPULARITY_THRESHOLD;
+            
             spots.push({
               name: feature.properties.name,
               location: toSentenceCase(feature.properties.municipality),
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
-              images: mediaData.images // Use images from manifest
+              images: mediaData.images,
+              isPopular: isPopular // Add popularity flag
             });
           }
         } catch (error) {
@@ -418,7 +427,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }
       }
       
-      console.log(`Loaded ${spots.length} spots`);
+      console.log(`Loaded ${spots.length} spots (${spots.filter(s => s.isPopular).length} popular, ${spots.filter(s => !s.isPopular).length} less popular)`);
       setTouristSpots(spots);
       setDataLoaded(true);
     };
@@ -811,32 +820,33 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   }, [getCategoryPill, isSpotInItinerary]);
 
-  // Add tourist spot markers
-  const addTouristSpotMarkers = useCallback(() => {
-    if (!map.current || !mapLoaded.current || touristSpots.length === 0) {
-      console.log('⏳ Waiting: map=%s, loaded=%s, spots=%d', !!map.current, mapLoaded.current, touristSpots.length);
-      return;
-    }
+  // Check if a spot is in the current viewport
+  const isSpotInViewport = useCallback((coordinates) => {
+    if (!map.current) return false;
+    
+    const bounds = map.current.getBounds();
+    const [lng, lat] = coordinates;
+    
+    return (
+      lng >= bounds.getWest() &&
+      lng <= bounds.getEast() &&
+      lat >= bounds.getSouth() &&
+      lat <= bounds.getNorth()
+    );
+  }, []);
 
-    console.log('🗺️ Adding', touristSpots.length, 'markers');
-
-    // Clear old markers
-    markersRef.current.forEach(marker => marker.remove());
-    markersRef.current = [];
-    markerElementsRef.current.clear();
-
-    touristSpots.forEach((spot) => {
-      const markerEl = document.createElement('div');
-      markerEl.style.display = 'flex';
-      markerEl.style.flexDirection = 'column';
-      markerEl.style.alignItems = 'center';
-      
-      // Check if this spot has images
+  // Create marker element based on popularity
+  const createMarkerElement = useCallback((spot) => {
+    const markerEl = document.createElement('div');
+    markerEl.style.display = 'flex';
+    markerEl.style.flexDirection = 'column';
+    markerEl.style.alignItems = 'center';
+    
+    if (spot.isPopular) {
+      // Popular spots: iOS-style image marker
       const hasImage = spot.images && spot.images.length > 0;
       
-      // ALWAYS use iOS-style image marker (with image or gradient fallback)
       if (hasImage) {
-        // iOS-style marker with actual image
         markerEl.innerHTML = `
           <div class="image-marker-icon" style="
             width: 60px;
@@ -882,7 +892,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           ">${spot.name}</div>
         `;
       } else {
-        // iOS-style marker with gradient fallback (no image available)
         markerEl.innerHTML = `
           <div class="image-marker-icon" style="
             width: 60px;
@@ -924,7 +933,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         `;
       }
       
-      // Add hover effects
+      // Add hover effects for iOS-style markers
       const imageIcon = markerEl.querySelector('.image-marker-icon');
       markerEl.addEventListener('mouseenter', () => {
         imageIcon.style.transform = 'scale(1.1)';
@@ -934,139 +943,212 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         imageIcon.style.transform = 'scale(1)';
         imageIcon.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
       });
+    } else {
+      // Less popular spots: Simple icon + text
+      markerEl.innerHTML = `
+        <div style="
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background-color: rgba(255, 255, 255, 0.95);
+          padding: 6px 12px;
+          border-radius: 20px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        " class="simple-marker">
+          <i class="fa-solid fa-location-dot" style="font-size: 14px; color: #1e40af;"></i>
+          <span style="
+            font-size: 12px;
+            font-weight: 600;
+            color: #1f2937;
+            white-space: nowrap;
+          ">${spot.name}</span>
+        </div>
+      `;
       
-      // Store marker element reference
-      markerElementsRef.current.set(spot.name, markerEl);
+      // Add hover effect for simple markers
+      const simpleMarker = markerEl.querySelector('.simple-marker');
+      markerEl.addEventListener('mouseenter', () => {
+        simpleMarker.style.transform = 'scale(1.05)';
+        simpleMarker.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+      });
+      markerEl.addEventListener('mouseleave', () => {
+        simpleMarker.style.transform = 'scale(1)';
+        simpleMarker.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+      });
+    }
+    
+    return markerEl;
+  }, []);
 
-      const marker = new maplibregl.Marker({ element: markerEl, anchor: 'bottom' })
-        .setLngLat(spot.coordinates)
-        .addTo(map.current);
+  // Update visible markers based on viewport
+  const updateVisibleMarkers = useCallback(() => {
+    if (!map.current || !mapLoaded.current || touristSpots.length === 0) return;
 
-      markerEl.addEventListener('click', () => {
-        setSelectedSpot(spot);
+    const currentVisibleSpots = new Set();
+    
+    touristSpots.forEach((spot) => {
+      const inViewport = isSpotInViewport(spot.coordinates);
+      const isCurrentlyVisible = visibleMarkersRef.current.has(spot.name);
+      
+      if (inViewport) {
+        currentVisibleSpots.add(spot.name);
         
-        // Hide both icon and label of clicked marker
-        const icon = markerEl.querySelector('.image-marker-icon');
-        const label = markerEl.querySelector('.marker-label');
-        if (icon) {
-          icon.style.opacity = '0';
-        }
-        if (label) {
-          label.style.opacity = '0';
-        }
-        
-        if (popupRef.current) popupRef.current.remove();
+        // Add marker if not already visible
+        if (!isCurrentlyVisible) {
+          const markerEl = createMarkerElement(spot);
+          markerElementsRef.current.set(spot.name, markerEl);
 
-        const popup = new maplibregl.Popup({
-          offset: [0, -342],
-          closeButton: false,
-          closeOnClick: false,
-          maxWidth: 'none'
-        })
-          .setLngLat(spot.coordinates)
-          .setHTML(createInfoCardHTML(spot))
-          .addTo(map.current);
+          const marker = new maplibregl.Marker({ 
+            element: markerEl, 
+            anchor: spot.isPopular ? 'bottom' : 'center'
+          })
+            .setLngLat(spot.coordinates)
+            .addTo(map.current);
 
-        popupRef.current = popup;
+          // Add click handler
+          markerEl.addEventListener('click', () => {
+            setSelectedSpot(spot);
+            
+            // Hide marker elements when popup opens
+            if (spot.isPopular) {
+              const icon = markerEl.querySelector('.image-marker-icon');
+              const label = markerEl.querySelector('.marker-label');
+              if (icon) icon.style.opacity = '0';
+              if (label) label.style.opacity = '0';
+            } else {
+              markerEl.style.opacity = '0';
+            }
+            
+            if (popupRef.current) popupRef.current.remove();
 
-        // Trigger animation after popup is added to DOM
-        setTimeout(() => {
-          const popupCard = document.querySelector('.info-card-popup');
-          if (popupCard) {
-            popupCard.style.transform = 'scale(1)';
-            popupCard.style.opacity = '1';
-          }
+            const popup = new maplibregl.Popup({
+              offset: [0, -342],
+              closeButton: false,
+              closeOnClick: false,
+              maxWidth: 'none'
+            })
+              .setLngLat(spot.coordinates)
+              .setHTML(createInfoCardHTML(spot))
+              .addTo(map.current);
 
-          let currentIdx = 0;
-          const images = document.querySelectorAll('.carousel-image');
-          const stepIndicators = document.querySelectorAll('.step-indicator');
-          const prevBtn = document.getElementById('carousel-prev-btn');
-          const nextBtn = document.getElementById('carousel-next-btn');
+            popupRef.current = popup;
 
-          function showImage(index) {
-            images.forEach((img, i) => {
-              img.style.opacity = i === index ? '1' : '0';
-            });
-            stepIndicators.forEach((indicator, i) => {
-              indicator.style.backgroundColor = i === index ? 'white' : 'rgba(255, 255, 255, 0.5)';
-            });
-          }
+            // Setup popup interactions
+            setTimeout(() => {
+              const popupCard = document.querySelector('.info-card-popup');
+              if (popupCard) {
+                popupCard.style.transform = 'scale(1)';
+                popupCard.style.opacity = '1';
+              }
 
-          images.forEach((img) => {
-            img.addEventListener('click', (e) => {
-              handleImageClick(e.target.getAttribute('data-image-url'), spot);
+              let currentIdx = 0;
+              const images = document.querySelectorAll('.carousel-image');
+              const stepIndicators = document.querySelectorAll('.step-indicator');
+              const prevBtn = document.getElementById('carousel-prev-btn');
+              const nextBtn = document.getElementById('carousel-next-btn');
+
+              function showImage(index) {
+                images.forEach((img, i) => {
+                  img.style.opacity = i === index ? '1' : '0';
+                });
+                stepIndicators.forEach((indicator, i) => {
+                  indicator.style.backgroundColor = i === index ? 'white' : 'rgba(255, 255, 255, 0.5)';
+                });
+              }
+
+              images.forEach((img) => {
+                img.addEventListener('click', (e) => {
+                  handleImageClick(e.target.getAttribute('data-image-url'), spot);
+                });
+              });
+
+              if (prevBtn) {
+                prevBtn.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  currentIdx = (currentIdx - 1 + images.length) % images.length;
+                  showImage(currentIdx);
+                });
+              }
+
+              if (nextBtn) {
+                nextBtn.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  currentIdx = (currentIdx + 1) % images.length;
+                  showImage(currentIdx);
+                });
+              }
+
+              const closeBtn = document.getElementById('close-card-btn');
+              if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                  if (popupRef.current) {
+                    popupRef.current.remove();
+                    popupRef.current = null;
+                  }
+                  
+                  // Show marker elements again
+                  const currentMarkerEl = markerElementsRef.current.get(spot.name);
+                  if (currentMarkerEl) {
+                    if (spot.isPopular) {
+                      const currentIcon = currentMarkerEl.querySelector('.image-marker-icon');
+                      const currentLabel = currentMarkerEl.querySelector('.marker-label');
+                      if (currentIcon) currentIcon.style.opacity = '1';
+                      if (currentLabel) currentLabel.style.opacity = '1';
+                    } else {
+                      currentMarkerEl.style.opacity = '1';
+                    }
+                  }
+                  
+                  setSelectedSpot(null);
+                });
+              }
+
+              const addBtn = document.getElementById('add-to-itinerary-btn');
+              if (addBtn && !isSpotInItinerary(spot.name)) {
+                addBtn.addEventListener('click', () => addToItinerary(spot, addBtn));
+              }
+
+              const viewDetailsBtn = document.getElementById('view-details-btn');
+              if (viewDetailsBtn) {
+                viewDetailsBtn.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  handleImageClick(spot.images[0], spot);
+                });
+              }
+            }, 0);
+            
+            map.current.flyTo({
+              center: spot.coordinates,
+              zoom: Math.max(map.current.getZoom(), 12),
+              padding: { top: 300, bottom: 50, left: 0, right: 0 },
+              duration: 800
             });
           });
 
-          if (prevBtn) {
-            prevBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              currentIdx = (currentIdx - 1 + images.length) % images.length;
-              showImage(currentIdx);
-            });
-          }
-
-          if (nextBtn) {
-            nextBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              currentIdx = (currentIdx + 1) % images.length;
-              showImage(currentIdx);
-            });
-          }
-
-          const closeBtn = document.getElementById('close-card-btn');
-          if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-              if (popupRef.current) {
-                popupRef.current.remove();
-                popupRef.current = null;
-              }
-              
-              // Show both icon and label again when popup is closed
-              const currentMarkerEl = markerElementsRef.current.get(spot.name);
-              if (currentMarkerEl) {
-                const currentIcon = currentMarkerEl.querySelector('.image-marker-icon');
-                const currentLabel = currentMarkerEl.querySelector('.marker-label');
-                if (currentIcon) {
-                  currentIcon.style.opacity = '1';
-                }
-                if (currentLabel) {
-                  currentLabel.style.opacity = '1';
-                }
-              }
-              
-              setSelectedSpot(null);
-            });
-          }
-
-          const addBtn = document.getElementById('add-to-itinerary-btn');
-          if (addBtn && !isSpotInItinerary(spot.name)) {
-            addBtn.addEventListener('click', () => addToItinerary(spot, addBtn));
-          }
-
-          // View Details button handler
-          const viewDetailsBtn = document.getElementById('view-details-btn');
-          if (viewDetailsBtn) {
-            viewDetailsBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              handleImageClick(spot.images[0], spot);
-            });
-          }
-        }, 0);
+          markersRef.current.push(marker);
+          console.log(`➕ Added marker: ${spot.name} (${spot.isPopular ? 'popular' : 'simple'})`);
+        }
+      } else if (isCurrentlyVisible) {
+        // Remove marker if no longer in viewport
+        const markerIndex = markersRef.current.findIndex(
+          m => m.getLngLat().lng === spot.coordinates[0] && 
+               m.getLngLat().lat === spot.coordinates[1]
+        );
         
-        map.current.flyTo({
-          center: spot.coordinates,
-          zoom: Math.max(map.current.getZoom(), 12),
-          padding: { top: 300, bottom: 50, left: 0, right: 0 },
-          duration: 800
-        });
-      });
-
-      markersRef.current.push(marker);
+        if (markerIndex !== -1) {
+          markersRef.current[markerIndex].remove();
+          markersRef.current.splice(markerIndex, 1);
+          markerElementsRef.current.delete(spot.name);
+          console.log(`➖ Removed marker: ${spot.name}`);
+        }
+      }
     });
-
-    console.log('✅ Successfully added', markersRef.current.length, 'markers with iOS-style design!');
-  }, [touristSpots, addToItinerary, handleImageClick, createInfoCardHTML, isSpotInItinerary]);
+    
+    visibleMarkersRef.current = currentVisibleSpots;
+    console.log(`📍 Visible markers: ${currentVisibleSpots.size} / ${touristSpots.length}`);
+  }, [touristSpots, isSpotInViewport, createMarkerElement, createInfoCardHTML, handleImageClick, addToItinerary, isSpotInItinerary]);
 
   // Initialize map ONCE
   useEffect(() => {
@@ -1096,6 +1178,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         });
 
         map.current.on('zoom', () => updateMarkerSizes(map.current.getZoom()));
+
+        // Update markers on move
+        map.current.on('moveend', updateVisibleMarkers);
+        map.current.on('zoomend', updateVisibleMarkers);
 
         map.current.on('load', () => {
           console.log('✅ Map loaded');
@@ -1127,10 +1213,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             console.log('✅ Mask added');
           }
 
-          // Trigger marker addition if data is ready
+          // Initial marker update
           if (dataLoaded && touristSpots.length > 0) {
-            console.log('🎯 Data already loaded, adding markers');
-            setTimeout(() => addTouristSpotMarkers(), 200);
+            console.log('🎯 Data ready, updating markers');
+            setTimeout(() => updateVisibleMarkers(), 200);
           }
         });
       })
@@ -1147,18 +1233,18 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         mapLoaded.current = false;
       }
     };
-  }, [updateMarkerSizes, dataLoaded, touristSpots, addTouristSpotMarkers]);
+  }, [updateMarkerSizes, updateVisibleMarkers, dataLoaded, touristSpots]);
 
-  // Add markers when data loads
+  // Update markers when data loads
   useEffect(() => {
     if (mapLoaded.current && dataLoaded && touristSpots.length > 0) {
-      console.log('🎯 Both ready, adding markers');
+      console.log('🎯 Data loaded, updating visible markers');
       const timer = setTimeout(() => {
-        addTouristSpotMarkers();
+        updateVisibleMarkers();
       }, 200);
       return () => clearTimeout(timer);
     }
-  }, [dataLoaded, touristSpots, addTouristSpotMarkers]);
+  }, [dataLoaded, touristSpots, updateVisibleMarkers]);
 
   // Debounced resize handler
   const handleResize = useCallback(() => {
