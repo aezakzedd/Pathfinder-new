@@ -911,6 +911,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     fetch(`https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`)
       .then(response => response.json())
       .then(style => {
+        // Remove all text/label layers to hide barangay names
+        style.layers = style.layers.filter(layer => {
+          // Keep all non-symbol layers (roads, water, buildings, etc.)
+          if (layer.type !== 'symbol') return true;
+          
+          // Remove all text/label layers
+          return false;
+        });
+
         map.current = new maplibregl.Map({
           container: mapContainer.current,
           style: style,
