@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Maximize, Minimize, Map as MapIcon, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { categoryColors, categoryIcons, toSentenceCase, popularSpots } from '../data/selectedTouristSpots';
+import { categoryColors, categoryIcons, toSentenceCase } from '../data/selectedTouristSpots';
 import { getSpotMedia } from '../hooks/useSpotMedia';
 import { debounce } from '../utils/debounce';
 import PlaceDetailsSidebar from './PlaceDetailsSidebar';
@@ -423,9 +423,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               feature.properties.name
             );
             
-            // Check if this spot is in the popular list
-            const isPopular = popularSpots.includes(feature.properties.name);
-            
             spots.push({
               name: feature.properties.name,
               location: toSentenceCase(feature.properties.municipality || municipality),
@@ -435,7 +432,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               categories: feature.properties.categories || [],
               images: mediaData.images || [],
               spotIndex: spotIndex++,
-              isPopular: isPopular
+              isPopular: false // All markers same priority now
             });
           }
           
@@ -445,8 +442,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }
       }
       
-      const popularCount = spots.filter(s => s.isPopular).length;
-      console.log(`✅ Total loaded: ${spots.length} tourist spots (${popularCount} popular) from ${Object.keys(MUNICIPALITY_FILES).length} municipalities`);
+      console.log(`✅ Total loaded: ${spots.length} tourist spots from ${Object.keys(MUNICIPALITY_FILES).length} municipalities`);
       setTouristSpots(spots);
       setDataLoaded(true);
     };
@@ -521,8 +517,20 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     setTimeout(() => setSidebarPlace(null), 300);
   }, []);
 
-  // Remove old marker scaling function - no longer needed
-  // Markers are fixed size now
+  // Marker utility functions
+  const getMarkerScale = (zoom) => {
+    const baseZoom = 9;
+    return Math.max(0.5, 1 - (zoom - baseZoom) * 0.1);
+  };
+
+  const updateMarkerSizes = useCallback((zoom) => {
+    const scale = getMarkerScale(zoom);
+    markersRef.current.forEach(marker => {
+      const element = marker.getElement();
+      const icon = element?.querySelector('i');
+      if (icon) icon.style.fontSize = `${42 * scale}px`;
+    });
+  }, []);
 
   const getCategoryPill = useCallback((category) => {
     const colors = categoryColors[category] || categoryColors.default;
@@ -658,65 +666,31 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return categoryIcons[categories[0]] || categoryIcons.default;
   }, []);
 
-  // Create marker element with iOS-style for popular spots
+  // Create marker element (simplified - all same style)
   const createMarkerElement = useCallback((spot) => {
     const markerEl = document.createElement('div');
     markerEl.style.display = 'flex';
     markerEl.style.alignItems = 'center';
     markerEl.style.gap = '6px';
     
-    if (spot.isPopular) {
-      // Popular: iOS-style image marker
-      markerEl.style.flexDirection = 'column';
-      const hasImage = spot.images && spot.images.length > 0;
-      
-      if (hasImage) {
-        markerEl.innerHTML = `
-          <div class="image-marker-icon" style="width: 60px; height: 60px; border-radius: 16px; overflow: hidden; background-color: white; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;">
-            <img src="${spot.images[0]}" alt="${spot.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='<i class=\"fa-solid fa-location-dot\" style=\"font-size: 32px; color: white; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\" />'; " />
-          </div>
-          <div class="marker-label" style="font-size: 12px; font-weight: 600; color: #000000; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff; margin-top: 6px; white-space: nowrap; pointer-events: none; text-align: center; line-height: 1.2; opacity: 1; transition: opacity 0.3s ease;">${spot.name}</div>
-        `;
-      } else {
-        // No image - show gradient background with icon
-        markerEl.innerHTML = `
-          <div class="image-marker-icon" style="width: 60px; height: 60px; border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease; display: flex; align-items: center; justify-content: center;">
-            <i class="fa-solid fa-location-dot" style="font-size: 32px; color: white;"></i>
-          </div>
-          <div class="marker-label" style="font-size: 12px; font-weight: 600; color: #000000; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff; margin-top: 6px; white-space: nowrap; pointer-events: none; text-align: center; line-height: 1.2; opacity: 1; transition: opacity 0.3s ease;">${spot.name}</div>
-        `;
-      }
-      
-      const imageIcon = markerEl.querySelector('.image-marker-icon');
-      markerEl.addEventListener('mouseenter', () => {
-        imageIcon.style.transform = 'scale(1.1)';
-        imageIcon.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)';
-      });
-      markerEl.addEventListener('mouseleave', () => {
-        imageIcon.style.transform = 'scale(1)';
-        imageIcon.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-      });
-    } else {
-      // Non-popular: Simple circular icon + text
-      const icon = getCategoryIcon(spot.categories);
-      
-      markerEl.innerHTML = `
-        <div class="simple-marker-circle" style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s ease;">
-          <i class="fa-solid ${icon}" style="font-size: 12px; color: white;"></i>
-        </div>
-        <span class="marker-text" style="font-size: 12px; font-weight: 600; color: #000000; white-space: nowrap; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff;">${spot.name}</span>
-      `;
-      
-      const circle = markerEl.querySelector('.simple-marker-circle');
-      markerEl.addEventListener('mouseenter', () => {
-        circle.style.transform = 'scale(1.1)';
-        circle.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
-      });
-      markerEl.addEventListener('mouseleave', () => {
-        circle.style.transform = 'scale(1)';
-        circle.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
-      });
-    }
+    const icon = getCategoryIcon(spot.categories);
+    
+    markerEl.innerHTML = `
+      <div class="simple-marker-circle" style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s ease;">
+        <i class="fa-solid ${icon}" style="font-size: 12px; color: white;"></i>
+      </div>
+      <span class="marker-text" style="font-size: 12px; font-weight: 600; color: #000000; white-space: nowrap; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff;">${spot.name}</span>
+    `;
+    
+    const circle = markerEl.querySelector('.simple-marker-circle');
+    markerEl.addEventListener('mouseenter', () => {
+      circle.style.transform = 'scale(1.1)';
+      circle.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
+    });
+    markerEl.addEventListener('mouseleave', () => {
+      circle.style.transform = 'scale(1)';
+      circle.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+    });
     
     return markerEl;
   }, [getCategoryIcon]);
@@ -733,7 +707,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return R * c;
   };
 
-  // Update visible markers with camera-based filtering - IMPROVED VERSION
+  // Update visible markers with camera-based filtering
   const updateVisibleMarkers = useCallback(() => {
     if (!map.current || !mapLoaded.current || touristSpots.length === 0) return;
 
@@ -747,13 +721,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     const currentMuni = getMunicipalityAtPoint(viewCenter[0], viewCenter[1]);
     setCurrentMunicipality(currentMuni);
     
-    // CRITICAL FIX: Remove ALL existing markers first to prevent stacking
-    markersRef.current.forEach(marker => {
-      marker.remove();
-    });
-    markersRef.current = [];
-    markerElementsRef.current.clear();
-    visibleMarkersRef.current.clear();
+    const currentVisibleSpots = new Set();
     
     // Calculate distance from camera center to each spot
     const spotsWithDistance = touristSpots.map(spot => ({
@@ -766,154 +734,164 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       )
     }));
     
-    // Sort by priority: popular first, then by distance
-    spotsWithDistance.sort((a, b) => {
-      if (a.isPopular && !b.isPopular) return -1;
-      if (!a.isPopular && b.isPopular) return 1;
-      return a.distance - b.distance;
-    });
+    // Sort by distance from camera (closest first)
+    spotsWithDistance.sort((a, b) => a.distance - b.distance);
     
     // Take only the closest 10 spots
     const spotsToShow = spotsWithDistance.slice(0, MAX_VISIBLE_MARKERS);
     
-    // Add new markers
     spotsToShow.forEach((spot) => {
-      visibleMarkersRef.current.add(spot.name);
-      const markerEl = createMarkerElement(spot);
-      markerElementsRef.current.set(spot.name, markerEl);
+      const isCurrentlyVisible = visibleMarkersRef.current.has(spot.name);
+      
+      if (!isCurrentlyVisible) {
+        // Add marker
+        currentVisibleSpots.add(spot.name);
+        const markerEl = createMarkerElement(spot);
+        markerElementsRef.current.set(spot.name, markerEl);
 
-      const marker = new maplibregl.Marker({ 
-        element: markerEl, 
-        anchor: spot.isPopular ? 'bottom' : 'center'
-      })
-        .setLngLat(spot.coordinates)
-        .addTo(map.current);
-
-      // Click handler
-      markerEl.addEventListener('click', () => {
-        setSelectedSpot(spot);
-        
-        if (spot.isPopular) {
-          const icon = markerEl.querySelector('.image-marker-icon');
-          const label = markerEl.querySelector('.marker-label');
-          if (icon) icon.style.opacity = '0';
-          if (label) label.style.opacity = '0';
-        } else {
-          markerEl.style.opacity = '0';
-        }
-        
-        if (popupRef.current) popupRef.current.remove();
-
-        const popup = new maplibregl.Popup({
-          offset: [0, -342],
-          closeButton: false,
-          closeOnClick: false,
-          maxWidth: 'none'
+        const marker = new maplibregl.Marker({ 
+          element: markerEl, 
+          anchor: 'center'
         })
           .setLngLat(spot.coordinates)
-          .setHTML(createInfoCardHTML(spot))
           .addTo(map.current);
 
-        popupRef.current = popup;
-
-        setTimeout(() => {
-          const popupCard = document.querySelector('.info-card-popup');
-          if (popupCard) {
-            popupCard.style.transform = 'scale(1)';
-            popupCard.style.opacity = '1';
-          }
-
-          let currentIdx = 0;
-          const images = document.querySelectorAll('.carousel-image');
-          const stepIndicators = document.querySelectorAll('.step-indicator');
-
-          function showImage(index) {
-            images.forEach((img, i) => img.style.opacity = i === index ? '1' : '0');
-            stepIndicators.forEach((indicator, i) => {
-              indicator.style.backgroundColor = i === index ? 'white' : 'rgba(255, 255, 255, 0.5)';
-            });
-          }
-
-          images.forEach((img) => {
-            img.addEventListener('click', (e) => {
-              handleImageClick(e.target.getAttribute('data-image-url'), spot);
-            });
-          });
-
-          const prevBtn = document.getElementById('carousel-prev-btn');
-          const nextBtn = document.getElementById('carousel-next-btn');
+        // Click handler
+        markerEl.addEventListener('click', () => {
+          setSelectedSpot(spot);
           
-          if (prevBtn) {
-            prevBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              currentIdx = (currentIdx - 1 + images.length) % images.length;
-              showImage(currentIdx);
-            });
-          }
+          markerEl.style.opacity = '0';
+          
+          if (popupRef.current) popupRef.current.remove();
 
-          if (nextBtn) {
-            nextBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              currentIdx = (currentIdx + 1) % images.length;
-              showImage(currentIdx);
-            });
-          }
+          const popup = new maplibregl.Popup({
+            offset: [0, -342],
+            closeButton: false,
+            closeOnClick: false,
+            maxWidth: 'none'
+          })
+            .setLngLat(spot.coordinates)
+            .setHTML(createInfoCardHTML(spot))
+            .addTo(map.current);
 
-          const closeBtn = document.getElementById('close-card-btn');
-          if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-              if (popupRef.current) {
-                popupRef.current.remove();
-                popupRef.current = null;
-              }
-              
-              const currentMarkerEl = markerElementsRef.current.get(spot.name);
-              if (currentMarkerEl) {
-                if (spot.isPopular) {
-                  const currentIcon = currentMarkerEl.querySelector('.image-marker-icon');
-                  const currentLabel = currentMarkerEl.querySelector('.marker-label');
-                  if (currentIcon) currentIcon.style.opacity = '1';
-                  if (currentLabel) currentLabel.style.opacity = '1';
-                } else {
+          popupRef.current = popup;
+
+          setTimeout(() => {
+            const popupCard = document.querySelector('.info-card-popup');
+            if (popupCard) {
+              popupCard.style.transform = 'scale(1)';
+              popupCard.style.opacity = '1';
+            }
+
+            let currentIdx = 0;
+            const images = document.querySelectorAll('.carousel-image');
+            const stepIndicators = document.querySelectorAll('.step-indicator');
+
+            function showImage(index) {
+              images.forEach((img, i) => img.style.opacity = i === index ? '1' : '0');
+              stepIndicators.forEach((indicator, i) => {
+                indicator.style.backgroundColor = i === index ? 'white' : 'rgba(255, 255, 255, 0.5)';
+              });
+            }
+
+            images.forEach((img) => {
+              img.addEventListener('click', (e) => {
+                handleImageClick(e.target.getAttribute('data-image-url'), spot);
+              });
+            });
+
+            const prevBtn = document.getElementById('carousel-prev-btn');
+            const nextBtn = document.getElementById('carousel-next-btn');
+            
+            if (prevBtn) {
+              prevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentIdx = (currentIdx - 1 + images.length) % images.length;
+                showImage(currentIdx);
+              });
+            }
+
+            if (nextBtn) {
+              nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentIdx = (currentIdx + 1) % images.length;
+                showImage(currentIdx);
+              });
+            }
+
+            const closeBtn = document.getElementById('close-card-btn');
+            if (closeBtn) {
+              closeBtn.addEventListener('click', () => {
+                if (popupRef.current) {
+                  popupRef.current.remove();
+                  popupRef.current = null;
+                }
+                
+                const currentMarkerEl = markerElementsRef.current.get(spot.name);
+                if (currentMarkerEl) {
                   currentMarkerEl.style.opacity = '1';
                 }
-              }
-              setSelectedSpot(null);
-            });
-          }
+                setSelectedSpot(null);
+              });
+            }
 
-          const addBtn = document.getElementById('add-to-itinerary-btn');
-          if (addBtn && !isSpotInItinerary(spot.name)) {
-            addBtn.addEventListener('click', () => addToItinerary(spot, addBtn));
-          }
+            const addBtn = document.getElementById('add-to-itinerary-btn');
+            if (addBtn && !isSpotInItinerary(spot.name)) {
+              addBtn.addEventListener('click', () => addToItinerary(spot, addBtn));
+            }
 
-          const viewDetailsBtn = document.getElementById('view-details-btn');
-          if (viewDetailsBtn) {
-            viewDetailsBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              handleImageClick(spot.images[0], spot);
-            });
-          }
-        }, 0);
-        
-        map.current.flyTo({
-          center: spot.coordinates,
-          zoom: Math.max(map.current.getZoom(), 12),
-          padding: { top: 300, bottom: 50, left: 0, right: 0 },
-          duration: 800
+            const viewDetailsBtn = document.getElementById('view-details-btn');
+            if (viewDetailsBtn) {
+              viewDetailsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                handleImageClick(spot.images[0], spot);
+              });
+            }
+          }, 0);
+          
+          map.current.flyTo({
+            center: spot.coordinates,
+            zoom: Math.max(map.current.getZoom(), 12),
+            padding: { top: 300, bottom: 50, left: 0, right: 0 },
+            duration: 800
+          });
         });
-      });
 
-      markersRef.current.push(marker);
+        markersRef.current.push(marker);
+      } else {
+        currentVisibleSpots.add(spot.name);
+      }
     });
     
-    const popularVisible = spotsToShow.filter(s => s.isPopular).length;
-    console.log(`📍 Showing ${spotsToShow.length}/${MAX_VISIBLE_MARKERS} markers (${popularVisible} popular) | Camera at: ${currentMuni || 'Unknown'} | Zoom: ${zoom.toFixed(1)}`);
+    // Remove markers that should no longer be visible
+    const markersToRemove = [];
+    visibleMarkersRef.current.forEach(spotName => {
+      if (!currentVisibleSpots.has(spotName)) {
+        markersToRemove.push(spotName);
+      }
+    });
+    
+    markersToRemove.forEach(spotName => {
+      const markerIndex = markersRef.current.findIndex(m => {
+        const spot = touristSpots.find(s => s.name === spotName);
+        return spot && m.getLngLat().lng === spot.coordinates[0] && m.getLngLat().lat === spot.coordinates[1];
+      });
+      
+      if (markerIndex !== -1) {
+        markersRef.current[markerIndex].remove();
+        markersRef.current.splice(markerIndex, 1);
+        markerElementsRef.current.delete(spotName);
+      }
+    });
+    
+    visibleMarkersRef.current = currentVisibleSpots;
+    
+    console.log(`📍 Showing ${currentVisibleSpots.size}/${MAX_VISIBLE_MARKERS} markers | Camera at: ${currentMuni || 'Unknown'} | Zoom: ${zoom.toFixed(1)}`);
   }, [touristSpots, createMarkerElement, createInfoCardHTML, handleImageClick, addToItinerary, isSpotInItinerary, getMunicipalityAtPoint]);
 
-  // Create debounced version with REDUCED delay for faster cleanup
+  // Create debounced version of updateVisibleMarkers
   const debouncedUpdateMarkers = useCallback(
-    debounce(() => updateVisibleMarkers(), 50), // Reduced from 150ms to 50ms
+    debounce(() => updateVisibleMarkers(), 150),
     [updateVisibleMarkers]
   );
 
@@ -978,7 +956,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           'top-right'
         );
 
-        // REMOVED: map.current.on('zoom', ...) - no more dynamic scaling
+        map.current.on('zoom', () => updateMarkerSizes(map.current.getZoom()));
         map.current.on('moveend', debouncedUpdateMarkers);
         map.current.on('zoomend', debouncedUpdateMarkers);
 
@@ -1045,7 +1023,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         mapLoaded.current = false;
       }
     };
-  }, [debouncedUpdateMarkers, updateVisibleMarkers, dataLoaded, touristSpots]);
+  }, [updateMarkerSizes, debouncedUpdateMarkers, updateVisibleMarkers, dataLoaded, touristSpots]);
 
   useEffect(() => {
     if (mapLoaded.current && dataLoaded && touristSpots.length > 0) {
