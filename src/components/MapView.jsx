@@ -565,6 +565,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
     const isInItinerary = isSpotInItinerary(spot.name);
     const hasImages = spot.images && spot.images.length > 0;
+    const imageCount = spot.images ? spot.images.length : 0;
     
     const buttonsHTML = `
       <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 20;">
@@ -616,6 +617,29 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       </div>
     `;
     
+    // Circle step indicators
+    const stepIndicatorsHTML = imageCount > 1 ? `
+      <div id="step-indicators" style="
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 6px;
+        z-index: 15;
+      ">
+        ${Array.from({ length: imageCount }, (_, i) => `
+          <div class="step-indicator" data-step="${i}" style="
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: ${i === 0 ? 'white' : 'rgba(255, 255, 255, 0.5)'};
+            transition: background-color 0.3s ease;
+          "></div>
+        `).join('')}
+      </div>
+    ` : '';
+    
     const carouselHTML = hasImages ? `
       <div id="carousel-container" style="
         width: 100%;
@@ -623,8 +647,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         background-color: #e5e7eb;
         position: relative;
         overflow: hidden;
+        border-radius: 12px 12px 0 0;
       ">
         ${buttonsHTML}
+        ${stepIndicatorsHTML}
         ${spot.images.map((img, idx) => `
           <img 
             src="${img}" 
@@ -682,19 +708,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
           </button>
-          
-          <div id="image-counter" style="
-            position: absolute;
-            bottom: 8px;
-            right: 8px;
-            padding: 4px 8px;
-            border-radius: 12px;
-            background-color: rgba(0, 0, 0, 0.6);
-            color: white;
-            font-size: 11px;
-            font-weight: 600;
-            z-index: 10;
-          ">1 / ${spot.images.length}</div>
         ` : ''}
       </div>
     ` : `
@@ -707,6 +720,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         display: flex;
         align-items: center;
         justify-content: center;
+        border-radius: 12px 12px 0 0;
       ">
         ${buttonsHTML}
         <i class="fa-solid fa-location-dot" style="font-size: 48px; color: #9ca3af;"></i>
@@ -729,10 +743,18 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       ">
         ${carouselHTML}
         
+        <!-- Black Separator Line -->
+        <div style="
+          width: 100%;
+          height: 1px;
+          background-color: #000000;
+          position: relative;
+        "></div>
+        
         <!-- Black Pill Button -->
         <button id="view-details-btn" style="
           position: absolute;
-          top: 206px;
+          top: 209.5px;
           left: 50%;
           transform: translateX(-50%);
           padding: 6px 16px;
@@ -957,7 +979,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
           let currentIdx = 0;
           const images = document.querySelectorAll('.carousel-image');
-          const counter = document.getElementById('image-counter');
+          const stepIndicators = document.querySelectorAll('.step-indicator');
           const prevBtn = document.getElementById('carousel-prev-btn');
           const nextBtn = document.getElementById('carousel-next-btn');
 
@@ -965,7 +987,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             images.forEach((img, i) => {
               img.style.opacity = i === index ? '1' : '0';
             });
-            if (counter) counter.textContent = `${index + 1} / ${images.length}`;
+            stepIndicators.forEach((indicator, i) => {
+              indicator.style.backgroundColor = i === index ? 'white' : 'rgba(255, 255, 255, 0.5)';
+            });
           }
 
           images.forEach((img) => {
