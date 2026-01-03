@@ -656,11 +656,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const createMarkerElement = useCallback((spot) => {
     const markerEl = document.createElement('div');
     markerEl.style.display = 'flex';
-    markerEl.style.flexDirection = 'column';
     markerEl.style.alignItems = 'center';
+    markerEl.style.gap = '6px';
     
     if (spot.isPopular) {
       // Popular: iOS-style image marker
+      markerEl.style.flexDirection = 'column';
       const hasImage = spot.images && spot.images.length > 0;
       
       if (hasImage) {
@@ -689,27 +690,25 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         imageIcon.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
       });
     } else {
-      // Less popular: Simple icon + text marker (like reference image)
+      // Less popular: Circular icon + text (NO pill background)
       const icon = getCategoryIcon(spot.categories);
       const colors = categoryColors[spot.categories[0]] || categoryColors.default;
       
       markerEl.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 6px; background-color: rgba(255, 255, 255, 0.95); padding: 6px 12px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; transition: all 0.2s ease;" class="simple-marker">
-          <div style="width: 20px; height: 20px; border-radius: 50%; background-color: ${colors.bg}; display: flex; align-items: center; justify-content: center;">
-            <i class="fa-solid ${icon}" style="font-size: 10px; color: ${colors.text};"></i>
-          </div>
-          <span style="font-size: 12px; font-weight: 600; color: #1f2937; white-space: nowrap;">${spot.name}</span>
+        <div class="simple-marker-circle" style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s ease;">
+          <i class="fa-solid ${icon}" style="font-size: 12px; color: white;"></i>
         </div>
+        <span class="marker-text" style="font-size: 12px; font-weight: 600; color: #000000; white-space: nowrap; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff;">${spot.name}</span>
       `;
       
-      const simpleMarker = markerEl.querySelector('.simple-marker');
+      const circle = markerEl.querySelector('.simple-marker-circle');
       markerEl.addEventListener('mouseenter', () => {
-        simpleMarker.style.transform = 'scale(1.05)';
-        simpleMarker.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+        circle.style.transform = 'scale(1.1)';
+        circle.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
       });
       markerEl.addEventListener('mouseleave', () => {
-        simpleMarker.style.transform = 'scale(1)';
-        simpleMarker.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+        circle.style.transform = 'scale(1)';
+        circle.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
       });
     }
     
