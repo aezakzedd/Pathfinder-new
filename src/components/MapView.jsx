@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 import { Maximize, Minimize, Map as MapIcon, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { selectedSpots, categoryColors, toSentenceCase } from '../data/selectedTouristSpots';
-import { getSpotMedia } from '../hooks/useSpotMedia'; // Import the new helper
+import { selectedSpots, loadAllSpotsFrom, popularSpots, categoryColors, categoryIcons, toSentenceCase } from '../data/selectedTouristSpots';
+import { getSpotMedia } from '../hooks/useSpotMedia';
 import PlaceDetailsSidebar from './PlaceDetailsSidebar';
 import ItineraryView from './ItineraryView';
 
@@ -12,10 +12,12 @@ const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
 const SIDEBAR_WIDTH = 480;
 
-// Popularity threshold - spots with more than this many images are "popular"
-const POPULARITY_THRESHOLD = 3;
-// Number of initial featured spots that always get iOS-style markers
-const INITIAL_FEATURED_COUNT = 8;
+// Zoom thresholds for marker visibility
+const ZOOM_LEVELS = {
+  POPULAR: 9,    // Popular/featured spots visible from default zoom
+  STANDARD: 12,  // Less popular spots visible at closer zoom
+  DETAIL: 14     // Very specific/minor spots at detailed zoom
+};
 
 // Platform configuration
 const PLATFORMS = {
@@ -175,8 +177,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const map = useRef(null);
   const mapLoaded = useRef(false);
   const markersRef = useRef([]);
-  const markerElementsRef = useRef(new Map()); // Store marker elements by spot name
-  const visibleMarkersRef = useRef(new Set()); // Track which markers are currently visible
+  const markerElementsRef = useRef(new Map());
+  const visibleMarkersRef = useRef(new Set());
   const popupRef = useRef(null);
   const savedState = useRef({ center: [124.2, 13.8], zoom: DEFAULT_ZOOM });
   const resizeTimeout = useRef(null);
@@ -188,7 +190,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [itinerary, setItinerary] = useState([]);
   const itineraryRef = useRef([]);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentZoom, setCurrentZoom] = useState(DEFAULT_ZOOM);
   
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -227,28 +229,21 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-  // Draw routing lines IMPERATIVELY using ref
+  // Draw routing lines
   const drawRoutes = useCallback(async () => {
     if (!map.current || !mapLoaded.current) return;
 
     const currentItinerary = itineraryRef.current;
     console.log('🎨 Drawing routes for', currentItinerary.length, 'places');
 
-    // Remove existing route
     if (map.current.getSource('route')) {
       if (map.current.getLayer('route-line')) map.current.removeLayer('route-line');
       if (map.current.getLayer('route-outline')) map.current.removeLayer('route-outline');
       map.current.removeSource('route');
-      console.log('🗑️ Removed old routes');
     }
 
-    // Need at least 2 places
-    if (currentItinerary.length < 2) {
-      console.log('⏭️ Not enough places');
-      return;
-    }
+    if (currentItinerary.length < 2) return;
 
-    // Fetch all route segments
     const routeSegments = [];
     for (let i = 0; i < currentItinerary.length - 1; i++) {
       const start = currentItinerary[i].coordinates;
@@ -257,23 +252,13 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       if (route) routeSegments.push(route);
     }
 
-    if (routeSegments.length === 0) {
-      console.log('❌ No route segments');
-      return;
-    }
+    if (routeSegments.length === 0) return;
 
-    console.log('✅ Got', routeSegments.length, 'segments');
-
-    // Combine into FeatureCollection
     const combinedGeometry = {
       type: 'FeatureCollection',
-      features: routeSegments.map(geometry => ({
-        type: 'Feature',
-        geometry: geometry
-      }))
+      features: routeSegments.map(geometry => ({ type: 'Feature', geometry }))
     };
 
-    // Add source and layers
     map.current.addSource('route', {
       type: 'geojson',
       data: combinedGeometry
@@ -283,36 +268,19 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       id: 'route-outline',
       type: 'line',
       source: 'route',
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round'
-      },
-      paint: {
-        'line-color': '#ffffff',
-        'line-width': 6,
-        'line-opacity': 0.8
-      }
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#ffffff', 'line-width': 6, 'line-opacity': 0.8 }
     });
 
     map.current.addLayer({
       id: 'route-line',
       type: 'line',
       source: 'route',
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round'
-      },
-      paint: {
-        'line-color': '#1e40af',
-        'line-width': 4,
-        'line-opacity': 0.9
-      }
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#1e40af', 'line-width': 4, 'line-opacity': 0.9 }
     });
-
-    console.log('🎉 Routes drawn successfully!');
   }, []);
 
-  // Call drawRoutes when itinerary changes
   useEffect(() => {
     drawRoutes();
   }, [itinerary.length, drawRoutes]);
@@ -321,16 +289,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const updateVideoQueue = useCallback((centerIndex) => {
     const videoCount = 3;
     const newQueue = new Set();
-
     newQueue.add(centerIndex);
     if (centerIndex > 0) newQueue.add(centerIndex - 1);
     if (centerIndex < videoCount - 1) newQueue.add(centerIndex + 1);
-
     setLoadedVideos(newQueue);
     setCurrentVideoIndex(centerIndex);
   }, []);
 
-  // Intersection Observer for lazy loading AND autoplay/pause
+  // Intersection Observer for video lazy loading
   useEffect(() => {
     if (!modalOpen) return;
 
@@ -342,34 +308,25 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           
           if (entry.isIntersecting) {
             updateVideoQueue(index);
-            
             if (iframe) {
               const platform = getVideoPlatform(index);
               if (platform === 'youtube') {
                 iframe.contentWindow?.postMessage(
-                  JSON.stringify({ event: 'command', func: 'playVideo', args: '' }),
-                  '*'
+                  JSON.stringify({ event: 'command', func: 'playVideo', args: '' }), '*'
                 );
               }
             }
-          } else {
-            if (iframe) {
-              const platform = getVideoPlatform(index);
-              if (platform === 'youtube') {
-                iframe.contentWindow?.postMessage(
-                  JSON.stringify({ event: 'command', func: 'pauseVideo', args: '' }),
-                  '*'
-                );
-              }
+          } else if (iframe) {
+            const platform = getVideoPlatform(index);
+            if (platform === 'youtube') {
+              iframe.contentWindow?.postMessage(
+                JSON.stringify({ event: 'command', func: 'pauseVideo', args: '' }), '*'
+              );
             }
           }
         });
       },
-      {
-        root: null,
-        threshold: 0.5,
-        rootMargin: '0px'
-      }
+      { root: null, threshold: 0.5, rootMargin: '0px' }
     );
 
     videoRefs.current.forEach((ref) => {
@@ -377,34 +334,27 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     });
 
     return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
+      if (observerRef.current) observerRef.current.disconnect();
     };
   }, [modalOpen, updateVideoQueue]);
 
-  // Load GeoJSON data and extract selected spots with images from manifest
+  // Load tourist spots data
   useEffect(() => {
     const loadTouristSpots = async () => {
       console.log('Starting to load tourist spots...');
       const spots = [];
+      let spotIndex = 0;
       
+      // Load selected spots first
       for (const selection of selectedSpots) {
         try {
           const response = await fetch(`/data/${selection.geojsonFile}`);
-          
-          if (!response.ok) {
-            console.error(`Failed to fetch ${selection.geojsonFile}`);
-            continue;
-          }
+          if (!response.ok) continue;
           
           const geojson = await response.json();
-          const feature = geojson.features.find(
-            f => f.properties.name === selection.spotName
-          );
+          const feature = geojson.features.find(f => f.properties.name === selection.spotName);
           
           if (feature) {
-            // Load images from new manifest system
             const mediaData = await getSpotMedia(
               feature.properties.municipality, 
               feature.properties.name
@@ -417,7 +367,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               description: feature.properties.description,
               categories: feature.properties.categories || [],
               images: mediaData.images,
-              spotIndex: spots.length // Track original index for initial featured check
+              spotIndex: spotIndex++,
+              isPopular: popularSpots.includes(feature.properties.name)
             });
           }
         } catch (error) {
@@ -425,7 +376,40 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }
       }
       
-      console.log(`Loaded ${spots.length} spots`);
+      // Load all spots from specific municipalities
+      for (const config of loadAllSpotsFrom) {
+        try {
+          const response = await fetch(`/data/${config.geojsonFile}`);
+          if (!response.ok) continue;
+          
+          const geojson = await response.json();
+          
+          for (const feature of geojson.features) {
+            // Skip if already loaded
+            if (spots.some(s => s.name === feature.properties.name)) continue;
+            
+            const mediaData = await getSpotMedia(
+              feature.properties.municipality,
+              feature.properties.name
+            );
+            
+            spots.push({
+              name: feature.properties.name,
+              location: toSentenceCase(feature.properties.municipality),
+              coordinates: feature.geometry.coordinates,
+              description: feature.properties.description,
+              categories: feature.properties.categories || [],
+              images: mediaData.images,
+              spotIndex: spotIndex++,
+              isPopular: popularSpots.includes(feature.properties.name)
+            });
+          }
+        } catch (error) {
+          console.error(`Error loading all from ${config.geojsonFile}:`, error);
+        }
+      }
+      
+      console.log(`Loaded ${spots.length} spots (${spots.filter(s => s.isPopular).length} popular)`);
       setTouristSpots(spots);
       setDataLoaded(true);
     };
@@ -433,13 +417,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     loadTouristSpots();
   }, []);
 
-  // Add to itinerary handler
+  // Handler functions
   const addToItinerary = useCallback((spot, buttonElement) => {
     const isAlreadyAdded = itineraryRef.current.some(item => item.name === spot.name);
     
     if (!isAlreadyAdded) {
-      console.log('✅ Adding:', spot.name);
-      
       if (buttonElement) {
         buttonElement.innerHTML = `
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -448,33 +430,25 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         `;
         buttonElement.style.backgroundColor = '#22c55e';
         buttonElement.style.pointerEvents = 'none';
-        buttonElement.style.minWidth = '28px';
       }
-      
       setItinerary(prev => [...prev, spot]);
     }
   }, []);
 
-  // Remove from itinerary handler
   const removeFromItinerary = useCallback((index) => {
     setItinerary(prev => prev.filter((_, i) => i !== index));
-    console.log('Removed index:', index);
   }, []);
 
-  // Handle card click from itinerary
   const handleCardClick = useCallback((place) => {
     const imageUrl = place.images && place.images.length > 0 ? place.images[0] : null;
-    
     setModalImage(imageUrl);
     setModalSpot(place);
     setModalOpen(true);
     setSidebarPlace(place);
     setSidebarOpen(true);
     setLoadedVideos(new Set([0]));
-    setCurrentVideoIndex(0);
   }, []);
 
-  // Handle image click to open modal
   const handleImageClick = useCallback((image, spot) => {
     setModalImage(image);
     setModalSpot(spot);
@@ -482,10 +456,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     setSidebarPlace(spot);
     setSidebarOpen(true);
     setLoadedVideos(new Set([0]));
-    setCurrentVideoIndex(0);
   }, []);
 
-  // Close modal
   const closeModal = useCallback(() => {
     setModalOpen(false);
     setSidebarOpen(false);
@@ -494,8 +466,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         const platform = getVideoPlatform(index);
         if (platform === 'youtube') {
           iframe.contentWindow?.postMessage(
-            JSON.stringify({ event: 'command', func: 'pauseVideo', args: '' }),
-            '*'
+            JSON.stringify({ event: 'command', func: 'pauseVideo', args: '' }), '*'
           );
         }
       }
@@ -505,41 +476,29 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       setModalSpot(null);
       setSidebarPlace(null);
       setLoadedVideos(new Set([0]));
-      setCurrentVideoIndex(0);
     }, 300);
   }, []);
 
-  // Close sidebar handler
   const closeSidebar = useCallback(() => {
     setSidebarOpen(false);
-    setTimeout(() => {
-      setSidebarPlace(null);
-    }, 300);
+    setTimeout(() => setSidebarPlace(null), 300);
   }, []);
 
-  // Calculate marker scale based on zoom level
+  // Marker utility functions
   const getMarkerScale = (zoom) => {
     const baseZoom = 9;
-    const scale = Math.max(0.5, 1 - (zoom - baseZoom) * 0.1);
-    return scale;
+    return Math.max(0.5, 1 - (zoom - baseZoom) * 0.1);
   };
 
-  // Update marker sizes based on zoom (only for standard pin markers, NOT image markers)
   const updateMarkerSizes = useCallback((zoom) => {
     const scale = getMarkerScale(zoom);
     markersRef.current.forEach(marker => {
       const element = marker.getElement();
       const icon = element?.querySelector('i');
-      
-      // Only scale standard pin markers, skip image markers
-      if (icon) {
-        icon.style.fontSize = `${42 * scale}px`;
-      }
-      // Image markers remain constant size - no scaling
+      if (icon) icon.style.fontSize = `${42 * scale}px`;
     });
   }, []);
 
-  // Get category pill HTML
   const getCategoryPill = useCallback((category) => {
     const colors = categoryColors[category] || categoryColors.default;
     return `
@@ -558,18 +517,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   }, []);
 
-  // Check if spot is in itinerary using ref
   const isSpotInItinerary = useCallback((spotName) => {
     return itineraryRef.current.some(item => item.name === spotName);
   }, []);
 
-  // Create info card HTML
   const createInfoCardHTML = useCallback((spot) => {
-    const categoryHTML = spot.categories
-      .slice(0, 2)
-      .map(cat => getCategoryPill(cat))
-      .join('');
-
+    const categoryHTML = spot.categories.slice(0, 2).map(cat => getCategoryPill(cat)).join('');
     const isInItinerary = isSpotInItinerary(spot.name);
     const hasImages = spot.images && spot.images.length > 0;
     const imageCount = spot.images ? spot.images.length : 0;
@@ -577,19 +530,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     const buttonsHTML = `
       <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 20;">
         <button id="add-to-itinerary-btn" style="
-          width: 28px;
-          height: 28px;
-          min-width: 28px;
-          flex-shrink: 0;
-          border-radius: 14px;
+          width: 28px; height: 28px; min-width: 28px; flex-shrink: 0; border-radius: 14px;
           background-color: ${isInItinerary ? '#22c55e' : 'rgba(30, 64, 175, 0.95)'};
-          border: none;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          border: none; display: flex; align-items: center; justify-content: center;
           cursor: ${isInItinerary ? 'default' : 'pointer'};
-          pointer-events: ${isInItinerary ? 'none' : 'auto'};
-          padding: 0;
+          pointer-events: ${isInItinerary ? 'none' : 'auto'}; padding: 0;
         ">
           ${isInItinerary ? `
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -602,19 +547,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             </svg>
           `}
         </button>
-
         <button id="close-card-btn" style="
-          width: 28px;
-          height: 28px;
-          min-width: 28px;
-          flex-shrink: 0;
-          border-radius: 50%;
-          background-color: rgba(0, 0, 0, 0.6);
-          border: none;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
+          width: 28px; height: 28px; min-width: 28px; flex-shrink: 0; border-radius: 50%;
+          background-color: rgba(0, 0, 0, 0.6); border: none;
+          display: flex; align-items: center; justify-content: center; cursor: pointer;
         ">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -624,22 +560,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       </div>
     `;
     
-    // Circle step indicators
     const stepIndicatorsHTML = imageCount > 1 ? `
-      <div id="step-indicators" style="
-        position: absolute;
-        top: 12px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 6px;
-        z-index: 15;
-      ">
+      <div id="step-indicators" style="position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 15;">
         ${Array.from({ length: imageCount }, (_, i) => `
           <div class="step-indicator" data-step="${i}" style="
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
+            width: 6px; height: 6px; border-radius: 50%;
             background-color: ${i === 0 ? 'white' : 'rgba(255, 255, 255, 0.5)'};
             transition: background-color 0.3s ease;
           "></div>
@@ -648,69 +573,21 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     ` : '';
     
     const carouselHTML = hasImages ? `
-      <div id="carousel-container" style="
-        width: 100%;
-        height: 210px;
-        background-color: #e5e7eb;
-        position: relative;
-        overflow: hidden;
-        border-radius: 12px 12px 0 0;
-      ">
+      <div id="carousel-container" style="width: 100%; height: 210px; background-color: #e5e7eb; position: relative; overflow: hidden; border-radius: 12px 12px 0 0;">
         ${buttonsHTML}
         ${stepIndicatorsHTML}
         ${spot.images.map((img, idx) => `
-          <img 
-            src="${img}" 
-            alt="${spot.name}"
-            class="carousel-image"
-            data-index="${idx}"
-            data-image-url="${img}"
-            style="
-              width: 100%;
-              height: 100%;
-              object-fit: cover;
-              position: absolute;
-              top: 0;
-              left: 0;
-              opacity: ${idx === 0 ? '1' : '0'};
-              transition: opacity 0.3s ease;
-              cursor: pointer;
-            "
-          />
+          <img src="${img}" alt="${spot.name}" class="carousel-image" data-index="${idx}" data-image-url="${img}"
+            style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;
+                   opacity: ${idx === 0 ? '1' : '0'}; transition: opacity 0.3s ease; cursor: pointer;" />
         `).join('')}
-        
         ${spot.images.length > 1 ? `
-          <button id="carousel-prev-btn" style="
-            position: absolute;
-            left: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background-color: rgba(0, 0, 0, 0.5);
-            border: none;
-            cursor: pointer;
-            z-index: 10;
-          ">
+          <button id="carousel-prev-btn" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; background-color: rgba(0, 0, 0, 0.5); border: none; cursor: pointer; z-index: 10;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
               <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
           </button>
-          
-          <button id="carousel-next-btn" style="
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background-color: rgba(0, 0, 0, 0.5);
-            border: none;
-            cursor: pointer;
-            z-index: 10;
-          ">
+          <button id="carousel-next-btn" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; background-color: rgba(0, 0, 0, 0.5); border: none; cursor: pointer; z-index: 10;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
               <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
@@ -718,98 +595,30 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         ` : ''}
       </div>
     ` : `
-      <div style="
-        width: 100%;
-        height: 210px;
-        background-color: #e5e7eb;
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 12px 12px 0 0;
-      ">
+      <div style="width: 100%; height: 210px; background-color: #e5e7eb; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; border-radius: 12px 12px 0 0;">
         ${buttonsHTML}
         <i class="fa-solid fa-location-dot" style="font-size: 48px; color: #9ca3af;"></i>
       </div>
     `;
 
     return `
-      <div class="info-card-popup" style="
-        width: 280px;
-        background-color: white;
-        border-radius: 12px;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-        overflow: visible;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        transform: scale(0.3);
-        opacity: 0;
-        transform-origin: bottom center;
-        transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-        position: relative;
-      ">
+      <div class="info-card-popup" style="width: 280px; background-color: white; border-radius: 12px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12); overflow: visible; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; transform: scale(0.3); opacity: 0; transform-origin: bottom center; transition: transform 0.3s ease-out, opacity 0.3s ease-out; position: relative;">
         ${carouselHTML}
-        
-        <!-- Black Separator Line -->
-        <div style="
-          width: 100%;
-          height: 1px;
-          background-color: #000000;
-          position: relative;
-        "></div>
-        
-        <!-- Black Pill Button -->
-        <button id="view-details-btn" style="
-          position: absolute;
-          top: 209.5px;
-          left: 50%;
-          transform: translateX(-50%);
-          padding: 6px 16px;
-          background-color: #000000;
-          color: white;
-          border: none;
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 600;
-          cursor: pointer;
-          z-index: 25;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-          white-space: nowrap;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-        "
-        onmouseover="this.style.transform='translateX(-50%) scale(1.05)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.4)'"
-        onmouseout="this.style.transform='translateX(-50%) scale(1)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.3)'">
+        <div style="width: 100%; height: 1px; background-color: #000000; position: relative;"></div>
+        <button id="view-details-btn" style="position: absolute; top: 205px; left: 50%; transform: translateX(-50%); padding: 6px 16px; background-color: #000000; color: white; border: none; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; z-index: 25; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); white-space: nowrap; display: flex; align-items: center; gap: 6px; transition: transform 0.2s ease, box-shadow 0.2s ease;"
+          onmouseover="this.style.transform='translateX(-50%) scale(1.05)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.4)'"
+          onmouseout="this.style.transform='translateX(-50%) scale(1)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.3)'">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="5 3 19 12 5 21 5 3"></polygon>
           </svg>
           View Details
         </button>
-        
-        <div style="
-          padding: 20px 14px 12px 14px;
-          box-sizing: border-box;
-          width: 100%;
-          max-width: 280px;
-        ">
+        <div style="padding: 20px 14px 12px 14px; box-sizing: border-box; width: 100%; max-width: 280px;">
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
             <i class="fa-solid fa-location-dot" style="font-size: 12px; color: #6b7280; flex-shrink: 0;"></i>
             <span style="color: #6b7280; font-size: 11px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${spot.location}</span>
           </div>
-          <h3 style="
-            margin: 0 0 8px 0;
-            font-size: 15px;
-            font-weight: 600;
-            color: #111827;
-            line-height: 1.4;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            hyphens: auto;
-            width: 100%;
-            box-sizing: border-box;
-          ">${spot.name}</h3>
+          <h3 style="margin: 0 0 8px 0; font-size: 15px; font-weight: 600; color: #111827; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; width: 100%; box-sizing: border-box;">${spot.name}</h3>
           <div style="display: flex; flex-wrap: wrap;">
             ${categoryHTML}
           </div>
@@ -818,133 +627,58 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   }, [getCategoryPill, isSpotInItinerary]);
 
-  // Check if a spot is in the current viewport
+  // Check if spot is in viewport
   const isSpotInViewport = useCallback((coordinates) => {
     if (!map.current) return false;
-    
     const bounds = map.current.getBounds();
     const [lng, lat] = coordinates;
-    
     return (
-      lng >= bounds.getWest() &&
-      lng <= bounds.getEast() &&
-      lat >= bounds.getSouth() &&
-      lat <= bounds.getNorth()
+      lng >= bounds.getWest() && lng <= bounds.getEast() &&
+      lat >= bounds.getSouth() && lat <= bounds.getNorth()
     );
   }, []);
 
-  // Determine if marker should use iOS style
-  const shouldUseIOSStyle = useCallback((spot) => {
-    // First 8 spots (initial featured) ALWAYS get iOS style
-    if (spot.spotIndex < INITIAL_FEATURED_COUNT) {
-      return true;
+  // Determine if marker should be visible at current zoom
+  const shouldShowMarker = useCallback((spot, zoom) => {
+    if (spot.isPopular) {
+      return zoom >= ZOOM_LEVELS.POPULAR;
     }
-    
-    // For others, check popularity (image count)
-    return spot.images && spot.images.length > POPULARITY_THRESHOLD;
+    return zoom >= ZOOM_LEVELS.STANDARD;
   }, []);
 
-  // Create marker element based on whether it should use iOS style
+  // Get category icon
+  const getCategoryIcon = useCallback((categories) => {
+    if (!categories || categories.length === 0) return categoryIcons.default;
+    return categoryIcons[categories[0]] || categoryIcons.default;
+  }, []);
+
+  // Create marker element
   const createMarkerElement = useCallback((spot) => {
     const markerEl = document.createElement('div');
     markerEl.style.display = 'flex';
     markerEl.style.flexDirection = 'column';
     markerEl.style.alignItems = 'center';
     
-    const useIOSStyle = shouldUseIOSStyle(spot);
-    
-    if (useIOSStyle) {
-      // iOS-style image marker (for initial 8 + popular spots)
+    if (spot.isPopular) {
+      // Popular: iOS-style image marker
       const hasImage = spot.images && spot.images.length > 0;
       
       if (hasImage) {
         markerEl.innerHTML = `
-          <div class="image-marker-icon" style="
-            width: 60px;
-            height: 60px;
-            border-radius: 16px;
-            overflow: hidden;
-            background-color: white;
-            border: 3px solid white;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
-          ">
-            <img 
-              src="${spot.images[0]}" 
-              alt="${spot.name}"
-              style="
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-              "
-            />
+          <div class="image-marker-icon" style="width: 60px; height: 60px; border-radius: 16px; overflow: hidden; background-color: white; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;">
+            <img src="${spot.images[0]}" alt="${spot.name}" style="width: 100%; height: 100%; object-fit: cover;" />
           </div>
-          <div class="marker-label" style="
-            font-size: 12px;
-            font-weight: 600;
-            color: #000000;
-            text-shadow: 
-              -1px -1px 0 #fff,
-              1px -1px 0 #fff,
-              -1px 1px 0 #fff,
-              1px 1px 0 #fff,
-              -1.5px 0 0 #fff,
-              1.5px 0 0 #fff,
-              0 -1.5px 0 #fff,
-              0 1.5px 0 #fff;
-            margin-top: 6px;
-            white-space: nowrap;
-            pointer-events: none;
-            text-align: center;
-            line-height: 1.2;
-            opacity: 1;
-            transition: opacity 0.3s ease;
-          ">${spot.name}</div>
+          <div class="marker-label" style="font-size: 12px; font-weight: 600; color: #000000; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff; margin-top: 6px; white-space: nowrap; pointer-events: none; text-align: center; line-height: 1.2; opacity: 1; transition: opacity 0.3s ease;">${spot.name}</div>
         `;
       } else {
         markerEl.innerHTML = `
-          <div class="image-marker-icon" style="
-            width: 60px;
-            height: 60px;
-            border-radius: 16px;
-            overflow: hidden;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: 3px solid white;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          ">
+          <div class="image-marker-icon" style="width: 60px; height: 60px; border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease; display: flex; align-items: center; justify-content: center;">
             <i class="fa-solid fa-location-dot" style="font-size: 32px; color: white;"></i>
           </div>
-          <div class="marker-label" style="
-            font-size: 12px;
-            font-weight: 600;
-            color: #000000;
-            text-shadow: 
-              -1px -1px 0 #fff,
-              1px -1px 0 #fff,
-              -1px 1px 0 #fff,
-              1px 1px 0 #fff,
-              -1.5px 0 0 #fff,
-              1.5px 0 0 #fff,
-              0 -1.5px 0 #fff,
-              0 1.5px 0 #fff;
-            margin-top: 6px;
-            white-space: nowrap;
-            pointer-events: none;
-            text-align: center;
-            line-height: 1.2;
-            opacity: 1;
-            transition: opacity 0.3s ease;
-          ">${spot.name}</div>
+          <div class="marker-label" style="font-size: 12px; font-weight: 600; color: #000000; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff; margin-top: 6px; white-space: nowrap; pointer-events: none; text-align: center; line-height: 1.2; opacity: 1; transition: opacity 0.3s ease;">${spot.name}</div>
         `;
       }
       
-      // Add hover effects for iOS-style markers
       const imageIcon = markerEl.querySelector('.image-marker-icon');
       markerEl.addEventListener('mouseenter', () => {
         imageIcon.style.transform = 'scale(1.1)';
@@ -955,30 +689,19 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         imageIcon.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
       });
     } else {
-      // Less popular spots: Simple icon + text
+      // Less popular: Simple icon + text marker (like reference image)
+      const icon = getCategoryIcon(spot.categories);
+      const colors = categoryColors[spot.categories[0]] || categoryColors.default;
+      
       markerEl.innerHTML = `
-        <div style="
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          background-color: rgba(255, 255, 255, 0.95);
-          padding: 6px 12px;
-          border-radius: 20px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-          cursor: pointer;
-          transition: all 0.2s ease;
-        " class="simple-marker">
-          <i class="fa-solid fa-location-dot" style="font-size: 14px; color: #1e40af;"></i>
-          <span style="
-            font-size: 12px;
-            font-weight: 600;
-            color: #1f2937;
-            white-space: nowrap;
-          ">${spot.name}</span>
+        <div style="display: flex; align-items: center; gap: 6px; background-color: rgba(255, 255, 255, 0.95); padding: 6px 12px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; transition: all 0.2s ease;" class="simple-marker">
+          <div style="width: 20px; height: 20px; border-radius: 50%; background-color: ${colors.bg}; display: flex; align-items: center; justify-content: center;">
+            <i class="fa-solid ${icon}" style="font-size: 10px; color: ${colors.text};"></i>
+          </div>
+          <span style="font-size: 12px; font-weight: 600; color: #1f2937; white-space: nowrap;">${spot.name}</span>
         </div>
       `;
       
-      // Add hover effect for simple markers
       const simpleMarker = markerEl.querySelector('.simple-marker');
       markerEl.addEventListener('mouseenter', () => {
         simpleMarker.style.transform = 'scale(1.05)';
@@ -991,179 +714,175 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
     
     return markerEl;
-  }, [shouldUseIOSStyle]);
+  }, [getCategoryIcon]);
 
-  // Update visible markers based on viewport
+  // Update visible markers based on viewport and zoom
   const updateVisibleMarkers = useCallback(() => {
     if (!map.current || !mapLoaded.current || touristSpots.length === 0) return;
 
+    const zoom = map.current.getZoom();
+    setCurrentZoom(zoom);
     const currentVisibleSpots = new Set();
     
     touristSpots.forEach((spot) => {
       const inViewport = isSpotInViewport(spot.coordinates);
+      const shouldShow = shouldShowMarker(spot, zoom);
+      const shouldBeVisible = inViewport && shouldShow;
       const isCurrentlyVisible = visibleMarkersRef.current.has(spot.name);
       
-      if (inViewport) {
+      if (shouldBeVisible && !isCurrentlyVisible) {
+        // Add marker
         currentVisibleSpots.add(spot.name);
-        
-        // Add marker if not already visible
-        if (!isCurrentlyVisible) {
-          const markerEl = createMarkerElement(spot);
-          const useIOSStyle = shouldUseIOSStyle(spot);
-          markerElementsRef.current.set(spot.name, markerEl);
+        const markerEl = createMarkerElement(spot);
+        markerElementsRef.current.set(spot.name, markerEl);
 
-          const marker = new maplibregl.Marker({ 
-            element: markerEl, 
-            anchor: useIOSStyle ? 'bottom' : 'center'
+        const marker = new maplibregl.Marker({ 
+          element: markerEl, 
+          anchor: spot.isPopular ? 'bottom' : 'center'
+        })
+          .setLngLat(spot.coordinates)
+          .addTo(map.current);
+
+        // Click handler
+        markerEl.addEventListener('click', () => {
+          setSelectedSpot(spot);
+          
+          if (spot.isPopular) {
+            const icon = markerEl.querySelector('.image-marker-icon');
+            const label = markerEl.querySelector('.marker-label');
+            if (icon) icon.style.opacity = '0';
+            if (label) label.style.opacity = '0';
+          } else {
+            markerEl.style.opacity = '0';
+          }
+          
+          if (popupRef.current) popupRef.current.remove();
+
+          const popup = new maplibregl.Popup({
+            offset: [0, -342],
+            closeButton: false,
+            closeOnClick: false,
+            maxWidth: 'none'
           })
             .setLngLat(spot.coordinates)
+            .setHTML(createInfoCardHTML(spot))
             .addTo(map.current);
 
-          // Add click handler
-          markerEl.addEventListener('click', () => {
-            setSelectedSpot(spot);
-            
-            // Hide marker elements when popup opens
-            if (useIOSStyle) {
-              const icon = markerEl.querySelector('.image-marker-icon');
-              const label = markerEl.querySelector('.marker-label');
-              if (icon) icon.style.opacity = '0';
-              if (label) label.style.opacity = '0';
-            } else {
-              markerEl.style.opacity = '0';
+          popupRef.current = popup;
+
+          setTimeout(() => {
+            const popupCard = document.querySelector('.info-card-popup');
+            if (popupCard) {
+              popupCard.style.transform = 'scale(1)';
+              popupCard.style.opacity = '1';
             }
-            
-            if (popupRef.current) popupRef.current.remove();
 
-            const popup = new maplibregl.Popup({
-              offset: [0, -342],
-              closeButton: false,
-              closeOnClick: false,
-              maxWidth: 'none'
-            })
-              .setLngLat(spot.coordinates)
-              .setHTML(createInfoCardHTML(spot))
-              .addTo(map.current);
+            let currentIdx = 0;
+            const images = document.querySelectorAll('.carousel-image');
+            const stepIndicators = document.querySelectorAll('.step-indicator');
 
-            popupRef.current = popup;
-
-            // Setup popup interactions
-            setTimeout(() => {
-              const popupCard = document.querySelector('.info-card-popup');
-              if (popupCard) {
-                popupCard.style.transform = 'scale(1)';
-                popupCard.style.opacity = '1';
-              }
-
-              let currentIdx = 0;
-              const images = document.querySelectorAll('.carousel-image');
-              const stepIndicators = document.querySelectorAll('.step-indicator');
-              const prevBtn = document.getElementById('carousel-prev-btn');
-              const nextBtn = document.getElementById('carousel-next-btn');
-
-              function showImage(index) {
-                images.forEach((img, i) => {
-                  img.style.opacity = i === index ? '1' : '0';
-                });
-                stepIndicators.forEach((indicator, i) => {
-                  indicator.style.backgroundColor = i === index ? 'white' : 'rgba(255, 255, 255, 0.5)';
-                });
-              }
-
-              images.forEach((img) => {
-                img.addEventListener('click', (e) => {
-                  handleImageClick(e.target.getAttribute('data-image-url'), spot);
-                });
+            function showImage(index) {
+              images.forEach((img, i) => img.style.opacity = i === index ? '1' : '0');
+              stepIndicators.forEach((indicator, i) => {
+                indicator.style.backgroundColor = i === index ? 'white' : 'rgba(255, 255, 255, 0.5)';
               });
+            }
 
-              if (prevBtn) {
-                prevBtn.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  currentIdx = (currentIdx - 1 + images.length) % images.length;
-                  showImage(currentIdx);
-                });
-              }
-
-              if (nextBtn) {
-                nextBtn.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  currentIdx = (currentIdx + 1) % images.length;
-                  showImage(currentIdx);
-                });
-              }
-
-              const closeBtn = document.getElementById('close-card-btn');
-              if (closeBtn) {
-                closeBtn.addEventListener('click', () => {
-                  if (popupRef.current) {
-                    popupRef.current.remove();
-                    popupRef.current = null;
-                  }
-                  
-                  // Show marker elements again
-                  const currentMarkerEl = markerElementsRef.current.get(spot.name);
-                  if (currentMarkerEl) {
-                    if (useIOSStyle) {
-                      const currentIcon = currentMarkerEl.querySelector('.image-marker-icon');
-                      const currentLabel = currentMarkerEl.querySelector('.marker-label');
-                      if (currentIcon) currentIcon.style.opacity = '1';
-                      if (currentLabel) currentLabel.style.opacity = '1';
-                    } else {
-                      currentMarkerEl.style.opacity = '1';
-                    }
-                  }
-                  
-                  setSelectedSpot(null);
-                });
-              }
-
-              const addBtn = document.getElementById('add-to-itinerary-btn');
-              if (addBtn && !isSpotInItinerary(spot.name)) {
-                addBtn.addEventListener('click', () => addToItinerary(spot, addBtn));
-              }
-
-              const viewDetailsBtn = document.getElementById('view-details-btn');
-              if (viewDetailsBtn) {
-                viewDetailsBtn.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  handleImageClick(spot.images[0], spot);
-                });
-              }
-            }, 0);
-            
-            map.current.flyTo({
-              center: spot.coordinates,
-              zoom: Math.max(map.current.getZoom(), 12),
-              padding: { top: 300, bottom: 50, left: 0, right: 0 },
-              duration: 800
+            images.forEach((img) => {
+              img.addEventListener('click', (e) => {
+                handleImageClick(e.target.getAttribute('data-image-url'), spot);
+              });
             });
-          });
 
-          markersRef.current.push(marker);
-          const markerType = useIOSStyle ? 'iOS-style' : 'simple';
-          console.log(`➕ Added marker: ${spot.name} (${markerType}, index: ${spot.spotIndex})`);
-        }
+            const prevBtn = document.getElementById('carousel-prev-btn');
+            const nextBtn = document.getElementById('carousel-next-btn');
+            
+            if (prevBtn) {
+              prevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentIdx = (currentIdx - 1 + images.length) % images.length;
+                showImage(currentIdx);
+              });
+            }
+
+            if (nextBtn) {
+              nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentIdx = (currentIdx + 1) % images.length;
+                showImage(currentIdx);
+              });
+            }
+
+            const closeBtn = document.getElementById('close-card-btn');
+            if (closeBtn) {
+              closeBtn.addEventListener('click', () => {
+                if (popupRef.current) {
+                  popupRef.current.remove();
+                  popupRef.current = null;
+                }
+                
+                const currentMarkerEl = markerElementsRef.current.get(spot.name);
+                if (currentMarkerEl) {
+                  if (spot.isPopular) {
+                    const currentIcon = currentMarkerEl.querySelector('.image-marker-icon');
+                    const currentLabel = currentMarkerEl.querySelector('.marker-label');
+                    if (currentIcon) currentIcon.style.opacity = '1';
+                    if (currentLabel) currentLabel.style.opacity = '1';
+                  } else {
+                    currentMarkerEl.style.opacity = '1';
+                  }
+                }
+                setSelectedSpot(null);
+              });
+            }
+
+            const addBtn = document.getElementById('add-to-itinerary-btn');
+            if (addBtn && !isSpotInItinerary(spot.name)) {
+              addBtn.addEventListener('click', () => addToItinerary(spot, addBtn));
+            }
+
+            const viewDetailsBtn = document.getElementById('view-details-btn');
+            if (viewDetailsBtn) {
+              viewDetailsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                handleImageClick(spot.images[0], spot);
+              });
+            }
+          }, 0);
+          
+          map.current.flyTo({
+            center: spot.coordinates,
+            zoom: Math.max(map.current.getZoom(), 12),
+            padding: { top: 300, bottom: 50, left: 0, right: 0 },
+            duration: 800
+          });
+        });
+
+        markersRef.current.push(marker);
+        const markerType = spot.isPopular ? 'iOS-style' : 'simple';
+        console.log(`➕ Added: ${spot.name} (${markerType})`);
+      } else if (shouldBeVisible) {
+        currentVisibleSpots.add(spot.name);
       } else if (isCurrentlyVisible) {
-        // Remove marker if no longer in viewport
+        // Remove marker
         const markerIndex = markersRef.current.findIndex(
-          m => m.getLngLat().lng === spot.coordinates[0] && 
-               m.getLngLat().lat === spot.coordinates[1]
+          m => m.getLngLat().lng === spot.coordinates[0] && m.getLngLat().lat === spot.coordinates[1]
         );
         
         if (markerIndex !== -1) {
           markersRef.current[markerIndex].remove();
           markersRef.current.splice(markerIndex, 1);
           markerElementsRef.current.delete(spot.name);
-          console.log(`➖ Removed marker: ${spot.name}`);
+          console.log(`➖ Removed: ${spot.name}`);
         }
       }
     });
     
     visibleMarkersRef.current = currentVisibleSpots;
-    console.log(`📍 Visible markers: ${currentVisibleSpots.size} / ${touristSpots.length}`);
-  }, [touristSpots, isSpotInViewport, createMarkerElement, shouldUseIOSStyle, createInfoCardHTML, handleImageClick, addToItinerary, isSpotInItinerary]);
+    console.log(`📍 Visible: ${currentVisibleSpots.size}/${touristSpots.length} (zoom: ${zoom.toFixed(1)})`);
+  }, [touristSpots, isSpotInViewport, shouldShowMarker, createMarkerElement, createInfoCardHTML, handleImageClick, addToItinerary, isSpotInItinerary]);
 
-  // Initialize map ONCE
+  // Initialize map
   useEffect(() => {
     if (map.current) return;
 
@@ -1173,8 +892,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     document.head.appendChild(fontAwesomeLink);
 
     const bounds = [[123.5, 12.8], [125.0, 14.8]];
-
-    console.log('🌍 Initializing map');
 
     fetch(`https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`)
       .then(response => response.json())
@@ -1191,16 +908,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         });
 
         map.current.on('zoom', () => updateMarkerSizes(map.current.getZoom()));
-
-        // Update markers on move
         map.current.on('moveend', updateVisibleMarkers);
         map.current.on('zoomend', updateVisibleMarkers);
 
         map.current.on('load', () => {
-          console.log('✅ Map loaded');
           mapLoaded.current = true;
           
-          // Add mask ONLY ONCE
           if (!map.current.getSource('mask')) {
             map.current.addSource('mask', {
               type: 'geojson',
@@ -1222,20 +935,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               source: 'mask',
               paint: { 'fill-color': '#000000', 'fill-opacity': 1 }
             });
-            
-            console.log('✅ Mask added');
           }
 
-          // Initial marker update
           if (dataLoaded && touristSpots.length > 0) {
-            console.log('🎯 Data ready, updating markers');
             setTimeout(() => updateVisibleMarkers(), 200);
           }
         });
       })
-      .catch(error => {
-        console.error('❌ Map init error:', error);
-      });
+      .catch(error => console.error('Map init error:', error));
 
     return () => {
       if (popupRef.current) popupRef.current.remove();
@@ -1248,23 +955,16 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     };
   }, [updateMarkerSizes, updateVisibleMarkers, dataLoaded, touristSpots]);
 
-  // Update markers when data loads
   useEffect(() => {
     if (mapLoaded.current && dataLoaded && touristSpots.length > 0) {
-      console.log('🎯 Data loaded, updating visible markers');
-      const timer = setTimeout(() => {
-        updateVisibleMarkers();
-      }, 200);
+      const timer = setTimeout(() => updateVisibleMarkers(), 200);
       return () => clearTimeout(timer);
     }
   }, [dataLoaded, touristSpots, updateVisibleMarkers]);
 
-  // Debounced resize handler
   const handleResize = useCallback(() => {
     if (!map.current) return;
-    
     if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
-
     resizeTimeout.current = setTimeout(() => {
       if (map.current) {
         map.current.resize();
@@ -1284,50 +984,25 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     if (onToggleFullscreen) onToggleFullscreen();
   }, [onToggleFullscreen]);
 
-  // Get platform for video
-  const getVideoPlatform = (index) => {
-    if (index === 1) return 'youtube';
-    return 'facebook';
-  };
+  const getVideoPlatform = (index) => index === 1 ? 'youtube' : 'facebook';
 
-  // Video card component
   const VideoCard = ({ index, isLoaded }) => {
     const platform = getVideoPlatform(index);
     const platformConfig = PLATFORMS[platform];
     const isLandscape = platform === 'youtube';
 
     return (
-      <div
-        ref={(el) => (videoRefs.current[index] = el)}
-        data-video-index={index}
-        style={{
-          width: '100%',
-          height: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          scrollSnapAlign: 'start'
-        }}
-      >
+      <div ref={(el) => (videoRefs.current[index] = el)} data-video-index={index}
+        style={{ width: '100%', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', scrollSnapAlign: 'start' }}>
         <div style={{ width: isLandscape ? '500px' : '300px', height: '85vh', maxHeight: isLandscape ? '400px' : '600px', backgroundColor: '#000', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.8)', overflow: 'hidden', position: 'relative' }}>
-          {!isLoaded ? (
-            <VideoSkeleton />
-          ) : platform === 'youtube' ? (
-            <iframe 
-              ref={(el) => (iframeRefs.current[index] = el)}
-              width="100%" height="100%" 
+          {!isLoaded ? <VideoSkeleton /> : platform === 'youtube' ? (
+            <iframe ref={(el) => (iframeRefs.current[index] = el)} width="100%" height="100%" 
               src="https://www.youtube.com/embed/j6IsY1PR5XE?enablejsapi=1&autoplay=1&mute=1" 
-              frameBorder="0" allowFullScreen
-              style={{ border: 'none', borderRadius: '16px' }}
-            />
+              frameBorder="0" allowFullScreen style={{ border: 'none', borderRadius: '16px' }} />
           ) : (
-            <iframe 
-              ref={(el) => (iframeRefs.current[index] = el)}
+            <iframe ref={(el) => (iframeRefs.current[index] = el)}
               src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3233230416819996%2F&show_text=false&width=267&autoplay=true" 
-              width="267" height="476" 
-              frameBorder="0" allowFullScreen
-              style={{ border: 'none', borderRadius: '8px' }}
-            />
+              width="267" height="476" frameBorder="0" allowFullScreen style={{ border: 'none', borderRadius: '8px' }} />
           )}
           {modalSpot && isLoaded && (
             <div style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px', display: 'flex', justifyContent: 'space-between', zIndex: 10 }}>
@@ -1344,14 +1019,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     );
   };
 
-  // Modal content
   const ModalContent = () => (
     <div onClick={closeModal} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 9998, display: 'flex' }}>
       <PerformanceMonitor show={showPerformance} />
       <div onClick={(e) => e.stopPropagation()} style={{ width: sidebarOpen ? `calc(100vw - ${SIDEBAR_WIDTH}px)` : '100vw', height: '100vh', overflowY: 'scroll', scrollSnapType: 'y mandatory', scrollbarWidth: 'none' }} className="video-scroll-container">
-        {[0, 1, 2].map((index) => (
-          <VideoCard key={index} index={index} isLoaded={loadedVideos.has(index)} />
-        ))}
+        {[0, 1, 2].map((index) => <VideoCard key={index} index={index} isLoaded={loadedVideos.has(index)} />)}
       </div>
       {sidebarOpen && <div style={{ width: `${SIDEBAR_WIDTH}px`, height: '100vh' }} />}
     </div>
