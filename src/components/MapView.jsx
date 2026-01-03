@@ -4,6 +4,7 @@ import { Maximize, Minimize, Map as MapIcon, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { selectedSpots, loadAllSpotsFrom, popularSpots, categoryColors, categoryIcons, toSentenceCase } from '../data/selectedTouristSpots';
+import { getCurrentMunicipality } from '../data/municipalityBoundaries';
 import { getSpotMedia } from '../hooks/useSpotMedia';
 import PlaceDetailsSidebar from './PlaceDetailsSidebar';
 import ItineraryView from './ItineraryView';
@@ -11,6 +12,25 @@ import ItineraryView from './ItineraryView';
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
 const SIDEBAR_WIDTH = 480;
+
+// PERFORMANCE LIMITS (Raspberry Pi 4B optimized)
+const MAX_MARKERS_PER_ZOOM = {
+  9: 11,   // Province-wide: only featured landmarks
+  10: 11,
+  11: 11,
+  12: 15,
+  13: 20,  // ~1km scale
+  14: 25,
+  15: 30,  // ~500m scale
+  16: 40,  // ~200m scale
+  17: 50,
+  18: 60,  // ~50m scale
+  19: 80,
+  20: 100
+};
+
+// Zoom threshold for municipality-only loading
+const MUNICIPALITY_ONLY_ZOOM = 15; // At zoom 15+, only load spots from current municipality
 
 // Platform configuration
 const PLATFORMS = {
@@ -184,6 +204,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const itineraryRef = useRef([]);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [currentZoom, setCurrentZoom] = useState(DEFAULT_ZOOM);
+  const [currentMunicipality, setCurrentMunicipality] = useState(null);
   
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -334,7 +355,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   // Load tourist spots data
   useEffect(() => {
     const loadTouristSpots = async () => {
-      console.log('🗺️ Starting to load tourist spots with zoom-based visibility...');
+      console.log('🗺️ Starting to load tourist spots with municipality-based filtering...');
       const spots = [];
       let spotIndex = 0;
       
@@ -353,22 +374,23 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               feature.properties.name
             );
             
-            const minZoom = selection.minZoom || 9;  // Default to zoom 9
-            const hasImages = mediaData.images && mediaData.images.length > 0;
+            const minZoom = selection.minZoom || 9;
+            const municipality = selection.municipality || feature.properties.municipality;
             
             spots.push({
               name: feature.properties.name,
               location: toSentenceCase(feature.properties.municipality),
+              municipality: municipality,  // Store for filtering
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
               images: mediaData.images || [],
               spotIndex: spotIndex++,
               isPopular: popularSpots.includes(feature.properties.name),
-              minZoom: minZoom  // Store zoom threshold
+              minZoom: minZoom
             });
             
-            console.log(`✅ Loaded: ${feature.properties.name} (minZoom: ${minZoom}, hasImages: ${hasImages})`);
+            console.log(`✅ Loaded: ${feature.properties.name} (${municipality}, minZoom: ${minZoom})`);
           }
         } catch (error) {
           console.error(`Error loading ${selection.geojsonFile}:`, error);
@@ -389,7 +411,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             
             // Skip if already loaded or in exclude list
             if (spots.some(s => s.name === spotName) || excludeList.includes(spotName)) {
-              console.log(`⏭️ Skipping: ${spotName} (excluded or already loaded)`);
               continue;
             }
             
@@ -398,11 +419,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               feature.properties.name
             );
             
-            const minZoom = config.minZoom || 12;  // Default zoom for "load all"
+            const minZoom = config.minZoom || 15;
             
             spots.push({
               name: feature.properties.name,
               location: toSentenceCase(feature.properties.municipality),
+              municipality: config.municipality,  // Store for filtering
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
@@ -417,22 +439,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }
       }
       
-      // Log zoom distribution and image stats
-      const zoomGroups = spots.reduce((acc, spot) => {
-        const zoom = spot.minZoom || 9;
-        acc[zoom] = (acc[zoom] || 0) + 1;
-        return acc;
-      }, {});
-      
-      const spotsWithImages = spots.filter(s => s.images.length > 0).length;
-      const popularWithImages = spots.filter(s => s.isPopular && s.images.length > 0).length;
-      const popularWithoutImages = spots.filter(s => s.isPopular && s.images.length === 0).length;
-      
-      console.log(`📍 Loaded ${spots.length} spots:`);
-      console.log('Zoom distribution:', zoomGroups);
-      console.log(`Popular markers: ${spots.filter(s => s.isPopular).length} (${popularWithImages} with images, ${popularWithoutImages} without)`);
-      console.log(`Total spots with images: ${spotsWithImages}/${spots.length}`);
-      
+      console.log(`📍 Loaded ${spots.length} total spots`);
       setTouristSpots(spots);
       setDataLoaded(true);
     };
@@ -650,22 +657,24 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   }, [getCategoryPill, isSpotInItinerary]);
 
-  // Check if spot is in viewport
-  const isSpotInViewport = useCallback((coordinates) => {
-    if (!map.current) return false;
-    const bounds = map.current.getBounds();
-    const [lng, lat] = coordinates;
-    return (
-      lng >= bounds.getWest() && lng <= bounds.getEast() &&
-      lat >= bounds.getSouth() && lat <= bounds.getNorth()
-    );
-  }, []);
-
-  // Determine if marker should be visible at current zoom
-  const shouldShowMarker = useCallback((spot, zoom) => {
-    // Check if spot meets its minimum zoom threshold
+  // Determine if marker should be visible (zoom + municipality filtering)
+  const shouldShowMarker = useCallback((spot, zoom, viewCenter) => {
+    // Check zoom threshold first
     const minZoom = spot.minZoom || 9;
-    return zoom >= minZoom;
+    if (zoom < minZoom) return false;
+
+    // At zoom 15+, only show markers from current municipality
+    if (zoom >= MUNICIPALITY_ONLY_ZOOM) {
+      const [lng, lat] = viewCenter;
+      const currentMuni = getCurrentMunicipality(lng, lat);
+      
+      // If we're viewing a specific municipality, only show its spots
+      if (currentMuni && spot.municipality !== currentMuni) {
+        return false;
+      }
+    }
+
+    return true;
   }, []);
 
   // Get category icon
@@ -738,21 +747,42 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return markerEl;
   }, [getCategoryIcon]);
 
-  // Update visible markers based on viewport and zoom
+  // Update visible markers with municipality filtering and marker limits
   const updateVisibleMarkers = useCallback(() => {
     if (!map.current || !mapLoaded.current || touristSpots.length === 0) return;
 
     const zoom = map.current.getZoom();
-    setCurrentZoom(zoom);
-    const currentVisibleSpots = new Set();
+    const center = map.current.getCenter();
+    const viewCenter = [center.lng, center.lat];
     
-    touristSpots.forEach((spot) => {
-      const inViewport = isSpotInViewport(spot.coordinates);
-      const shouldShow = shouldShowMarker(spot, zoom);
-      const shouldBeVisible = inViewport && shouldShow;
+    setCurrentZoom(zoom);
+    
+    // Get current municipality
+    const currentMuni = getCurrentMunicipality(viewCenter[0], viewCenter[1]);
+    setCurrentMunicipality(currentMuni);
+    
+    const currentVisibleSpots = new Set();
+    const markerLimit = MAX_MARKERS_PER_ZOOM[Math.floor(zoom)] || 100;
+    
+    // Filter spots that should be visible
+    const eligibleSpots = touristSpots.filter(spot => shouldShowMarker(spot, zoom, viewCenter));
+    
+    // Sort by priority: popular first, then by minZoom (lower = higher priority)
+    eligibleSpots.sort((a, b) => {
+      if (a.isPopular && !b.isPopular) return -1;
+      if (!a.isPopular && b.isPopular) return 1;
+      return a.minZoom - b.minZoom;
+    });
+    
+    // Limit markers
+    const spotsToShow = eligibleSpots.slice(0, markerLimit);
+    
+    console.log(`🔍 Zoom ${zoom.toFixed(1)} | Municipality: ${currentMuni || 'None'} | Eligible: ${eligibleSpots.length} | Showing: ${spotsToShow.length}/${markerLimit}`);
+    
+    spotsToShow.forEach((spot) => {
       const isCurrentlyVisible = visibleMarkersRef.current.has(spot.name);
       
-      if (shouldBeVisible && !isCurrentlyVisible) {
+      if (!isCurrentlyVisible) {
         // Add marker
         currentVisibleSpots.add(spot.name);
         const markerEl = createMarkerElement(spot);
@@ -881,28 +911,36 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         });
 
         markersRef.current.push(marker);
-        const markerType = spot.isPopular ? 'iOS-style' : 'simple';
-        console.log(`➕ Added: ${spot.name} (${markerType}, minZoom: ${spot.minZoom || 9}, current: ${zoom.toFixed(1)})`);
-      } else if (shouldBeVisible) {
+        console.log(`➕ Added: ${spot.name} (${spot.municipality})`);
+      } else {
         currentVisibleSpots.add(spot.name);
-      } else if (isCurrentlyVisible) {
-        // Remove marker
-        const markerIndex = markersRef.current.findIndex(
-          m => m.getLngLat().lng === spot.coordinates[0] && m.getLngLat().lat === spot.coordinates[1]
-        );
-        
-        if (markerIndex !== -1) {
-          markersRef.current[markerIndex].remove();
-          markersRef.current.splice(markerIndex, 1);
-          markerElementsRef.current.delete(spot.name);
-          console.log(`➖ Removed: ${spot.name} (zoom: ${zoom.toFixed(1)}, minZoom: ${spot.minZoom || 9})`);
-        }
+      }
+    });
+    
+    // Remove markers that should no longer be visible
+    const markersToRemove = [];
+    visibleMarkersRef.current.forEach(spotName => {
+      if (!currentVisibleSpots.has(spotName)) {
+        markersToRemove.push(spotName);
+      }
+    });
+    
+    markersToRemove.forEach(spotName => {
+      const markerIndex = markersRef.current.findIndex(m => {
+        const spot = touristSpots.find(s => s.name === spotName);
+        return spot && m.getLngLat().lng === spot.coordinates[0] && m.getLngLat().lat === spot.coordinates[1];
+      });
+      
+      if (markerIndex !== -1) {
+        markersRef.current[markerIndex].remove();
+        markersRef.current.splice(markerIndex, 1);
+        markerElementsRef.current.delete(spotName);
+        console.log(`➖ Removed: ${spotName}`);
       }
     });
     
     visibleMarkersRef.current = currentVisibleSpots;
-    console.log(`📍 Visible: ${currentVisibleSpots.size}/${touristSpots.length} (zoom: ${zoom.toFixed(1)})`);
-  }, [touristSpots, isSpotInViewport, shouldShowMarker, createMarkerElement, createInfoCardHTML, handleImageClick, addToItinerary, isSpotInItinerary]);
+  }, [touristSpots, shouldShowMarker, createMarkerElement, createInfoCardHTML, handleImageClick, addToItinerary, isSpotInItinerary]);
 
   // Initialize map
   useEffect(() => {
@@ -945,7 +983,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           maxBounds: bounds,
           antialias: false,
           fadeDuration: 0,
-          localIdeographFontFamily: false  // Disable local font fallback
+          localIdeographFontFamily: false
         });
 
         map.current.on('zoom', () => updateMarkerSizes(map.current.getZoom()));
