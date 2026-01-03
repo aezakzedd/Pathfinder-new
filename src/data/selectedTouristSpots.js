@@ -1,6 +1,12 @@
 // Selected tourist spots configuration
 // Featured spots appear at default zoom, others appear at higher zoom levels
 
+// ZOOM LEVEL REFERENCE (approximate distances):
+// Zoom 13 = ~1km scale
+// Zoom 15 = ~500m scale  
+// Zoom 16 = ~200m scale
+// Zoom 18 = ~50m scale
+
 // Popular spots that get iOS-style image markers
 export const popularSpots = [
   'Binurong Point',
@@ -12,58 +18,121 @@ export const popularSpots = [
   'Nupa Green Lagoon',
   'Bote Lighthouse',
   'San Miguel River Park',
-  'Codon Lighthouse'
+  'Codon Lighthouse',
+  // Puraran area spots
+  'Puraran Beach'
 ];
 
-// Selected tourist spots - 8 featured spots at default zoom
+// Zoom-based visibility configuration for Puraran Beach area
+// This mimics Google Maps' zoom-level marker clustering
+export const zoomBasedSpots = [
+  {
+    municipality: 'BARAS',
+    spotName: 'Puraran Beach',
+    geojsonFile: 'baras.geojson',
+    minZoom: 13  // Visible at 1km scale (default view)
+  },
+  {
+    municipality: 'BARAS',
+    spotName: 'Majestic Puraran Beach Resort',
+    geojsonFile: 'baras.geojson',
+    minZoom: 15  // Visible at 500m scale (second Puraran marker)
+  },
+  {
+    municipality: 'BARAS',
+    spotName: 'Puraran Surf Resort',
+    geojsonFile: 'baras.geojson',
+    minZoom: 15  // Visible at 500m scale
+  },
+  {
+    municipality: 'BARAS',
+    spotName: 'JoSurfInn',
+    geojsonFile: 'baras.geojson',
+    minZoom: 16  // Visible at 200m scale
+  },
+  {
+    municipality: 'BARAS',
+    spotName: "L'Astrolabe",
+    geojsonFile: 'baras.geojson',
+    minZoom: 16  // Visible at 200m scale
+  },
+  {
+    municipality: 'BARAS',
+    spotName: 'Alon Stay',
+    geojsonFile: 'baras.geojson',
+    minZoom: 18  // Visible at 50m scale (most detailed zoom)
+  }
+];
+
+// Selected tourist spots - Featured spots visible at default zoom
 export const selectedSpots = [
   {
     municipality: 'SAN_ANDRES',
     spotName: 'Mamangal Beach Resort',
-    geojsonFile: 'san_andres.geojson'
+    geojsonFile: 'san_andres.geojson',
+    minZoom: 9  // Default zoom
   },
   {
     municipality: 'CARAMORAN',
     spotName: 'Palumbanes Island',
-    geojsonFile: 'caramoran.geojson'
+    geojsonFile: 'caramoran.geojson',
+    minZoom: 9
   },
   {
     municipality: 'BAGAMANOC',
     spotName: 'Paday Falls',
-    geojsonFile: 'bagamanoc.geojson'
+    geojsonFile: 'bagamanoc.geojson',
+    minZoom: 9
   },
   {
     municipality: 'GIGMOTO',
     spotName: 'Nupa Green Lagoon',
-    geojsonFile: 'gigmoto.geojson'
+    geojsonFile: 'gigmoto.geojson',
+    minZoom: 9
   },
   {
     municipality: 'BATO',
     spotName: 'Bote Lighthouse',
-    geojsonFile: 'BATO.geojson'
+    geojsonFile: 'BATO.geojson',
+    minZoom: 9
   },
   {
     municipality: 'SAN_MIGUEL',
     spotName: 'San Miguel River Park',
-    geojsonFile: 'san_miguel.geojson'
+    geojsonFile: 'san_miguel.geojson',
+    minZoom: 9
   },
   {
     municipality: 'BARAS',
     spotName: 'Binurong Point',
-    geojsonFile: 'baras.geojson'
+    geojsonFile: 'baras.geojson',
+    minZoom: 9
   },
   {
     municipality: 'SAN_ANDRES',
     spotName: 'Codon Lighthouse',
-    geojsonFile: 'san_andres.geojson'
-  }
+    geojsonFile: 'san_andres.geojson',
+    minZoom: 9
+  },
+  // Include zoom-based spots
+  ...zoomBasedSpots
 ];
 
-// Load all spots from specific municipalities
+// Load all spots from specific municipalities (excluding zoom-controlled ones)
 export const loadAllSpotsFrom = [
   {
     municipality: 'BARAS',
-    geojsonFile: 'baras.geojson'
+    geojsonFile: 'baras.geojson',
+    // Exclude these spots as they're controlled by zoom levels
+    excludeSpots: [
+      'Puraran Beach',
+      'Majestic Puraran Beach Resort',
+      'Puraran Surf Resort',
+      'JoSurfInn',
+      "L'Astrolabe",
+      'Alon Stay'
+    ],
+    minZoom: 12  // Other Baras spots visible at closer zoom
   }
 ];
 
