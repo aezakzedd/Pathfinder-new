@@ -107,25 +107,25 @@ export const zoomBasedSpots = [
   {
     municipality: 'VIRAC',
     spotName: 'Twin Rocks Beach',
-    geojsonFile: 'virac.geojson',
+    geojsonFile: 'VIRAC.geojson',
     minZoom: 13  // Main beach
   },
   {
     municipality: 'VIRAC',
     spotName: 'Igang Beach',
-    geojsonFile: 'virac.geojson',
+    geojsonFile: 'VIRAC.geojson',
     minZoom: 13  // Main beach
   },
   {
     municipality: 'VIRAC',
     spotName: 'Marilima Beach',
-    geojsonFile: 'virac.geojson',
+    geojsonFile: 'VIRAC.geojson',
     minZoom: 13  // Main beach
   },
   {
     municipality: 'VIRAC',
     spotName: 'Igang Chapel Ruins',
-    geojsonFile: 'virac.geojson',
+    geojsonFile: 'VIRAC.geojson',
     minZoom: 15  // Heritage site
   },
 
@@ -272,7 +272,7 @@ export const selectedSpots = [
   {
     municipality: 'VIRAC',
     spotName: 'Twin Rocks Beach',
-    geojsonFile: 'virac.geojson',
+    geojsonFile: 'VIRAC.geojson',
     minZoom: 9
   },
   {
@@ -318,7 +318,7 @@ export const loadAllSpotsFrom = [
   },
   {
     municipality: 'VIRAC',
-    geojsonFile: 'virac.geojson',
+    geojsonFile: 'VIRAC.geojson',
     excludeSpots: [
       'Twin Rocks Beach',
       'Igang Beach',
