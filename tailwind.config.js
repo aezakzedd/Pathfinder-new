@@ -5,11 +5,11 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {
-      fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'sans-serif'],
-      },
-    },
+    extend: {},
   },
   plugins: [],
+  // Production optimization
+  future: {
+    hoverOnlyWhenSupported: true,  // Better mobile/kiosk performance
+  },
 }
