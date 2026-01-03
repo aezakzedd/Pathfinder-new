@@ -14,6 +14,8 @@ const SIDEBAR_WIDTH = 480;
 
 // Popularity threshold - spots with more than this many images are "popular"
 const POPULARITY_THRESHOLD = 3;
+// Number of initial featured spots that always get iOS-style markers
+const INITIAL_FEATURED_COUNT = 8;
 
 // Platform configuration
 const PLATFORMS = {
@@ -408,10 +410,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               feature.properties.name
             );
             
-            // Determine if spot is popular based on image count
-            const imageCount = mediaData.images.length;
-            const isPopular = imageCount > POPULARITY_THRESHOLD;
-            
             spots.push({
               name: feature.properties.name,
               location: toSentenceCase(feature.properties.municipality),
@@ -419,7 +417,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               description: feature.properties.description,
               categories: feature.properties.categories || [],
               images: mediaData.images,
-              isPopular: isPopular // Add popularity flag
+              spotIndex: spots.length // Track original index for initial featured check
             });
           }
         } catch (error) {
@@ -427,7 +425,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }
       }
       
-      console.log(`Loaded ${spots.length} spots (${spots.filter(s => s.isPopular).length} popular, ${spots.filter(s => !s.isPopular).length} less popular)`);
+      console.log(`Loaded ${spots.length} spots`);
       setTouristSpots(spots);
       setDataLoaded(true);
     };
@@ -835,15 +833,28 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     );
   }, []);
 
-  // Create marker element based on popularity
+  // Determine if marker should use iOS style
+  const shouldUseIOSStyle = useCallback((spot) => {
+    // First 8 spots (initial featured) ALWAYS get iOS style
+    if (spot.spotIndex < INITIAL_FEATURED_COUNT) {
+      return true;
+    }
+    
+    // For others, check popularity (image count)
+    return spot.images && spot.images.length > POPULARITY_THRESHOLD;
+  }, []);
+
+  // Create marker element based on whether it should use iOS style
   const createMarkerElement = useCallback((spot) => {
     const markerEl = document.createElement('div');
     markerEl.style.display = 'flex';
     markerEl.style.flexDirection = 'column';
     markerEl.style.alignItems = 'center';
     
-    if (spot.isPopular) {
-      // Popular spots: iOS-style image marker
+    const useIOSStyle = shouldUseIOSStyle(spot);
+    
+    if (useIOSStyle) {
+      // iOS-style image marker (for initial 8 + popular spots)
       const hasImage = spot.images && spot.images.length > 0;
       
       if (hasImage) {
@@ -980,7 +991,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     }
     
     return markerEl;
-  }, []);
+  }, [shouldUseIOSStyle]);
 
   // Update visible markers based on viewport
   const updateVisibleMarkers = useCallback(() => {
@@ -998,11 +1009,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         // Add marker if not already visible
         if (!isCurrentlyVisible) {
           const markerEl = createMarkerElement(spot);
+          const useIOSStyle = shouldUseIOSStyle(spot);
           markerElementsRef.current.set(spot.name, markerEl);
 
           const marker = new maplibregl.Marker({ 
             element: markerEl, 
-            anchor: spot.isPopular ? 'bottom' : 'center'
+            anchor: useIOSStyle ? 'bottom' : 'center'
           })
             .setLngLat(spot.coordinates)
             .addTo(map.current);
@@ -1012,7 +1024,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             setSelectedSpot(spot);
             
             // Hide marker elements when popup opens
-            if (spot.isPopular) {
+            if (useIOSStyle) {
               const icon = markerEl.querySelector('.image-marker-icon');
               const label = markerEl.querySelector('.marker-label');
               if (icon) icon.style.opacity = '0';
@@ -1091,7 +1103,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
                   // Show marker elements again
                   const currentMarkerEl = markerElementsRef.current.get(spot.name);
                   if (currentMarkerEl) {
-                    if (spot.isPopular) {
+                    if (useIOSStyle) {
                       const currentIcon = currentMarkerEl.querySelector('.image-marker-icon');
                       const currentLabel = currentMarkerEl.querySelector('.marker-label');
                       if (currentIcon) currentIcon.style.opacity = '1';
@@ -1128,7 +1140,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           });
 
           markersRef.current.push(marker);
-          console.log(`➕ Added marker: ${spot.name} (${spot.isPopular ? 'popular' : 'simple'})`);
+          const markerType = useIOSStyle ? 'iOS-style' : 'simple';
+          console.log(`➕ Added marker: ${spot.name} (${markerType}, index: ${spot.spotIndex})`);
         }
       } else if (isCurrentlyVisible) {
         // Remove marker if no longer in viewport
@@ -1148,7 +1161,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     
     visibleMarkersRef.current = currentVisibleSpots;
     console.log(`📍 Visible markers: ${currentVisibleSpots.size} / ${touristSpots.length}`);
-  }, [touristSpots, isSpotInViewport, createMarkerElement, createInfoCardHTML, handleImageClick, addToItinerary, isSpotInItinerary]);
+  }, [touristSpots, isSpotInViewport, createMarkerElement, shouldUseIOSStyle, createInfoCardHTML, handleImageClick, addToItinerary, isSpotInItinerary]);
 
   // Initialize map ONCE
   useEffect(() => {
