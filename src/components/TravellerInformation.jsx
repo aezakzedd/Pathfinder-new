@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
-export default function TravellerInformation() {
+export default function TravellerInformation({ onGetStarted }) {
   const [step, setStep] = useState(1); // 1: Dates, 2: Budget, 3: Preferences
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
@@ -31,6 +31,19 @@ export default function TravellerInformation() {
       ...prev,
       [key]: !prev[key]
     }));
+  };
+  
+  const handleGetStartedClick = () => {
+    const dateInfo = {
+      startDate,
+      endDate,
+      budget,
+      preferences
+    };
+    console.log('Get Started clicked with:', dateInfo);
+    if (onGetStarted) {
+      onGetStarted(dateInfo);
+    }
   };
 
   // Calendar functions
@@ -607,7 +620,7 @@ export default function TravellerInformation() {
           </button>
         ) : (
           <button
-            onClick={() => console.log('Get Started', { startDate, endDate, budget, preferences })}
+            onClick={handleGetStartedClick}
             style={{
               display: 'flex',
               alignItems: 'center',
