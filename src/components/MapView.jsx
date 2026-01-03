@@ -12,13 +12,6 @@ const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
 const SIDEBAR_WIDTH = 480;
 
-// Zoom thresholds for marker visibility
-const ZOOM_LEVELS = {
-  POPULAR: 9,    // Popular/featured spots visible from default zoom
-  STANDARD: 12,  // Less popular spots visible at closer zoom
-  DETAIL: 14     // Very specific/minor spots at detailed zoom
-};
-
 // Platform configuration
 const PLATFORMS = {
   facebook: {
@@ -341,11 +334,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   // Load tourist spots data
   useEffect(() => {
     const loadTouristSpots = async () => {
-      console.log('Starting to load tourist spots...');
+      console.log('🗺️ Starting to load tourist spots with zoom-based visibility...');
       const spots = [];
       let spotIndex = 0;
       
-      // Load selected spots first
+      // Load selected spots with their minZoom configuration
       for (const selection of selectedSpots) {
         try {
           const response = await fetch(`/data/${selection.geojsonFile}`);
@@ -360,6 +353,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               feature.properties.name
             );
             
+            const minZoom = selection.minZoom || 9;  // Default to zoom 9
+            
             spots.push({
               name: feature.properties.name,
               location: toSentenceCase(feature.properties.municipality),
@@ -368,30 +363,41 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               categories: feature.properties.categories || [],
               images: mediaData.images,
               spotIndex: spotIndex++,
-              isPopular: popularSpots.includes(feature.properties.name)
+              isPopular: popularSpots.includes(feature.properties.name),
+              minZoom: minZoom  // Store zoom threshold
             });
+            
+            console.log(`✅ Loaded: ${feature.properties.name} (minZoom: ${minZoom})`);
           }
         } catch (error) {
           console.error(`Error loading ${selection.geojsonFile}:`, error);
         }
       }
       
-      // Load all spots from specific municipalities
+      // Load all spots from specific municipalities (with exclusions)
       for (const config of loadAllSpotsFrom) {
         try {
           const response = await fetch(`/data/${config.geojsonFile}`);
           if (!response.ok) continue;
           
           const geojson = await response.json();
+          const excludeList = config.excludeSpots || [];
           
           for (const feature of geojson.features) {
-            // Skip if already loaded
-            if (spots.some(s => s.name === feature.properties.name)) continue;
+            const spotName = feature.properties.name;
+            
+            // Skip if already loaded or in exclude list
+            if (spots.some(s => s.name === spotName) || excludeList.includes(spotName)) {
+              console.log(`⏭️ Skipping: ${spotName} (excluded or already loaded)`);
+              continue;
+            }
             
             const mediaData = await getSpotMedia(
               feature.properties.municipality,
               feature.properties.name
             );
+            
+            const minZoom = config.minZoom || 12;  // Default zoom for "load all"
             
             spots.push({
               name: feature.properties.name,
@@ -401,7 +407,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               categories: feature.properties.categories || [],
               images: mediaData.images,
               spotIndex: spotIndex++,
-              isPopular: popularSpots.includes(feature.properties.name)
+              isPopular: popularSpots.includes(feature.properties.name),
+              minZoom: minZoom
             });
           }
         } catch (error) {
@@ -409,7 +416,17 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }
       }
       
-      console.log(`Loaded ${spots.length} spots (${spots.filter(s => s.isPopular).length} popular)`);
+      // Log zoom distribution
+      const zoomGroups = spots.reduce((acc, spot) => {
+        const zoom = spot.minZoom || 9;
+        acc[zoom] = (acc[zoom] || 0) + 1;
+        return acc;
+      }, {});
+      
+      console.log(`📍 Loaded ${spots.length} spots:`);
+      console.log('Zoom distribution:', zoomGroups);
+      console.log(`Popular markers: ${spots.filter(s => s.isPopular).length}`);
+      
       setTouristSpots(spots);
       setDataLoaded(true);
     };
@@ -640,10 +657,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
   // Determine if marker should be visible at current zoom
   const shouldShowMarker = useCallback((spot, zoom) => {
-    if (spot.isPopular) {
-      return zoom >= ZOOM_LEVELS.POPULAR;
-    }
-    return zoom >= ZOOM_LEVELS.STANDARD;
+    // Check if spot meets its minimum zoom threshold
+    const minZoom = spot.minZoom || 9;
+    return zoom >= minZoom;
   }, []);
 
   // Get category icon
@@ -859,7 +875,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         markersRef.current.push(marker);
         const markerType = spot.isPopular ? 'iOS-style' : 'simple';
-        console.log(`➕ Added: ${spot.name} (${markerType})`);
+        console.log(`➕ Added: ${spot.name} (${markerType}, minZoom: ${spot.minZoom || 9}, current: ${zoom.toFixed(1)})`);
       } else if (shouldBeVisible) {
         currentVisibleSpots.add(spot.name);
       } else if (isCurrentlyVisible) {
@@ -872,7 +888,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           markersRef.current[markerIndex].remove();
           markersRef.current.splice(markerIndex, 1);
           markerElementsRef.current.delete(spot.name);
-          console.log(`➖ Removed: ${spot.name}`);
+          console.log(`➖ Removed: ${spot.name} (zoom: ${zoom.toFixed(1)}, minZoom: ${spot.minZoom || 9})`);
         }
       }
     });
