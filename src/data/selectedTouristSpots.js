@@ -9,23 +9,43 @@
 
 // Popular spots that get iOS-style image markers
 export const popularSpots = [
+  // Baras
   'Binurong Point',
+  'Puraran Beach',
   'Majestic Puraran Beach Resort',
   'Puraran Surf Resort',
+  'Balacay Point',
+  // San Andres
   'Mamangal Beach Resort',
-  'Palumbanes Island',
-  'Paday Falls',
-  'Nupa Green Lagoon',
-  'Bote Lighthouse',
-  'San Miguel River Park',
   'Codon Lighthouse',
-  // Puraran area spots
-  'Puraran Beach'
+  // Caramoran
+  'Palumbanes Island',
+  // Bagamanoc
+  'Paday Falls',
+  // Gigmoto
+  'Nupa Green Lagoon',
+  // Bato
+  'Bote Lighthouse',
+  'Maribina Falls',
+  'Balongbong Falls',
+  // San Miguel
+  'San Miguel River Park',
+  // Virac
+  'Twin Rocks Beach',
+  'Igang Beach',
+  'Marilima Beach',
+  // Pandan
+  'Pandan Lighthouse',
+  // Viga
+  'Viga Beach',
+  // Panganiban
+  'Tignob Sandbar'
 ];
 
-// Zoom-based visibility configuration for Puraran Beach area
+// Zoom-based visibility configuration for ALL municipalities
 // This mimics Google Maps' zoom-level marker clustering
 export const zoomBasedSpots = [
+  // ===== BARAS MUNICIPALITY =====
   {
     municipality: 'BARAS',
     spotName: 'Puraran Beach',
@@ -36,7 +56,7 @@ export const zoomBasedSpots = [
     municipality: 'BARAS',
     spotName: 'Majestic Puraran Beach Resort',
     geojsonFile: 'baras.geojson',
-    minZoom: 15  // Visible at 500m scale (second Puraran marker)
+    minZoom: 15  // Visible at 500m scale
   },
   {
     municipality: 'BARAS',
@@ -60,17 +80,158 @@ export const zoomBasedSpots = [
     municipality: 'BARAS',
     spotName: 'Alon Stay',
     geojsonFile: 'baras.geojson',
-    minZoom: 18  // Visible at 50m scale (most detailed zoom)
+    minZoom: 18  // Visible at 50m scale
+  },
+  {
+    municipality: 'BARAS',
+    spotName: 'Balacay Point',
+    geojsonFile: 'baras.geojson',
+    minZoom: 13  // Main viewpoint
+  },
+
+  // ===== SAN ANDRES MUNICIPALITY =====
+  {
+    municipality: 'SAN_ANDRES',
+    spotName: 'Mamangal Beach Resort',
+    geojsonFile: 'san_andres.geojson',
+    minZoom: 13  // Main beach area
+  },
+  {
+    municipality: 'SAN_ANDRES',
+    spotName: 'Codon Lighthouse',
+    geojsonFile: 'san_andres.geojson',
+    minZoom: 13  // Landmark
+  },
+
+  // ===== VIRAC MUNICIPALITY =====
+  {
+    municipality: 'VIRAC',
+    spotName: 'Twin Rocks Beach',
+    geojsonFile: 'virac.geojson',
+    minZoom: 13  // Main beach
+  },
+  {
+    municipality: 'VIRAC',
+    spotName: 'Igang Beach',
+    geojsonFile: 'virac.geojson',
+    minZoom: 13  // Main beach
+  },
+  {
+    municipality: 'VIRAC',
+    spotName: 'Marilima Beach',
+    geojsonFile: 'virac.geojson',
+    minZoom: 13  // Main beach
+  },
+  {
+    municipality: 'VIRAC',
+    spotName: 'Igang Chapel Ruins',
+    geojsonFile: 'virac.geojson',
+    minZoom: 15  // Heritage site
+  },
+
+  // ===== BATO MUNICIPALITY =====
+  {
+    municipality: 'BATO',
+    spotName: 'Bote Lighthouse',
+    geojsonFile: 'BATO.geojson',
+    minZoom: 13  // Landmark
+  },
+  {
+    municipality: 'BATO',
+    spotName: 'Maribina Falls',
+    geojsonFile: 'BATO.geojson',
+    minZoom: 13  // Popular waterfall
+  },
+  {
+    municipality: 'BATO',
+    spotName: 'Balongbong Falls',
+    geojsonFile: 'BATO.geojson',
+    minZoom: 15  // Secondary waterfall
+  },
+  {
+    municipality: 'BATO',
+    spotName: 'Bato Church',
+    geojsonFile: 'BATO.geojson',
+    minZoom: 15  // Heritage site
+  },
+
+  // ===== SAN MIGUEL MUNICIPALITY =====
+  {
+    municipality: 'SAN_MIGUEL',
+    spotName: 'San Miguel River Park',
+    geojsonFile: 'san_miguel.geojson',
+    minZoom: 13  // Main attraction
+  },
+
+  // ===== CARAMORAN MUNICIPALITY =====
+  {
+    municipality: 'CARAMORAN',
+    spotName: 'Palumbanes Island',
+    geojsonFile: 'caramoran.geojson',
+    minZoom: 13  // Main island
+  },
+
+  // ===== GIGMOTO MUNICIPALITY =====
+  {
+    municipality: 'GIGMOTO',
+    spotName: 'Nupa Green Lagoon',
+    geojsonFile: 'gigmoto.geojson',
+    minZoom: 13  // Main lagoon
+  },
+
+  // ===== BAGAMANOC MUNICIPALITY =====
+  {
+    municipality: 'BAGAMANOC',
+    spotName: 'Paday Falls',
+    geojsonFile: 'bagamanoc.geojson',
+    minZoom: 13  // Main waterfall
+  },
+
+  // ===== PANDAN MUNICIPALITY =====
+  {
+    municipality: 'PANDAN',
+    spotName: 'Pandan Lighthouse',
+    geojsonFile: 'pandan.geojson',
+    minZoom: 13  // Main lighthouse
+  },
+  {
+    municipality: 'PANDAN',
+    spotName: 'Mangrove Reserve River Cruise',
+    geojsonFile: 'pandan.geojson',
+    minZoom: 15  // Eco-tourism
+  },
+
+  // ===== VIGA MUNICIPALITY =====
+  {
+    municipality: 'VIGA',
+    spotName: 'Viga Beach',
+    geojsonFile: 'viga.geojson',
+    minZoom: 13  // Main beach
+  },
+
+  // ===== PANGANIBAN MUNICIPALITY =====
+  {
+    municipality: 'PANGANIBAN',
+    spotName: 'Tignob Sandbar',
+    geojsonFile: 'panganiban.geojson',
+    minZoom: 13  // Main attraction
   }
 ];
 
 // Selected tourist spots - Featured spots visible at default zoom
 export const selectedSpots = [
+  // Main featured spots (zoom 9 - province-wide view)
+  {
+    municipality: 'BARAS',
+    spotName: 'Binurong Point',
+    geojsonFile: 'baras.geojson',
+    minZoom: 9
+  },
   {
     municipality: 'SAN_ANDRES',
     spotName: 'Mamangal Beach Resort',
     geojsonFile: 'san_andres.geojson',
-    minZoom: 9  // Default zoom
+    minZoom: 9
   },
   {
     municipality: 'CARAMORAN',
@@ -103,36 +264,136 @@ export const selectedSpots = [
     minZoom: 9
   },
   {
-    municipality: 'BARAS',
-    spotName: 'Binurong Point',
-    geojsonFile: 'baras.geojson',
-    minZoom: 9
-  },
-  {
     municipality: 'SAN_ANDRES',
     spotName: 'Codon Lighthouse',
     geojsonFile: 'san_andres.geojson',
+    minZoom: 9
+  },
+  {
+    municipality: 'VIRAC',
+    spotName: 'Twin Rocks Beach',
+    geojsonFile: 'virac.geojson',
+    minZoom: 9
+  },
+  {
+    municipality: 'BATO',
+    spotName: 'Maribina Falls',
+    geojsonFile: 'BATO.geojson',
+    minZoom: 9
+  },
+  {
+    municipality: 'PANDAN',
+    spotName: 'Pandan Lighthouse',
+    geojsonFile: 'pandan.geojson',
     minZoom: 9
   },
   // Include zoom-based spots
   ...zoomBasedSpots
 ];
 
-// Load all spots from specific municipalities (excluding zoom-controlled ones)
+// Load all spots from ALL municipalities (excluding zoom-controlled ones)
 export const loadAllSpotsFrom = [
   {
     municipality: 'BARAS',
     geojsonFile: 'baras.geojson',
-    // Exclude these spots as they're controlled by zoom levels
     excludeSpots: [
       'Puraran Beach',
       'Majestic Puraran Beach Resort',
       'Puraran Surf Resort',
       'JoSurfInn',
       "L'Astrolabe",
-      'Alon Stay'
+      'Alon Stay',
+      'Balacay Point'
     ],
-    minZoom: 12  // Other Baras spots visible at closer zoom
+    minZoom: 12
+  },
+  {
+    municipality: 'SAN_ANDRES',
+    geojsonFile: 'san_andres.geojson',
+    excludeSpots: [
+      'Mamangal Beach Resort',
+      'Codon Lighthouse'
+    ],
+    minZoom: 12
+  },
+  {
+    municipality: 'VIRAC',
+    geojsonFile: 'virac.geojson',
+    excludeSpots: [
+      'Twin Rocks Beach',
+      'Igang Beach',
+      'Marilima Beach',
+      'Igang Chapel Ruins'
+    ],
+    minZoom: 12
+  },
+  {
+    municipality: 'BATO',
+    geojsonFile: 'BATO.geojson',
+    excludeSpots: [
+      'Bote Lighthouse',
+      'Maribina Falls',
+      'Balongbong Falls',
+      'Bato Church'
+    ],
+    minZoom: 12
+  },
+  {
+    municipality: 'SAN_MIGUEL',
+    geojsonFile: 'san_miguel.geojson',
+    excludeSpots: [
+      'San Miguel River Park'
+    ],
+    minZoom: 12
+  },
+  {
+    municipality: 'CARAMORAN',
+    geojsonFile: 'caramoran.geojson',
+    excludeSpots: [
+      'Palumbanes Island'
+    ],
+    minZoom: 12
+  },
+  {
+    municipality: 'GIGMOTO',
+    geojsonFile: 'gigmoto.geojson',
+    excludeSpots: [
+      'Nupa Green Lagoon'
+    ],
+    minZoom: 12
+  },
+  {
+    municipality: 'BAGAMANOC',
+    geojsonFile: 'bagamanoc.geojson',
+    excludeSpots: [
+      'Paday Falls'
+    ],
+    minZoom: 12
+  },
+  {
+    municipality: 'PANDAN',
+    geojsonFile: 'pandan.geojson',
+    excludeSpots: [
+      'Pandan Lighthouse',
+      'Mangrove Reserve River Cruise'
+    ],
+    minZoom: 12
+  },
+  {
+    municipality: 'VIGA',
+    geojsonFile: 'viga.geojson',
+    excludeSpots: [
+      'Viga Beach'
+    ],
+    minZoom: 12
+  },
+  {
+    municipality: 'PANGANIBAN',
+    geojsonFile: 'panganiban.geojson',
+    excludeSpots: [
+      'Tignob Sandbar'
+    ],
+    minZoom: 12
   }
 ];
 
@@ -168,6 +429,10 @@ export const categoryColors = {
   PARK: { bg: '#bef264', text: '#3f6212' },
   LAGOON: { bg: '#a5f3fc', text: '#155e75' },
   RIVER: { bg: '#bae6fd', text: '#0c4a6e' },
+  LIGHTHOUSE: { bg: '#fde68a', text: '#92400e' },
+  SANDBAR: { bg: '#fed7aa', text: '#9a3412' },
+  MANGROVE: { bg: '#86efac', text: '#166534' },
+  RUINS: { bg: '#e9d5ff', text: '#6b21a8' },
   default: { bg: '#f3f4f6', text: '#1f2937' }
 };
 
@@ -193,5 +458,9 @@ export const categoryIcons = {
   PARK: 'fa-tree-city',
   LAGOON: 'fa-droplet',
   RIVER: 'fa-water',
+  LIGHTHOUSE: 'fa-lighthouse',
+  SANDBAR: 'fa-water',
+  MANGROVE: 'fa-tree',
+  RUINS: 'fa-monument',
   default: 'fa-location-dot'
 };
