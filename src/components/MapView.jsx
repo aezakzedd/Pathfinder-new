@@ -3,8 +3,7 @@ import { createPortal } from 'react-dom';
 import { Maximize, Minimize, Map as MapIcon, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { selectedSpots, loadAllSpotsFrom, popularSpots, categoryColors, categoryIcons, toSentenceCase } from '../data/selectedTouristSpots';
-import { getCurrentMunicipality } from '../data/municipalityBoundaries';
+import { categoryColors, categoryIcons, toSentenceCase } from '../data/selectedTouristSpots';
 import { getSpotMedia } from '../hooks/useSpotMedia';
 import { debounce } from '../utils/debounce';
 import PlaceDetailsSidebar from './PlaceDetailsSidebar';
@@ -13,25 +12,22 @@ import ItineraryView from './ItineraryView';
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
 const SIDEBAR_WIDTH = 480;
+const MAX_VISIBLE_MARKERS = 10;
 
-// PERFORMANCE LIMITS (Raspberry Pi 4B optimized)
-const MAX_MARKERS_PER_ZOOM = {
-  9: 11,   // Province-wide: only featured landmarks
-  10: 11,
-  11: 11,
-  12: 15,
-  13: 20,  // ~1km scale
-  14: 25,
-  15: 30,  // ~500m scale
-  16: 40,  // ~200m scale
-  17: 50,
-  18: 60,  // ~50m scale
-  19: 80,
-  20: 100
+// Municipality GeoJSON files mapping
+const MUNICIPALITY_FILES = {
+  'BARAS': 'baras.geojson',
+  'BATO': 'BATO.geojson',
+  'VIRAC': 'VIRAC.geojson',
+  'SAN_ANDRES': 'san_andres.geojson',
+  'SAN_MIGUEL': 'san_miguel.geojson',
+  'BAGAMANOC': 'bagamanoc.geojson',
+  'PANGANIBAN': 'panganiban.geojson',
+  'VIGA': 'viga.geojson',
+  'GIGMOTO': 'gigmoto.geojson',
+  'PANDAN': 'pandan.geojson',
+  'CARAMORAN': 'caramoran.geojson'
 };
-
-// Zoom threshold for municipality-only loading
-const MUNICIPALITY_ONLY_ZOOM = 15; // At zoom 15+, only load spots from current municipality
 
 // Platform configuration
 const PLATFORMS = {
@@ -203,6 +199,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   const [dataLoaded, setDataLoaded] = useState(false);
   const [currentZoom, setCurrentZoom] = useState(DEFAULT_ZOOM);
   const [currentMunicipality, setCurrentMunicipality] = useState(null);
+  const municipalityBoundariesRef = useRef(null);
   
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -239,6 +236,58 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
+
+  // Load Catanduanes municipality boundaries
+  useEffect(() => {
+    const loadMunicipalityBoundaries = async () => {
+      try {
+        const response = await fetch('/data/catanduanes.geojson');
+        if (response.ok) {
+          const data = await response.json();
+          municipalityBoundariesRef.current = data;
+          console.log('✅ Municipality boundaries loaded:', data.features.length, 'municipalities');
+        }
+      } catch (error) {
+        console.error('Error loading municipality boundaries:', error);
+      }
+    };
+
+    loadMunicipalityBoundaries();
+  }, []);
+
+  // Function to determine which municipality a point is in
+  const getMunicipalityAtPoint = useCallback((lng, lat) => {
+    if (!municipalityBoundariesRef.current) return null;
+
+    const point = [lng, lat];
+    
+    for (const feature of municipalityBoundariesRef.current.features) {
+      if (feature.geometry.type === 'Polygon') {
+        if (isPointInPolygon(point, feature.geometry.coordinates[0])) {
+          return feature.properties.MUNICIPALI;
+        }
+      }
+    }
+    return null;
+  }, []);
+
+  // Point-in-polygon algorithm
+  const isPointInPolygon = (point, polygon) => {
+    const [x, y] = point;
+    let inside = false;
+
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const [xi, yi] = polygon[i];
+      const [xj, yj] = polygon[j];
+
+      const intersect = ((yi > y) !== (yj > y)) &&
+        (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      
+      if (intersect) inside = !inside;
+    }
+
+    return inside;
+  };
 
   // Draw routing lines
   const drawRoutes = useCallback(async () => {
@@ -348,95 +397,57 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     };
   }, [modalOpen, updateVideoQueue]);
 
-  // Load tourist spots data
+  // Load ALL tourist spots data from all municipalities
   useEffect(() => {
-    const loadTouristSpots = async () => {
+    const loadAllTouristSpots = async () => {
       const spots = [];
       let spotIndex = 0;
       
-      // Load selected spots with their minZoom configuration
-      for (const selection of selectedSpots) {
+      console.log('🔄 Loading tourist spots from all 11 municipalities...');
+      
+      // Loop through all 11 municipalities
+      for (const [municipality, geojsonFile] of Object.entries(MUNICIPALITY_FILES)) {
         try {
-          const response = await fetch(`/data/${selection.geojsonFile}`);
-          if (!response.ok) continue;
+          const response = await fetch(`/data/${geojsonFile}`);
+          if (!response.ok) {
+            console.warn(`⚠️ Could not load ${geojsonFile}`);
+            continue;
+          }
           
           const geojson = await response.json();
-          const feature = geojson.features.find(f => f.properties.name === selection.spotName);
           
-          if (feature) {
+          // Load ALL features from this municipality
+          for (const feature of geojson.features) {
             const mediaData = await getSpotMedia(
-              feature.properties.municipality, 
+              feature.properties.municipality || municipality,
               feature.properties.name
             );
             
-            const minZoom = selection.minZoom || 9;
-            const municipality = selection.municipality || feature.properties.municipality;
-            
             spots.push({
               name: feature.properties.name,
-              location: toSentenceCase(feature.properties.municipality),
+              location: toSentenceCase(feature.properties.municipality || municipality),
               municipality: municipality,
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
               images: mediaData.images || [],
               spotIndex: spotIndex++,
-              isPopular: popularSpots.includes(feature.properties.name),
-              minZoom: minZoom
+              isPopular: false // All markers same priority now
             });
           }
+          
+          console.log(`✅ Loaded ${geojson.features.length} spots from ${municipality}`);
         } catch (error) {
-          console.error(`Error loading ${selection.geojsonFile}:`, error);
+          console.error(`❌ Error loading ${geojsonFile}:`, error);
         }
       }
       
-      // Load all spots from specific municipalities (with exclusions)
-      for (const config of loadAllSpotsFrom) {
-        try {
-          const response = await fetch(`/data/${config.geojsonFile}`);
-          if (!response.ok) continue;
-          
-          const geojson = await response.json();
-          const excludeList = config.excludeSpots || [];
-          
-          for (const feature of geojson.features) {
-            const spotName = feature.properties.name;
-            
-            // Skip if already loaded or in exclude list
-            if (spots.some(s => s.name === spotName) || excludeList.includes(spotName)) {
-              continue;
-            }
-            
-            const mediaData = await getSpotMedia(
-              feature.properties.municipality,
-              feature.properties.name
-            );
-            
-            const minZoom = config.minZoom || 15;
-            
-            spots.push({
-              name: feature.properties.name,
-              location: toSentenceCase(feature.properties.municipality),
-              municipality: config.municipality,
-              coordinates: feature.geometry.coordinates,
-              description: feature.properties.description,
-              categories: feature.properties.categories || [],
-              images: mediaData.images || [],
-              spotIndex: spotIndex++,
-              isPopular: popularSpots.includes(feature.properties.name),
-              minZoom: minZoom
-            });
-          }
-        } catch (error) {
-          console.error(`Error loading all from ${config.geojsonFile}:`, error);
-        }
-      }
-      
+      console.log(`✅ Total loaded: ${spots.length} tourist spots from ${Object.keys(MUNICIPALITY_FILES).length} municipalities`);
       setTouristSpots(spots);
       setDataLoaded(true);
     };
 
-    loadTouristSpots();
+    loadAllTouristSpots();
   }, []);
 
   // Handler functions
@@ -649,97 +660,54 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     `;
   }, [getCategoryPill, isSpotInItinerary]);
 
-  // Determine if marker should be visible (zoom + municipality filtering)
-  const shouldShowMarker = useCallback((spot, zoom, viewCenter) => {
-    // Check zoom threshold first
-    const minZoom = spot.minZoom || 9;
-    if (zoom < minZoom) return false;
-
-    // At zoom 15+, only show markers from current municipality
-    if (zoom >= MUNICIPALITY_ONLY_ZOOM) {
-      const [lng, lat] = viewCenter;
-      const currentMuni = getCurrentMunicipality(lng, lat);
-      
-      // If we're viewing a specific municipality, only show its spots
-      if (currentMuni && spot.municipality !== currentMuni) {
-        return false;
-      }
-    }
-
-    return true;
-  }, []);
-
   // Get category icon
   const getCategoryIcon = useCallback((categories) => {
     if (!categories || categories.length === 0) return categoryIcons.default;
     return categoryIcons[categories[0]] || categoryIcons.default;
   }, []);
 
-  // Create marker element
+  // Create marker element (simplified - all same style)
   const createMarkerElement = useCallback((spot) => {
     const markerEl = document.createElement('div');
     markerEl.style.display = 'flex';
     markerEl.style.alignItems = 'center';
     markerEl.style.gap = '6px';
     
-    if (spot.isPopular) {
-      // Popular: iOS-style image marker
-      markerEl.style.flexDirection = 'column';
-      const hasImage = spot.images && spot.images.length > 0;
-      
-      if (hasImage) {
-        markerEl.innerHTML = `
-          <div class="image-marker-icon" style="width: 60px; height: 60px; border-radius: 16px; overflow: hidden; background-color: white; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;">
-            <img src="${spot.images[0]}" alt="${spot.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='<i class=\"fa-solid fa-location-dot\" style=\"font-size: 32px; color: white; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\" style/>'" />
-          </div>
-          <div class="marker-label" style="font-size: 12px; font-weight: 600; color: #000000; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff; margin-top: 6px; white-space: nowrap; pointer-events: none; text-align: center; line-height: 1.2; opacity: 1; transition: opacity 0.3s ease;">${spot.name}</div>
-        `;
-      } else {
-        // No image - show gradient background with icon
-        markerEl.innerHTML = `
-          <div class="image-marker-icon" style="width: 60px; height: 60px; border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease; display: flex; align-items: center; justify-content: center;">
-            <i class="fa-solid fa-location-dot" style="font-size: 32px; color: white;"></i>
-          </div>
-          <div class="marker-label" style="font-size: 12px; font-weight: 600; color: #000000; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff; margin-top: 6px; white-space: nowrap; pointer-events: none; text-align: center; line-height: 1.2; opacity: 1; transition: opacity 0.3s ease;">${spot.name}</div>
-        `;
-      }
-      
-      const imageIcon = markerEl.querySelector('.image-marker-icon');
-      markerEl.addEventListener('mouseenter', () => {
-        imageIcon.style.transform = 'scale(1.1)';
-        imageIcon.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)';
-      });
-      markerEl.addEventListener('mouseleave', () => {
-        imageIcon.style.transform = 'scale(1)';
-        imageIcon.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-      });
-    } else {
-      // Less popular: Circular icon + text (NO pill background)
-      const icon = getCategoryIcon(spot.categories);
-      const colors = categoryColors[spot.categories[0]] || categoryColors.default;
-      
-      markerEl.innerHTML = `
-        <div class="simple-marker-circle" style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s ease;">
-          <i class="fa-solid ${icon}" style="font-size: 12px; color: white;"></i>
-        </div>
-        <span class="marker-text" style="font-size: 12px; font-weight: 600; color: #000000; white-space: nowrap; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff;">${spot.name}</span>
-      `;
-      
-      const circle = markerEl.querySelector('.simple-marker-circle');
-      markerEl.addEventListener('mouseenter', () => {
-        circle.style.transform = 'scale(1.1)';
-        circle.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
-      });
-      markerEl.addEventListener('mouseleave', () => {
-        circle.style.transform = 'scale(1)';
-        circle.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
-      });
-    }
+    const icon = getCategoryIcon(spot.categories);
+    
+    markerEl.innerHTML = `
+      <div class="simple-marker-circle" style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s ease;">
+        <i class="fa-solid ${icon}" style="font-size: 12px; color: white;"></i>
+      </div>
+      <span class="marker-text" style="font-size: 12px; font-weight: 600; color: #000000; white-space: nowrap; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff;">${spot.name}</span>
+    `;
+    
+    const circle = markerEl.querySelector('.simple-marker-circle');
+    markerEl.addEventListener('mouseenter', () => {
+      circle.style.transform = 'scale(1.1)';
+      circle.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
+    });
+    markerEl.addEventListener('mouseleave', () => {
+      circle.style.transform = 'scale(1)';
+      circle.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+    });
     
     return markerEl;
   }, [getCategoryIcon]);
 
-  // Update visible markers with municipality filtering and marker limits
+  // Calculate distance between two points (Haversine formula)
+  const calculateDistance = (lng1, lat1, lng2, lat2) => {
+    const R = 6371; // Earth radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  // Update visible markers with camera-based filtering
   const updateVisibleMarkers = useCallback(() => {
     if (!map.current || !mapLoaded.current || touristSpots.length === 0) return;
 
@@ -750,24 +718,27 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     setCurrentZoom(zoom);
     
     // Get current municipality
-    const currentMuni = getCurrentMunicipality(viewCenter[0], viewCenter[1]);
+    const currentMuni = getMunicipalityAtPoint(viewCenter[0], viewCenter[1]);
     setCurrentMunicipality(currentMuni);
     
     const currentVisibleSpots = new Set();
-    const markerLimit = MAX_MARKERS_PER_ZOOM[Math.floor(zoom)] || 100;
     
-    // Filter spots that should be visible
-    const eligibleSpots = touristSpots.filter(spot => shouldShowMarker(spot, zoom, viewCenter));
+    // Calculate distance from camera center to each spot
+    const spotsWithDistance = touristSpots.map(spot => ({
+      ...spot,
+      distance: calculateDistance(
+        viewCenter[0],
+        viewCenter[1],
+        spot.coordinates[0],
+        spot.coordinates[1]
+      )
+    }));
     
-    // Sort by priority: popular first, then by minZoom (lower = higher priority)
-    eligibleSpots.sort((a, b) => {
-      if (a.isPopular && !b.isPopular) return -1;
-      if (!a.isPopular && b.isPopular) return 1;
-      return a.minZoom - b.minZoom;
-    });
+    // Sort by distance from camera (closest first)
+    spotsWithDistance.sort((a, b) => a.distance - b.distance);
     
-    // Limit markers
-    const spotsToShow = eligibleSpots.slice(0, markerLimit);
+    // Take only the closest 10 spots
+    const spotsToShow = spotsWithDistance.slice(0, MAX_VISIBLE_MARKERS);
     
     spotsToShow.forEach((spot) => {
       const isCurrentlyVisible = visibleMarkersRef.current.has(spot.name);
@@ -780,7 +751,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         const marker = new maplibregl.Marker({ 
           element: markerEl, 
-          anchor: spot.isPopular ? 'bottom' : 'center'
+          anchor: 'center'
         })
           .setLngLat(spot.coordinates)
           .addTo(map.current);
@@ -789,14 +760,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         markerEl.addEventListener('click', () => {
           setSelectedSpot(spot);
           
-          if (spot.isPopular) {
-            const icon = markerEl.querySelector('.image-marker-icon');
-            const label = markerEl.querySelector('.marker-label');
-            if (icon) icon.style.opacity = '0';
-            if (label) label.style.opacity = '0';
-          } else {
-            markerEl.style.opacity = '0';
-          }
+          markerEl.style.opacity = '0';
           
           if (popupRef.current) popupRef.current.remove();
 
@@ -865,14 +829,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
                 
                 const currentMarkerEl = markerElementsRef.current.get(spot.name);
                 if (currentMarkerEl) {
-                  if (spot.isPopular) {
-                    const currentIcon = currentMarkerEl.querySelector('.image-marker-icon');
-                    const currentLabel = currentMarkerEl.querySelector('.marker-label');
-                    if (currentIcon) currentIcon.style.opacity = '1';
-                    if (currentLabel) currentLabel.style.opacity = '1';
-                  } else {
-                    currentMarkerEl.style.opacity = '1';
-                  }
+                  currentMarkerEl.style.opacity = '1';
                 }
                 setSelectedSpot(null);
               });
@@ -928,7 +885,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     });
     
     visibleMarkersRef.current = currentVisibleSpots;
-  }, [touristSpots, shouldShowMarker, createMarkerElement, createInfoCardHTML, handleImageClick, addToItinerary, isSpotInItinerary]);
+    
+    console.log(`📍 Showing ${currentVisibleSpots.size}/${MAX_VISIBLE_MARKERS} markers | Camera at: ${currentMuni || 'Unknown'} | Zoom: ${zoom.toFixed(1)}`);
+  }, [touristSpots, createMarkerElement, createInfoCardHTML, handleImageClick, addToItinerary, isSpotInItinerary, getMunicipalityAtPoint]);
 
   // Create debounced version of updateVisibleMarkers
   const debouncedUpdateMarkers = useCallback(
@@ -968,10 +927,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           style: style,
           center: [124.2, 13.8],
           zoom: DEFAULT_ZOOM,
+          pitch: 0,
+          bearing: 0,
           attributionControl: false,
           maxBounds: bounds,
           
-          // RPI Performance Settings
+          // RPI Performance Settings with 3D enabled
           antialias: false,
           fadeDuration: 0,
           localIdeographFontFamily: false,
@@ -979,9 +940,21 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           refreshExpiredTiles: false,
           maxTileCacheSize: 50,
           optimizeForTerrain: false,
-          pitchWithRotate: false,
-          touchPitch: false
+          pitchWithRotate: true,
+          touchPitch: true,
+          maxPitch: 85,
+          minPitch: 0
         });
+
+        // Add navigation controls with 3D support
+        map.current.addControl(
+          new maplibregl.NavigationControl({
+            visualizePitch: true,
+            showCompass: true,
+            showZoom: true
+          }),
+          'top-right'
+        );
 
         map.current.on('zoom', () => updateMarkerSizes(map.current.getZoom()));
         map.current.on('moveend', debouncedUpdateMarkers);
@@ -989,6 +962,16 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         map.current.on('load', () => {
           mapLoaded.current = true;
+          
+          // Add sky layer for proper 3D pitch rendering
+          map.current.setSky({
+            'sky-color': '#000000',
+            'sky-horizon-blend': 0.3,
+            'horizon-color': '#000000',
+            'horizon-fog-blend': 0.3,
+            'fog-color': '#000000',
+            'fog-ground-blend': 0.2
+          });
           
           if (!map.current.getSource('mask')) {
             map.current.addSource('mask', {
