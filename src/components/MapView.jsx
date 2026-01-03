@@ -719,16 +719,48 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         background-color: white;
         border-radius: 12px;
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-        overflow: hidden;
+        overflow: visible;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         transform: scale(0.3);
         opacity: 0;
         transform-origin: bottom center;
         transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+        position: relative;
       ">
         ${carouselHTML}
+        
+        <!-- Black Pill Button -->
+        <button id="view-details-btn" style="
+          position: absolute;
+          top: 206px;
+          left: 50%;
+          transform: translateX(-50%);
+          padding: 6px 16px;
+          background-color: #000000;
+          color: white;
+          border: none;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 600;
+          cursor: pointer;
+          z-index: 25;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+          white-space: nowrap;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        "
+        onmouseover="this.style.transform='translateX(-50%) scale(1.05)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.4)'"
+        onmouseout="this.style.transform='translateX(-50%) scale(1)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.3)'">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          View Details
+        </button>
+        
         <div style="
-          padding: 12px 14px;
+          padding: 20px 14px 12px 14px;
           box-sizing: border-box;
           width: 100%;
           max-width: 280px;
@@ -986,6 +1018,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           const addBtn = document.getElementById('add-to-itinerary-btn');
           if (addBtn && !isSpotInItinerary(spot.name)) {
             addBtn.addEventListener('click', () => addToItinerary(spot, addBtn));
+          }
+
+          // View Details button handler
+          const viewDetailsBtn = document.getElementById('view-details-btn');
+          if (viewDetailsBtn) {
+            viewDetailsBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              handleImageClick(spot.images[0], spot);
+            });
           }
         }, 0);
         
