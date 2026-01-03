@@ -23,13 +23,20 @@ const ImageMarker = ({ imageUrl, spotName, onClick }) => {
         style={{
           width: '60px',
           height: '60px',
-          borderRadius: '16px',
+          minWidth: '60px',
+          minHeight: '60px',
+          maxWidth: '60px',
+          maxHeight: '60px',
+          borderRadius: '50%', // Changed to perfect circle
           overflow: 'hidden',
-          backgroundColor: 'white',
-          border: '3px solid white',
+          backgroundColor: '#000000', // Black background
+          border: '3px solid #000000', // Black border
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
           transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-          position: 'relative'
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'scale(1.1)';
@@ -59,15 +66,15 @@ const ImageMarker = ({ imageUrl, spotName, onClick }) => {
                   display: flex;
                   align-items: center;
                   justify-content: center;
-                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                  background-color: #000000;
                 ">
-                  <i class="fa-solid fa-location-dot" style="font-size: 32px; color: white;"></i>
+                  <i class="fa-solid fa-location-dot" style="font-size: 28px; color: #ffffff;"></i>
                 </div>
               `;
             }}
           />
         ) : (
-          // Fallback gradient with icon
+          // Fallback with black background and white icon
           <div
             style={{
               width: '100%',
@@ -75,10 +82,22 @@ const ImageMarker = ({ imageUrl, spotName, onClick }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+              backgroundColor: '#000000', // Black background
+              padding: '2px' // Adds small padding so icon doesn't touch edges
             }}
           >
-            <i className="fa-solid fa-location-dot" style={{ fontSize: '32px', color: 'white' }} />
+            <i 
+              className="fa-solid fa-location-dot" 
+              style={{ 
+                fontSize: '28px', // Slightly smaller to fit better
+                color: '#ffffff', // White icon
+                width: '28px',
+                height: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }} 
+            />
           </div>
         )}
       </div>
