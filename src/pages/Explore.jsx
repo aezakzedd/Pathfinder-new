@@ -15,6 +15,9 @@ export default function Explore() {
   const [translateValues, setTranslateValues] = useState({ x: 0, y: 0 });
   const [isPositionCalculated, setIsPositionCalculated] = useState(false);
   const resizeTimeoutRef = useRef(null);
+  
+  // State for passing dates to itinerary
+  const [selectedDates, setSelectedDates] = useState(null);
 
   // Memoized calculate function to prevent recreation
   const calculateTranslateValues = useCallback(() => {
@@ -76,6 +79,12 @@ export default function Explore() {
 
   const toggleMapFullscreen = useCallback(() => {
     setIsMapFullscreen(prev => !prev);
+  }, []);
+  
+  // Handler for when Get Started is clicked
+  const handleGetStarted = useCallback((dates) => {
+    setSelectedDates(dates);
+    setIsMinimized(true); // Minimize the preferences panel
   }, []);
 
   // Memoize styles to prevent recreation on every render
@@ -339,7 +348,7 @@ export default function Explore() {
               <div style={whiteCardTransformStyle}>
                 {/* Grey card background with TravellerInformation */}
                 <div style={whiteCardBackgroundStyle}>
-                  <TravellerInformation />
+                  <TravellerInformation onGetStarted={handleGetStarted} />
                 </div>
               </div>
 
@@ -364,7 +373,7 @@ export default function Explore() {
                     />
                   </div>
                 </div>
-                <span style={textStyle}>Create Itinerary</span>
+                <span style={textStyle}>Preferences</span>
               </div>
             </div>
           </div>
@@ -381,6 +390,7 @@ export default function Explore() {
               <MapView 
                 isFullscreen={isMapFullscreen}
                 onToggleFullscreen={toggleMapFullscreen}
+                selectedDates={selectedDates}
               />
             </div>
           </div>
