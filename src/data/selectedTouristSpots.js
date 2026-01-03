@@ -1,5 +1,21 @@
+// Selected tourist spots configuration
+// Featured spots appear at default zoom, others appear at higher zoom levels
+
+// Popular spots that get iOS-style image markers
+export const popularSpots = [
+  'Binurong Point',
+  'Majestic Puraran Beach Resort',
+  'Puraran Surf Resort',
+  'Mamangal Beach Resort',
+  'Palumbanes Island',
+  'Paday Falls',
+  'Nupa Green Lagoon',
+  'Bote Lighthouse',
+  'San Miguel River Park',
+  'Codon Lighthouse'
+];
+
 // Selected tourist spots - 8 featured spots at default zoom
-// ONLY using spots that actually exist in the GeoJSON files
 export const selectedSpots = [
   {
     municipality: 'SAN_ANDRES',
@@ -43,6 +59,14 @@ export const selectedSpots = [
   }
 ];
 
+// Load all spots from specific municipalities
+export const loadAllSpotsFrom = [
+  {
+    municipality: 'BARAS',
+    geojsonFile: 'baras.geojson'
+  }
+];
+
 // Helper function to convert municipality name to sentence case
 export const toSentenceCase = (str) => {
   if (!str) return '';
@@ -76,4 +100,29 @@ export const categoryColors = {
   LAGOON: { bg: '#a5f3fc', text: '#155e75' },
   RIVER: { bg: '#bae6fd', text: '#0c4a6e' },
   default: { bg: '#f3f4f6', text: '#1f2937' }
+};
+
+// Category icons mapping (Font Awesome classes)
+export const categoryIcons = {
+  BEACH: 'fa-umbrella-beach',
+  WATERFALL: 'fa-water',
+  VIEWPOINT: 'fa-mountain',
+  NATURE: 'fa-tree',
+  ACCOMMODATION: 'fa-bed',
+  RESORT: 'fa-hotel',
+  CAFE: 'fa-mug-hot',
+  RESTAURANT: 'fa-utensils',
+  MUSEUM: 'fa-landmark',
+  HERITAGE: 'fa-monument',
+  RELIGIOUS_SITE: 'fa-place-of-worship',
+  SURFING: 'fa-person-swimming',
+  LANDMARK: 'fa-flag',
+  ECO_PARK: 'fa-leaf',
+  HIKING: 'fa-hiking',
+  ISLAND: 'fa-island-tropical',
+  BAR: 'fa-martini-glass',
+  PARK: 'fa-tree-city',
+  LAGOON: 'fa-droplet',
+  RIVER: 'fa-water',
+  default: 'fa-location-dot'
 };
