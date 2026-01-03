@@ -354,6 +354,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             );
             
             const minZoom = selection.minZoom || 9;  // Default to zoom 9
+            const hasImages = mediaData.images && mediaData.images.length > 0;
             
             spots.push({
               name: feature.properties.name,
@@ -361,13 +362,13 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
-              images: mediaData.images,
+              images: mediaData.images || [],
               spotIndex: spotIndex++,
               isPopular: popularSpots.includes(feature.properties.name),
               minZoom: minZoom  // Store zoom threshold
             });
             
-            console.log(`✅ Loaded: ${feature.properties.name} (minZoom: ${minZoom})`);
+            console.log(`✅ Loaded: ${feature.properties.name} (minZoom: ${minZoom}, hasImages: ${hasImages})`);
           }
         } catch (error) {
           console.error(`Error loading ${selection.geojsonFile}:`, error);
@@ -405,7 +406,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
-              images: mediaData.images,
+              images: mediaData.images || [],
               spotIndex: spotIndex++,
               isPopular: popularSpots.includes(feature.properties.name),
               minZoom: minZoom
@@ -416,16 +417,21 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }
       }
       
-      // Log zoom distribution
+      // Log zoom distribution and image stats
       const zoomGroups = spots.reduce((acc, spot) => {
         const zoom = spot.minZoom || 9;
         acc[zoom] = (acc[zoom] || 0) + 1;
         return acc;
       }, {});
       
+      const spotsWithImages = spots.filter(s => s.images.length > 0).length;
+      const popularWithImages = spots.filter(s => s.isPopular && s.images.length > 0).length;
+      const popularWithoutImages = spots.filter(s => s.isPopular && s.images.length === 0).length;
+      
       console.log(`📍 Loaded ${spots.length} spots:`);
       console.log('Zoom distribution:', zoomGroups);
-      console.log(`Popular markers: ${spots.filter(s => s.isPopular).length}`);
+      console.log(`Popular markers: ${spots.filter(s => s.isPopular).length} (${popularWithImages} with images, ${popularWithoutImages} without)`);
+      console.log(`Total spots with images: ${spotsWithImages}/${spots.length}`);
       
       setTouristSpots(spots);
       setDataLoaded(true);
@@ -683,11 +689,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       if (hasImage) {
         markerEl.innerHTML = `
           <div class="image-marker-icon" style="width: 60px; height: 60px; border-radius: 16px; overflow: hidden; background-color: white; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;">
-            <img src="${spot.images[0]}" alt="${spot.name}" style="width: 100%; height: 100%; object-fit: cover;" />
+            <img src="${spot.images[0]}" alt="${spot.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='<i class=\"fa-solid fa-location-dot\" style=\"font-size: 32px; color: white; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\" style/>'" />
           </div>
           <div class="marker-label" style="font-size: 12px; font-weight: 600; color: #000000; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff; margin-top: 6px; white-space: nowrap; pointer-events: none; text-align: center; line-height: 1.2; opacity: 1; transition: opacity 0.3s ease;">${spot.name}</div>
         `;
       } else {
+        // No image - show gradient background with icon
         markerEl.innerHTML = `
           <div class="image-marker-icon" style="width: 60px; height: 60px; border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease; display: flex; align-items: center; justify-content: center;">
             <i class="fa-solid fa-location-dot" style="font-size: 32px; color: white;"></i>
@@ -918,14 +925,16 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       .then(style => {
         console.log('✅ Map style loaded successfully');
         
-        // Remove all text/label layers to hide barangay names
+        // Remove all text/label layers AND problem glyphs to fix font errors
         style.layers = style.layers.filter(layer => {
-          // Keep all non-symbol layers (roads, water, buildings, etc.)
           if (layer.type !== 'symbol') return true;
-          
-          // Remove all text/label layers
           return false;
         });
+        
+        // Remove problematic glyphs URL to prevent 500 errors
+        if (style.glyphs) {
+          delete style.glyphs;
+        }
 
         map.current = new maplibregl.Map({
           container: mapContainer.current,
@@ -935,7 +944,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           attributionControl: false,
           maxBounds: bounds,
           antialias: false,
-          fadeDuration: 0
+          fadeDuration: 0,
+          localIdeographFontFamily: false  // Disable local font fallback
         });
 
         map.current.on('zoom', () => updateMarkerSizes(map.current.getZoom()));
