@@ -12,7 +12,13 @@ import ItineraryView from './ItineraryView';
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
 const SIDEBAR_WIDTH = 480;
-const MAX_VISIBLE_MARKERS = 3; // REDUCED from 10 to 3 to avoid clutter
+
+// Zoom-based marker visibility thresholds
+const ZOOM_THRESHOLDS = {
+  MIN_ZOOM_1_MARKER: 8.5,   // Below this: show 1 iOS-style marker
+  MIN_ZOOM_2_MARKERS: 10,   // Between 8.5-10: show 2 markers
+  MIN_ZOOM_3_MARKERS: 11    // Above 11: show 3 markers
+};
 
 // Municipality GeoJSON files mapping
 const MUNICIPALITY_FILES = {
@@ -432,7 +438,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               categories: feature.properties.categories || [],
               images: mediaData.images || [],
               spotIndex: spotIndex++,
-              isPopular: false // All markers same priority now
+              isPopular: false
             });
           }
           
@@ -666,31 +672,60 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return categoryIcons[categories[0]] || categoryIcons.default;
   }, []);
 
-  // Create marker element (simplified - all same style)
-  const createMarkerElement = useCallback((spot) => {
+  // Create marker element with zoom-based styling
+  const createMarkerElement = useCallback((spot, zoom, useIOSStyle = false) => {
     const markerEl = document.createElement('div');
-    markerEl.style.display = 'flex';
-    markerEl.style.alignItems = 'center';
-    markerEl.style.gap = '6px';
     
-    const icon = getCategoryIcon(spot.categories);
-    
-    markerEl.innerHTML = `
-      <div class="simple-marker-circle" style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s ease;">
-        <i class="fa-solid ${icon}" style="font-size: 12px; color: white;"></i>
-      </div>
-      <span class="marker-text" style="font-size: 12px; font-weight: 600; color: #000000; white-space: nowrap; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff;">${spot.name}</span>
-    `;
-    
-    const circle = markerEl.querySelector('.simple-marker-circle');
-    markerEl.addEventListener('mouseenter', () => {
-      circle.style.transform = 'scale(1.1)';
-      circle.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
-    });
-    markerEl.addEventListener('mouseleave', () => {
-      circle.style.transform = 'scale(1)';
-      circle.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
-    });
+    if (useIOSStyle && spot.images && spot.images.length > 0) {
+      // iOS-style image marker for far zoom levels
+      markerEl.style.display = 'flex';
+      markerEl.style.flexDirection = 'column';
+      markerEl.style.alignItems = 'center';
+      markerEl.style.gap = '4px';
+      
+      markerEl.innerHTML = `
+        <div class="ios-marker-container" style="position: relative; cursor: pointer;">
+          <div class="ios-marker-image" style="width: 60px; height: 60px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 3px solid white; background-color: #e5e7eb; transition: all 0.2s ease;">
+            <img src="${spot.images[0]}" alt="${spot.name}" style="width: 100%; height: 100%; object-fit: cover;" />
+          </div>
+        </div>
+        <span class="marker-text" style="font-size: 13px; font-weight: 700; color: #000000; white-space: nowrap; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -2px 0 0 #fff, 2px 0 0 #fff, 0 -2px 0 #fff, 0 2px 0 #fff; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${spot.name}</span>
+      `;
+      
+      const imageContainer = markerEl.querySelector('.ios-marker-image');
+      markerEl.addEventListener('mouseenter', () => {
+        imageContainer.style.transform = 'scale(1.1)';
+        imageContainer.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
+      });
+      markerEl.addEventListener('mouseleave', () => {
+        imageContainer.style.transform = 'scale(1)';
+        imageContainer.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+      });
+    } else {
+      // Simple circle marker for closer zoom levels
+      markerEl.style.display = 'flex';
+      markerEl.style.alignItems = 'center';
+      markerEl.style.gap = '6px';
+      
+      const icon = getCategoryIcon(spot.categories);
+      
+      markerEl.innerHTML = `
+        <div class="simple-marker-circle" style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s ease;">
+          <i class="fa-solid ${icon}" style="font-size: 12px; color: white;"></i>
+        </div>
+        <span class="marker-text" style="font-size: 12px; font-weight: 600; color: #000000; white-space: nowrap; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff;">${spot.name}</span>
+      `;
+      
+      const circle = markerEl.querySelector('.simple-marker-circle');
+      markerEl.addEventListener('mouseenter', () => {
+        circle.style.transform = 'scale(1.1)';
+        circle.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
+      });
+      markerEl.addEventListener('mouseleave', () => {
+        circle.style.transform = 'scale(1)';
+        circle.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+      });
+    }
     
     return markerEl;
   }, [getCategoryIcon]);
@@ -707,7 +742,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return R * c;
   };
 
-  // Update visible markers with camera-based filtering
+  // Determine max markers based on zoom level
+  const getMaxMarkersForZoom = (zoom) => {
+    if (zoom < ZOOM_THRESHOLDS.MIN_ZOOM_1_MARKER) return 1;
+    if (zoom < ZOOM_THRESHOLDS.MIN_ZOOM_2_MARKERS) return 2;
+    return 3;
+  };
+
+  // Update visible markers with zoom-based progressive filtering
   const updateVisibleMarkers = useCallback(() => {
     if (!map.current || !mapLoaded.current || touristSpots.length === 0) return;
 
@@ -720,6 +762,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     // Get current municipality
     const currentMuni = getMunicipalityAtPoint(viewCenter[0], viewCenter[1]);
     setCurrentMunicipality(currentMuni);
+    
+    // Determine how many markers to show based on zoom
+    const maxMarkers = getMaxMarkersForZoom(zoom);
+    const useIOSStyle = zoom < ZOOM_THRESHOLDS.MIN_ZOOM_1_MARKER;
     
     const currentVisibleSpots = new Set();
     
@@ -737,8 +783,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     // Sort by distance from camera (closest first)
     spotsWithDistance.sort((a, b) => a.distance - b.distance);
     
-    // Take only the closest spots (now 3 instead of 10)
-    const spotsToShow = spotsWithDistance.slice(0, MAX_VISIBLE_MARKERS);
+    // Take only the appropriate number of markers based on zoom
+    const spotsToShow = spotsWithDistance.slice(0, maxMarkers);
     
     spotsToShow.forEach((spot) => {
       const isCurrentlyVisible = visibleMarkersRef.current.has(spot.name);
@@ -746,7 +792,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       if (!isCurrentlyVisible) {
         // Add marker
         currentVisibleSpots.add(spot.name);
-        const markerEl = createMarkerElement(spot);
+        const markerEl = createMarkerElement(spot, zoom, useIOSStyle);
         markerElementsRef.current.set(spot.name, markerEl);
 
         const marker = new maplibregl.Marker({ 
@@ -886,7 +932,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     
     visibleMarkersRef.current = currentVisibleSpots;
     
-    console.log(`📍 Showing ${currentVisibleSpots.size}/${MAX_VISIBLE_MARKERS} markers | Camera at: ${currentMuni || 'Unknown'} | Zoom: ${zoom.toFixed(1)}`);
+    console.log(`📍 Showing ${currentVisibleSpots.size}/${maxMarkers} markers (zoom: ${zoom.toFixed(1)}) | ${useIOSStyle ? 'iOS style' : 'Simple style'} | ${currentMuni || 'Unknown'}`);
   }, [touristSpots, createMarkerElement, createInfoCardHTML, handleImageClick, addToItinerary, isSpotInItinerary, getMunicipalityAtPoint]);
 
   // Create debounced version of updateVisibleMarkers
