@@ -6,6 +6,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { selectedSpots, loadAllSpotsFrom, popularSpots, categoryColors, categoryIcons, toSentenceCase } from '../data/selectedTouristSpots';
 import { getCurrentMunicipality } from '../data/municipalityBoundaries';
 import { getSpotMedia } from '../hooks/useSpotMedia';
+import { debounce } from '../utils/debounce';
 import PlaceDetailsSidebar from './PlaceDetailsSidebar';
 import ItineraryView from './ItineraryView';
 
@@ -60,18 +61,15 @@ const PLATFORMS = {
 const fetchRoute = async (start, end) => {
   try {
     const url = `https://router.project-osrm.org/route/v1/driving/${start[0]},${start[1]};${end[0]},${end[1]}?overview=full&geometries=geojson`;
-    console.log('🔄 Fetching route:', start, '->', end);
     const response = await fetch(url);
     const data = await response.json();
     
     if (data.routes && data.routes.length > 0) {
-      console.log('✅ Route fetched');
       return data.routes[0].geometry;
     }
-    console.log('❌ No routes found');
     return null;
   } catch (error) {
-    console.error('❌ Route fetch error:', error);
+    console.error('Route fetch error:', error);
     return null;
   }
 };
@@ -235,7 +233,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     const handleKeyPress = (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'P') {
         setShowPerformance(prev => !prev);
-        console.log('Performance monitor toggled');
       }
     };
 
@@ -248,7 +245,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     if (!map.current || !mapLoaded.current) return;
 
     const currentItinerary = itineraryRef.current;
-    console.log('🎨 Drawing routes for', currentItinerary.length, 'places');
 
     if (map.current.getSource('route')) {
       if (map.current.getLayer('route-line')) map.current.removeLayer('route-line');
@@ -355,7 +351,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
   // Load tourist spots data
   useEffect(() => {
     const loadTouristSpots = async () => {
-      console.log('🗺️ Starting to load tourist spots with municipality-based filtering...');
       const spots = [];
       let spotIndex = 0;
       
@@ -380,7 +375,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             spots.push({
               name: feature.properties.name,
               location: toSentenceCase(feature.properties.municipality),
-              municipality: municipality,  // Store for filtering
+              municipality: municipality,
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
@@ -389,8 +384,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               isPopular: popularSpots.includes(feature.properties.name),
               minZoom: minZoom
             });
-            
-            console.log(`✅ Loaded: ${feature.properties.name} (${municipality}, minZoom: ${minZoom})`);
           }
         } catch (error) {
           console.error(`Error loading ${selection.geojsonFile}:`, error);
@@ -424,7 +417,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
             spots.push({
               name: feature.properties.name,
               location: toSentenceCase(feature.properties.municipality),
-              municipality: config.municipality,  // Store for filtering
+              municipality: config.municipality,
               coordinates: feature.geometry.coordinates,
               description: feature.properties.description,
               categories: feature.properties.categories || [],
@@ -439,7 +432,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }
       }
       
-      console.log(`📍 Loaded ${spots.length} total spots`);
       setTouristSpots(spots);
       setDataLoaded(true);
     };
@@ -777,8 +769,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     // Limit markers
     const spotsToShow = eligibleSpots.slice(0, markerLimit);
     
-    console.log(`🔍 Zoom ${zoom.toFixed(1)} | Municipality: ${currentMuni || 'None'} | Eligible: ${eligibleSpots.length} | Showing: ${spotsToShow.length}/${markerLimit}`);
-    
     spotsToShow.forEach((spot) => {
       const isCurrentlyVisible = visibleMarkersRef.current.has(spot.name);
       
@@ -911,7 +901,6 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         });
 
         markersRef.current.push(marker);
-        console.log(`➕ Added: ${spot.name} (${spot.municipality})`);
       } else {
         currentVisibleSpots.add(spot.name);
       }
@@ -935,12 +924,17 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         markersRef.current[markerIndex].remove();
         markersRef.current.splice(markerIndex, 1);
         markerElementsRef.current.delete(spotName);
-        console.log(`➖ Removed: ${spotName}`);
       }
     });
     
     visibleMarkersRef.current = currentVisibleSpots;
   }, [touristSpots, shouldShowMarker, createMarkerElement, createInfoCardHTML, handleImageClick, addToItinerary, isSpotInItinerary]);
+
+  // Create debounced version of updateVisibleMarkers
+  const debouncedUpdateMarkers = useCallback(
+    debounce(() => updateVisibleMarkers(), 150),
+    [updateVisibleMarkers]
+  );
 
   // Initialize map
   useEffect(() => {
@@ -961,15 +955,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         return response.json();
       })
       .then(style => {
-        console.log('✅ Map style loaded successfully');
+        // Remove all text/label layers
+        style.layers = style.layers.filter(layer => layer.type !== 'symbol');
         
-        // Remove all text/label layers AND problem glyphs to fix font errors
-        style.layers = style.layers.filter(layer => {
-          if (layer.type !== 'symbol') return true;
-          return false;
-        });
-        
-        // Remove problematic glyphs URL to prevent 500 errors
+        // Remove problematic glyphs URL
         if (style.glyphs) {
           delete style.glyphs;
         }
@@ -981,18 +970,25 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           zoom: DEFAULT_ZOOM,
           attributionControl: false,
           maxBounds: bounds,
+          
+          // RPI Performance Settings
           antialias: false,
           fadeDuration: 0,
-          localIdeographFontFamily: false
+          localIdeographFontFamily: false,
+          preserveDrawingBuffer: false,
+          refreshExpiredTiles: false,
+          maxTileCacheSize: 50,
+          optimizeForTerrain: false,
+          pitchWithRotate: false,
+          touchPitch: false
         });
 
         map.current.on('zoom', () => updateMarkerSizes(map.current.getZoom()));
-        map.current.on('moveend', updateVisibleMarkers);
-        map.current.on('zoomend', updateVisibleMarkers);
+        map.current.on('moveend', debouncedUpdateMarkers);
+        map.current.on('zoomend', debouncedUpdateMarkers);
 
         map.current.on('load', () => {
           mapLoaded.current = true;
-          console.log('✅ Map loaded and ready');
           
           if (!map.current.getSource('mask')) {
             map.current.addSource('mask', {
@@ -1023,20 +1019,28 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         });
       })
       .catch(error => {
-        console.error('❌ Map initialization error:', error);
-        console.error('Please check: 1) VITE_MAPTILER_API_KEY is set, 2) Internet connection, 3) MapTiler API status');
+        console.error('Map initialization error:', error);
       });
 
     return () => {
       if (popupRef.current) popupRef.current.remove();
-      markersRef.current.forEach(marker => marker.remove());
+      markersRef.current.forEach(marker => {
+        marker.remove();
+        marker = null;
+      });
+      markersRef.current = [];
+      markerElementsRef.current.clear();
+      visibleMarkersRef.current.clear();
+      
       if (map.current) {
+        map.current.off('moveend', debouncedUpdateMarkers);
+        map.current.off('zoomend', debouncedUpdateMarkers);
         map.current.remove();
         map.current = null;
         mapLoaded.current = false;
       }
     };
-  }, [updateMarkerSizes, updateVisibleMarkers, dataLoaded, touristSpots]);
+  }, [updateMarkerSizes, debouncedUpdateMarkers, updateVisibleMarkers, dataLoaded, touristSpots]);
 
   useEffect(() => {
     if (mapLoaded.current && dataLoaded && touristSpots.length > 0) {
