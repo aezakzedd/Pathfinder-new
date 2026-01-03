@@ -909,8 +909,15 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     const bounds = [[123.5, 12.8], [125.0, 14.8]];
 
     fetch(`https://api.maptiler.com/maps/toner-v2/style.json?key=${MAPTILER_API_KEY}`)
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: Failed to load map style`);
+        }
+        return response.json();
+      })
       .then(style => {
+        console.log('✅ Map style loaded successfully');
+        
         // Remove all text/label layers to hide barangay names
         style.layers = style.layers.filter(layer => {
           // Keep all non-symbol layers (roads, water, buildings, etc.)
@@ -937,6 +944,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         map.current.on('load', () => {
           mapLoaded.current = true;
+          console.log('✅ Map loaded and ready');
           
           if (!map.current.getSource('mask')) {
             map.current.addSource('mask', {
@@ -966,7 +974,10 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           }
         });
       })
-      .catch(error => console.error('Map init error:', error));
+      .catch(error => {
+        console.error('❌ Map initialization error:', error);
+        console.error('Please check: 1) VITE_MAPTILER_API_KEY is set, 2) Internet connection, 3) MapTiler API status');
+      });
 
     return () => {
       if (popupRef.current) popupRef.current.remove();
