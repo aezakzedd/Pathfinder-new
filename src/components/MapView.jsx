@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Maximize, Minimize, Map as MapIcon, List, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { categoryColors, categoryIcons, toSentenceCase } from '../data/selectedTouristSpots';
+import { categoryColors, categoryIcons, toSentenceCase, popularSpots } from '../data/selectedTouristSpots';
 import { getSpotMedia } from '../hooks/useSpotMedia';
 import { debounce } from '../utils/debounce';
 import PlaceDetailsSidebar from './PlaceDetailsSidebar';
@@ -423,6 +423,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               feature.properties.name
             );
             
+            // Check if this spot is in the popular list
+            const isPopular = popularSpots.includes(feature.properties.name);
+            
             spots.push({
               name: feature.properties.name,
               location: toSentenceCase(feature.properties.municipality || municipality),
@@ -432,7 +435,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
               categories: feature.properties.categories || [],
               images: mediaData.images || [],
               spotIndex: spotIndex++,
-              isPopular: false // All markers same priority now
+              isPopular: isPopular
             });
           }
           
@@ -442,7 +445,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         }
       }
       
-      console.log(`✅ Total loaded: ${spots.length} tourist spots from ${Object.keys(MUNICIPALITY_FILES).length} municipalities`);
+      const popularCount = spots.filter(s => s.isPopular).length;
+      console.log(`✅ Total loaded: ${spots.length} tourist spots (${popularCount} popular) from ${Object.keys(MUNICIPALITY_FILES).length} municipalities`);
       setTouristSpots(spots);
       setDataLoaded(true);
     };
@@ -666,31 +670,65 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return categoryIcons[categories[0]] || categoryIcons.default;
   }, []);
 
-  // Create marker element (simplified - all same style)
+  // Create marker element with iOS-style for popular spots
   const createMarkerElement = useCallback((spot) => {
     const markerEl = document.createElement('div');
     markerEl.style.display = 'flex';
     markerEl.style.alignItems = 'center';
     markerEl.style.gap = '6px';
     
-    const icon = getCategoryIcon(spot.categories);
-    
-    markerEl.innerHTML = `
-      <div class="simple-marker-circle" style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s ease;">
-        <i class="fa-solid ${icon}" style="font-size: 12px; color: white;"></i>
-      </div>
-      <span class="marker-text" style="font-size: 12px; font-weight: 600; color: #000000; white-space: nowrap; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff;">${spot.name}</span>
-    `;
-    
-    const circle = markerEl.querySelector('.simple-marker-circle');
-    markerEl.addEventListener('mouseenter', () => {
-      circle.style.transform = 'scale(1.1)';
-      circle.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
-    });
-    markerEl.addEventListener('mouseleave', () => {
-      circle.style.transform = 'scale(1)';
-      circle.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
-    });
+    if (spot.isPopular) {
+      // Popular: iOS-style image marker
+      markerEl.style.flexDirection = 'column';
+      const hasImage = spot.images && spot.images.length > 0;
+      
+      if (hasImage) {
+        markerEl.innerHTML = `
+          <div class="image-marker-icon" style="width: 60px; height: 60px; border-radius: 16px; overflow: hidden; background-color: white; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;">
+            <img src="${spot.images[0]}" alt="${spot.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='<i class=\"fa-solid fa-location-dot\" style=\"font-size: 32px; color: white; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\" />'; " />
+          </div>
+          <div class="marker-label" style="font-size: 12px; font-weight: 600; color: #000000; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff; margin-top: 6px; white-space: nowrap; pointer-events: none; text-align: center; line-height: 1.2; opacity: 1; transition: opacity 0.3s ease;">${spot.name}</div>
+        `;
+      } else {
+        // No image - show gradient background with icon
+        markerEl.innerHTML = `
+          <div class="image-marker-icon" style="width: 60px; height: 60px; border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease; display: flex; align-items: center; justify-content: center;">
+            <i class="fa-solid fa-location-dot" style="font-size: 32px; color: white;"></i>
+          </div>
+          <div class="marker-label" style="font-size: 12px; font-weight: 600; color: #000000; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff; margin-top: 6px; white-space: nowrap; pointer-events: none; text-align: center; line-height: 1.2; opacity: 1; transition: opacity 0.3s ease;">${spot.name}</div>
+        `;
+      }
+      
+      const imageIcon = markerEl.querySelector('.image-marker-icon');
+      markerEl.addEventListener('mouseenter', () => {
+        imageIcon.style.transform = 'scale(1.1)';
+        imageIcon.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)';
+      });
+      markerEl.addEventListener('mouseleave', () => {
+        imageIcon.style.transform = 'scale(1)';
+        imageIcon.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+      });
+    } else {
+      // Non-popular: Simple circular icon + text
+      const icon = getCategoryIcon(spot.categories);
+      
+      markerEl.innerHTML = `
+        <div class="simple-marker-circle" style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s ease;">
+          <i class="fa-solid ${icon}" style="font-size: 12px; color: white;"></i>
+        </div>
+        <span class="marker-text" style="font-size: 12px; font-weight: 600; color: #000000; white-space: nowrap; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff;">${spot.name}</span>
+      `;
+      
+      const circle = markerEl.querySelector('.simple-marker-circle');
+      markerEl.addEventListener('mouseenter', () => {
+        circle.style.transform = 'scale(1.1)';
+        circle.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
+      });
+      markerEl.addEventListener('mouseleave', () => {
+        circle.style.transform = 'scale(1)';
+        circle.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+      });
+    }
     
     return markerEl;
   }, [getCategoryIcon]);
@@ -734,8 +772,12 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
       )
     }));
     
-    // Sort by distance from camera (closest first)
-    spotsWithDistance.sort((a, b) => a.distance - b.distance);
+    // Sort by priority: popular first, then by distance
+    spotsWithDistance.sort((a, b) => {
+      if (a.isPopular && !b.isPopular) return -1;
+      if (!a.isPopular && b.isPopular) return 1;
+      return a.distance - b.distance;
+    });
     
     // Take only the closest 10 spots
     const spotsToShow = spotsWithDistance.slice(0, MAX_VISIBLE_MARKERS);
@@ -751,7 +793,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
 
         const marker = new maplibregl.Marker({ 
           element: markerEl, 
-          anchor: 'center'
+          anchor: spot.isPopular ? 'bottom' : 'center'
         })
           .setLngLat(spot.coordinates)
           .addTo(map.current);
@@ -760,7 +802,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
         markerEl.addEventListener('click', () => {
           setSelectedSpot(spot);
           
-          markerEl.style.opacity = '0';
+          if (spot.isPopular) {
+            const icon = markerEl.querySelector('.image-marker-icon');
+            const label = markerEl.querySelector('.marker-label');
+            if (icon) icon.style.opacity = '0';
+            if (label) label.style.opacity = '0';
+          } else {
+            markerEl.style.opacity = '0';
+          }
           
           if (popupRef.current) popupRef.current.remove();
 
@@ -829,7 +878,14 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
                 
                 const currentMarkerEl = markerElementsRef.current.get(spot.name);
                 if (currentMarkerEl) {
-                  currentMarkerEl.style.opacity = '1';
+                  if (spot.isPopular) {
+                    const currentIcon = currentMarkerEl.querySelector('.image-marker-icon');
+                    const currentLabel = currentMarkerEl.querySelector('.marker-label');
+                    if (currentIcon) currentIcon.style.opacity = '1';
+                    if (currentLabel) currentLabel.style.opacity = '1';
+                  } else {
+                    currentMarkerEl.style.opacity = '1';
+                  }
                 }
                 setSelectedSpot(null);
               });
@@ -886,7 +942,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     
     visibleMarkersRef.current = currentVisibleSpots;
     
-    console.log(`📍 Showing ${currentVisibleSpots.size}/${MAX_VISIBLE_MARKERS} markers | Camera at: ${currentMuni || 'Unknown'} | Zoom: ${zoom.toFixed(1)}`);
+    const popularVisible = spotsToShow.filter(s => s.isPopular).length;
+    console.log(`📍 Showing ${currentVisibleSpots.size}/${MAX_VISIBLE_MARKERS} markers (${popularVisible} popular) | Camera at: ${currentMuni || 'Unknown'} | Zoom: ${zoom.toFixed(1)}`);
   }, [touristSpots, createMarkerElement, createInfoCardHTML, handleImageClick, addToItinerary, isSpotInItinerary, getMunicipalityAtPoint]);
 
   // Create debounced version of updateVisibleMarkers
