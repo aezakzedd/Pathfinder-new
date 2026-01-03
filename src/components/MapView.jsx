@@ -12,7 +12,7 @@ import ItineraryView from './ItineraryView';
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
 const DEFAULT_ZOOM = 9;
 const SIDEBAR_WIDTH = 480;
-const MAX_VISIBLE_MARKERS = 10;
+const MAX_VISIBLE_MARKERS = 3; // REDUCED from 10 to 3 to avoid clutter
 
 // Municipality GeoJSON files mapping
 const MUNICIPALITY_FILES = {
@@ -737,7 +737,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     // Sort by distance from camera (closest first)
     spotsWithDistance.sort((a, b) => a.distance - b.distance);
     
-    // Take only the closest 10 spots
+    // Take only the closest spots (now 3 instead of 10)
     const spotsToShow = spotsWithDistance.slice(0, MAX_VISIBLE_MARKERS);
     
     spotsToShow.forEach((spot) => {
@@ -956,6 +956,13 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           'top-right'
         );
 
+        // Add scale control at bottom right with black/white theme
+        const scaleControl = new maplibregl.ScaleControl({
+          maxWidth: 100,
+          unit: 'metric'
+        });
+        map.current.addControl(scaleControl, 'bottom-right');
+
         map.current.on('zoom', () => updateMarkerSizes(map.current.getZoom()));
         map.current.on('moveend', debouncedUpdateMarkers);
         map.current.on('zoomend', debouncedUpdateMarkers);
@@ -1132,6 +1139,19 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
           .maplibregl-popup-content { padding: 0 !important; background: transparent !important; box-shadow: none !important; }
           .maplibregl-popup-tip { display: none !important; }
           .video-scroll-container::-webkit-scrollbar { display: none; }
+          
+          /* Scale control black/white theme */
+          .maplibregl-ctrl-scale {
+            background-color: rgba(255, 255, 255, 0.95) !important;
+            color: #000000 !important;
+            border: 2px solid #000000 !important;
+            border-top: none !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            padding: 2px 6px !important;
+            margin-bottom: 8px !important;
+            margin-right: 8px !important;
+          }
         `}
       </style>
     </div>
