@@ -15,9 +15,17 @@ const SIDEBAR_WIDTH = 480;
 
 // Zoom-based marker visibility thresholds
 const ZOOM_THRESHOLDS = {
-  MIN_ZOOM_1_MARKER: 8.5,   // Below this: show 1 iOS-style marker
+  MIN_ZOOM_1_MARKER: 8.5,   // Below this: show 1 iOS-style marker per cluster
   MIN_ZOOM_2_MARKERS: 10,   // Between 8.5-10: show 2 markers
   MIN_ZOOM_3_MARKERS: 11    // Above 11: show 3 markers
+};
+
+// Proximity thresholds (in km) for clustering at different zoom levels
+const PROXIMITY_THRESHOLDS = {
+  ZOOM_LESS_8: 5,    // At zoom < 8: cluster if within 5km
+  ZOOM_8_TO_9: 3,    // At zoom 8-9: cluster if within 3km
+  ZOOM_9_TO_10: 2,   // At zoom 9-10: cluster if within 2km
+  ZOOM_ABOVE_10: 0   // At zoom > 10: no clustering
 };
 
 // Municipality GeoJSON files mapping
@@ -742,6 +750,48 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return R * c;
   };
 
+  // Get proximity threshold based on zoom level
+  const getProximityThreshold = (zoom) => {
+    if (zoom < 8) return PROXIMITY_THRESHOLDS.ZOOM_LESS_8;
+    if (zoom < 9) return PROXIMITY_THRESHOLDS.ZOOM_8_TO_9;
+    if (zoom < 10) return PROXIMITY_THRESHOLDS.ZOOM_9_TO_10;
+    return PROXIMITY_THRESHOLDS.ZOOM_ABOVE_10; // No clustering at high zoom
+  };
+
+  // Cluster nearby spots and return only representative spots
+  const clusterNearbySpots = (spots, proximityThreshold) => {
+    if (proximityThreshold === 0) return spots; // No clustering needed
+    
+    const clustered = [];
+    const used = new Set();
+    
+    spots.forEach((spot, index) => {
+      if (used.has(index)) return;
+      
+      // This spot becomes the cluster representative
+      clustered.push(spot);
+      used.add(index);
+      
+      // Mark all nearby spots as used (they're in this cluster)
+      spots.forEach((otherSpot, otherIndex) => {
+        if (index === otherIndex || used.has(otherIndex)) return;
+        
+        const distance = calculateDistance(
+          spot.coordinates[0],
+          spot.coordinates[1],
+          otherSpot.coordinates[0],
+          otherSpot.coordinates[1]
+        );
+        
+        if (distance <= proximityThreshold) {
+          used.add(otherIndex);
+        }
+      });
+    });
+    
+    return clustered;
+  };
+
   // Determine max markers based on zoom level
   const getMaxMarkersForZoom = (zoom) => {
     if (zoom < ZOOM_THRESHOLDS.MIN_ZOOM_1_MARKER) return 1;
@@ -749,7 +799,7 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     return 3;
   };
 
-  // Update visible markers with zoom-based progressive filtering
+  // Update visible markers with zoom-based progressive filtering AND proximity clustering
   const updateVisibleMarkers = useCallback(() => {
     if (!map.current || !mapLoaded.current || touristSpots.length === 0) return;
 
@@ -762,6 +812,9 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     // Get current municipality
     const currentMuni = getMunicipalityAtPoint(viewCenter[0], viewCenter[1]);
     setCurrentMunicipality(currentMuni);
+    
+    // Determine proximity threshold for this zoom level
+    const proximityThreshold = getProximityThreshold(zoom);
     
     // Determine how many markers to show based on zoom
     const maxMarkers = getMaxMarkersForZoom(zoom);
@@ -783,8 +836,11 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     // Sort by distance from camera (closest first)
     spotsWithDistance.sort((a, b) => a.distance - b.distance);
     
+    // Apply proximity clustering to prevent overlaps
+    const clusteredSpots = clusterNearbySpots(spotsWithDistance, proximityThreshold);
+    
     // Take only the appropriate number of markers based on zoom
-    const spotsToShow = spotsWithDistance.slice(0, maxMarkers);
+    const spotsToShow = clusteredSpots.slice(0, maxMarkers);
     
     spotsToShow.forEach((spot) => {
       const isCurrentlyVisible = visibleMarkersRef.current.has(spot.name);
@@ -932,7 +988,8 @@ const MapView = memo(function MapView({ isFullscreen = false, onToggleFullscreen
     
     visibleMarkersRef.current = currentVisibleSpots;
     
-    console.log(`📍 Showing ${currentVisibleSpots.size}/${maxMarkers} markers (zoom: ${zoom.toFixed(1)}) | ${useIOSStyle ? 'iOS style' : 'Simple style'} | ${currentMuni || 'Unknown'}`);
+    const clusterInfo = proximityThreshold > 0 ? ` | Clustered within ${proximityThreshold}km` : '';
+    console.log(`📍 Showing ${currentVisibleSpots.size}/${maxMarkers} markers (zoom: ${zoom.toFixed(1)}) | ${useIOSStyle ? 'iOS style' : 'Simple style'}${clusterInfo} | ${currentMuni || 'Unknown'}`);
   }, [touristSpots, createMarkerElement, createInfoCardHTML, handleImageClick, addToItinerary, isSpotInItinerary, getMunicipalityAtPoint]);
 
   // Create debounced version of updateVisibleMarkers
